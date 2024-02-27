@@ -1,0 +1,9 @@
+schemaspy.t=pgsql11
+schemaspy.dp=/usr/share/jdbc-postgresql/lib/jdbc-postgresql.jar
+schemaspy.host=localhost
+schemaspy.port=5432
+schemaspy.u=quantdb-admin
+schemaspy.p=
+schemaspy.db=quantdb
+schemaspy.s=quantdb
+schemaspy.o=/tmp/quantdb-schema/

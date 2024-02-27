@@ -1,0 +1,25 @@
+* setup
+** database
+
+first run will fail due to missing passwords set in the next step
+#+begin_src bash
+../bin/dbsetup
+#+end_src
+
+add password to =.pgpass= then run this block and set the passwords
+#+header: :dbuser postgres
+#+header: :database postgres
+#+begin_src sql
+\password 'quantdb-admin'
+\password 'quantdb-user'
+\quit
+#+end_src
+
+after setting password
+#+begin_src bash
+../bin/dbsetup
+#+end_src
+
+#+begin_src bash
+psql quantdb_test quantdb-user
+#+end_src

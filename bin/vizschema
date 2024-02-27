@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# vizschema [PORT] [DATABASE]
+set -e
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do # resolve all symlinks
+  DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # resolve relative symlinks
+done
+ABS_PATH="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+RESOURCES="${ABS_PATH}/../resources/"
+
+if [ -z $1 ]; then
+    PORT=5432
+else
+    PORT=$1
+fi
+
+if [ -z $2 ]; then
+    #DATABASE=$(python -c 'from quantdb.config import auth; print(auth.get("test-database"))')
+    DATABASE=quantdb_test
+else
+    DATABASE=$2
+fi
+
+OUTPUT=/tmp/quantdb-schema
+WORKING=$(dirname ${OUTPUT})
+# FIXME pass vars on cli
+# graphviz version working again as of 6.2.4 is faster but looks worse than vizjs
+#schemaspy -configFile ${RESOURCES}/schemaspy.ini \
+schemaspy -vizjs -configFile ${RESOURCES}/schemaspy.ini \
+          -o $OUTPUT \
+          -db $DATABASE \
+          -port $PORT
+
+pushd ${WORKING}
+if [ ! -f redbean-2.2.com.orig ]; then
+   curl https://redbean.dev/redbean-2.2.com -o redbean-2.2.com.orig || exit $?
+fi
+
+zip -r quantdb-schema.zip $OUTPUT
+cp redbean-2.2.com.orig quantdb-schema-runnable.zip
+pushd $OUTPUT
+zip -r ../quantdb-schema-runnable.zip .
+popd
+chmod +x quantdb-schema-runnable.zip
+popd
