@@ -1,0 +1,71 @@
+* endpoints
+** =/api/1=
+*** =measured_instances/=
+returns measured instances matching criteria
+this joins the instance measured table with the categorical values table
+**** query parameters
+*None of these resolve any subClassOf or partOf hierarchy.*
+***** =categorical_values=
+# &match_anatomical_entities=brain,liver
+# &match_anatomical_entities=c8-vagus,c7-vagus,c6-vagus,c6-vagus
+# these will be interlex or uberon terms coming from the REVA vagus terms
+#+begin_example
+&categorical_values=ILX:1234567,UBERON:0000955
+#+end_example
+***** =units=
+#+begin_example
+&units=mm
+#+end_example
+***** =aspects=
+#+begin_example
+&aspects=diameter
+#+end_example
+***** =instance_classes=
+# match instance classes XXX does not resolve subClassOf hierachy!
+#+begin_example
+&instance_classes=fiber
+#+end_example
+***** match value +-
+both must be provided
+#+begin_example
+&quantiative_value=0.5
+&quantiative_margin=0.5
+#+end_example
+***** match range
+both must be provided
+#+begin_example
+&quantiative_range_beg=0
+&quantiative_range_end=1
+#+end_example
+***** COMMENT future
+I think we can implement this using aspects where a coordinate
+system becomes a subclass of a location or distance metric
+so the query becomes
+#+begin_example
+&aspect=ccf-sparc-vagus-all-subject-scaffold-1
+&quantitative_range_beg=0.2
+&quantitative_range_end=0.3
+#+end_example
+
+because the coordinate system is the defining aspect
+and carries a bunch of additional information with it
+
+original brainstorm
+#+begin_example
+&ccf_name=scaffold&ccf_start_coordinate=0.5&ccf_end_coordinate=0.4
+&ccf_name=file_index&ccf_start_coordinate=0.5&ccf_end_coordinate=0.4
+&ccf_name=random&ccf_start_coordinate=0.5&ccf_end_coordinate=0.4
+&ccf_name=random&ccf_point=0.5&ccf_error=0.1
+#+end_example
+
+*** =files/=
+like measured_instances but returns files associated with a given measured instance, join on prov and return field source
+# ** utility endpoints :ignore:
+*** =units/=
+list known units
+*** =aspects/=
+list known aspects
+*** =instance_classes/=
+list known instance classes
+*** =categorical_values/=
+list known categorical values
