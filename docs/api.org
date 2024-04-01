@@ -1,30 +1,62 @@
 * endpoints
-** =/api/1=
+** =/api/1/=
 *** =measured_instances/=
 returns measured instances matching criteria
 this joins the instance measured table with the categorical values table
 **** query parameters
 *None of these resolve any subClassOf or partOf hierarchy.*
-***** =categorical_values=
-# &match_anatomical_entities=brain,liver
-# &match_anatomical_entities=c8-vagus,c7-vagus,c6-vagus,c6-vagus
-# these will be interlex or uberon terms coming from the REVA vagus terms
+***** =formal_ids=
+union
 #+begin_example
-&categorical_values=ILX:1234567,UBERON:0000955
+&formal_ids=[{dataset-id-1}/{formal-id-1},{dataset-id-2}/{formal-id-2}]
 #+end_example
+***** =specimen_ids=
+union
+#+begin_example
+&specimen_ids=[]
+#+end_example
+***** =subject_ids=
+union
+#+begin_example
+&subject_ids=[]
+#+end_example
+***** =sample_ids=
+union
+#+begin_example
+&sample_ids=[]
+#+end_example
+***** =categorical_filter=
+a list of predicate object pairs to filter by
+#+begin_example
+&categorical_filter=[location=UBERON:0000955,sex=PATO:0000384]
+#+end_example
+- candidates
+  - anatomical-location
+  - sex
+  - species
+  - age-category
+- beyond scope
+  - strain
+  - rrid-for-strain
+  - experimental-group  # open
+
 ***** =units=
 #+begin_example
 &units=mm
 #+end_example
 ***** =aspects=
+FIXME AND vs OR, default to intersection despite a flip from
+absent producing the union of all
 #+begin_example
 &aspects=diameter
 #+end_example
 ***** =instance_classes=
+owl:domain
 # match instance classes XXX does not resolve subClassOf hierachy!
 #+begin_example
 &instance_classes=fiber
 #+end_example
+***** =agg_type=
 ***** match value +-
 both must be provided
 #+begin_example
@@ -37,6 +69,21 @@ both must be provided
 &quantiative_range_beg=0
 &quantiative_range_end=1
 #+end_example
+***** COMMENT =categorical_predicate= :donotuse:
+#+begin_example
+&cat_predicate=location
+#+end_example
+***** COMMENT =categorical_values= :donotuse:
+TODO do we also require/allow a predicate?
+need to default to union for this parameter
+
+# &match_anatomical_entities=brain,liver
+# &match_anatomical_entities=c8-vagus,c7-vagus,c6-vagus,c6-vagus
+# these will be interlex or uberon terms coming from the REVA vagus terms
+#+begin_example
+&categorical_values=ILX:1234567,UBERON:0000955
+#+end_example
+
 ***** COMMENT future
 I think we can implement this using aspects where a coordinate
 system becomes a subclass of a location or distance metric
@@ -57,15 +104,34 @@ original brainstorm
 &ccf_name=random&ccf_start_coordinate=0.5&ccf_end_coordinate=0.4
 &ccf_name=random&ccf_point=0.5&ccf_error=0.1
 #+end_example
+**** examples
+#+begin_src bash
+/{endpoint}?instance_classes=[]&aspects=[]&categorical_filter=[]&agg_type=[]
+#+end_src
+**** use cases
+show me all measurements that have been made on a subject
+or part of that subject or sample derived from that subject
 
+for this just stick it in the measured_instances
 *** =files/=
 like measured_instances but returns files associated with a given measured instance, join on prov and return field source
 # ** utility endpoints :ignore:
+*** =quant_desciptors/=
+**** query parameters
+***** =units=
+***** =aspects=
+***** =instance_classes=
 *** =units/=
 list known units
 *** =aspects/=
 list known aspects
+**** query parameters
+***** =instance_classes=
+***** =categorical_values=
 *** =instance_classes/=
 list known instance classes
+instance classes are ... owl classes that are the domain for the measurement
+*** =categorical_predicates/=
+list known categorical descriptors
 *** =categorical_values/=
 list known categorical values
