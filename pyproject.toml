@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "quantdb"
+version = "0.1.0"
+description = "Quantitative DB"
+authors = ["tmsincomb <troysincomb@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{ include = "quantdb" }]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+sqlalchemy = "^2.0.29"
+pydantic = "^2.6.4"
+fastapi = "^0.110.1"
+uvicorn = {extras = ["standard"], version = "^0.29.0"}
+pydantic-settings = "^2.2.1"
+
+[tool.poetry.scripts]
+quantdb-fastapi = "uvicorn quantdb.main:app --reload"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.1.1"
+pre-commit = "^3.7.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
