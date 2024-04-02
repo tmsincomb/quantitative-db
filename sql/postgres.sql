@@ -35,4 +35,3 @@ CREATE DATABASE :database -- quantdb
     LC_COLLATE = 'en_US.UTF-8'  -- this was a gentoo locale issue check ${LANG}
     LC_CTYPE = 'en_US.UTF-8'
     CONNECTION LIMIT = -1;
-
