@@ -2,23 +2,33 @@
 
 ------------------- handling of datasources
 
+CREATE table objects_internal(
+-- TODO ...
+id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+label text,
+curator_note text
+);
+
 CREATE TYPE remote_id_type AS ENUM (
 -- FIXME XXX hardcoded remote conventions, essentially an optimization
 'organization',
 'dataset',
 'collection',
-'package'  -- XXX we do not currently support packages with multiple files so all packages entered should be to their file level
+'package',  -- XXX we do not currently support packages with multiple files so all packages entered should be to their file level
 -- 'file',
 -- technically also user is in here
+'internal'  -- explicitly not remote (amusingly), TODO see if we want to do it this way ... this should have a foreign key constraint but given that objects are almost always external we pretend that our internal objects table is external, thus no foreign key, the alternative is to add id_interal and then a check constraint, there are other things we probably want in the objects table ... so better
 );
 
-create table objects(
+CREATE table objects(
 -- see sparcur.objects for context on naming, these are effectively datasources that are discrete files
 -- yes, technically objects can also have quantiative values "measured" on them, but to avoid having to write CTEs or similar recursive queries, we keep them separate, right now we use the uuid directly as the primary key, at some point we may have to add an additional level of indirection to support multiple object id types, e.g. by identifying them by their checksums instead or something like that
 id uuid PRIMARY KEY, -- XXX NOTE this reinforces the fact that we do not support packages with multiple files
 id_type remote_id_type NOT NULL,
 id_file integer, -- keep this for now to reduce the number of api calls, we may also need/want an s3 path or something
-constraint constraint_objects_remote_id_type_id_file check ((id_type != 'package') or (id_file is not null))
+id_internal uuid references objects_internal(id),
+constraint constraint_objects_remote_id_type_id_package check ((id_type != 'package') or (id_file is not null)),
+constraint constraint_objects_remote_id_type_id_internal check ((id_type != 'internal') or (id_internal is not null and id = id_internal))
 );
 
 create table dataset_object(
@@ -105,7 +115,9 @@ CREATE TYPE quant_agg_type AS ENUM (
 'mean',
 'media',
 'mode',
-'sum'
+'sum',
+'min',
+'max'
 );
 
 create table quant_descriptors(
