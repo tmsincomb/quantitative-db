@@ -65,10 +65,12 @@ INSERT INTO class_measured (iri, label) VALUES
 ('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/axon', 'axon'),
 ('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/dendrite', 'dendrite'),
 
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/nerve-segment', 'nerve-segment'), -- reva ft unit
 ('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/fascicle', 'fascicle'),
 ('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/fiber', 'fiber'),
 ('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/tissue', 'tissue'),
 
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/segment/cross-section', 'segment-cross-section'), -- single z plane, TODO do we need a data perspective name for these, e.g. image-z-stack-plane 3d-volume-plane
 ('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/fascicle/cross-section', 'fascicle-cross-section'),
 ('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/fiber/cross-section', 'fiber-cross-section'),
 ('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/tissue/cross-section', 'tissue-cross-section'),
@@ -110,10 +112,25 @@ INSERT INTO cat_descriptors (label, is_measuring, range) VALUES
 ;
 
 INSERT INTO aspects (iri, label) VALUES
+-- RULING distance is more fundamental, however it is literally definitional
+-- unless it is being derived from some other quantity such as c
+-- this is becuase you have to pick two specific points in order to define length
+-- while distance is abstract and can unitized in countless ways (i.e. based on
+-- which two points you pick)
+('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance', 'distance'),
+('http://uri.interlex.org/tgbugs/uris/readable/aspect/length', 'length'),
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/diameter', 'diameter'),
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/diameter-orthogonal-to-anterior-posterior-axis', 'diameter-orthogonal-to-anterior-posterior-axis'),
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/length-parallel-to-anterior-posterior-axis', 'length-parallel-to-anterior-posterior-axis')
 -- ('http://uri.interlex.org/tgbugs/uris/readable/aspect/', ''),
+;
+
+INSERT INTO aspect_parent (id, parent) VALUES
+(aspect_from_label('length'), aspect_from_label('distance')),
+(aspect_from_label('diameter'), aspect_from_label('length')),
+(aspect_from_label('diameter-orthogonal-to-anterior-posterior-axis'), aspect_from_label('diameter')),
+(aspect_from_label('length-parallel-to-anterior-posterior-axis'), aspect_from_label('length'))
+--(aspect_from_label(), aspect_from_label()),
 ;
 
 INSERT INTO units (iri, label) VALUES
@@ -242,15 +259,16 @@ WHERE cv.object_id is NULL;
 -- the order of inserts here more or less corresponds to the order needed for the workflow
 
 INSERT INTO sds_specimen (dataset, specimen_id) VALUES
-(:'dataset_uuid_1', 'sam-seg-c7-A-level-1')
+(:'dataset_uuid_1', 'sam-seg-c7-A-level-1') -- FIXME I think we need a parent column here as well
 ;
 
-INSERT INTO instance_measured (inst_desc, dataset, formal_id, specimen_id) VALUES
+INSERT INTO instance_measured (inst_desc, dataset, formal_id, specimen_id, subject_id) VALUES
 (
 inst_desc_from_label('fascicle-cross-section'),
 :'dataset_uuid_1',
 'fsccs-1',
-spec_from_dataset_id(:'dataset_uuid_1', 'sam-seg-c7-A-level-1')
+spec_from_dataset_id(:'dataset_uuid_1', 'sam-seg-c7-A-level-1'),
+spec_from_dataset_id(:'dataset_uuid_1', 'sub-1') -- FIXME we need a way to validate this, which means we need the transitive parent table
 )
 ;
 
@@ -281,3 +299,29 @@ SELECT * FROM get_all_values_example();
 SELECT 'guo-2';
 SELECT * FROM get_unextracte_objects();
 
+
+-- hierachy testing
+SELECT * FROM get_aspect_parents(aspect_from_label('diameter-orthogonal-to-anterior-posterior-axis'));
+SELECT * FROM get_aspect_parent_edges(aspect_from_label('diameter-orthogonal-to-anterior-posterior-axis'));
+SELECT * FROM get_all_aspect_parents();
+
+SELECT * FROM get_class_parents(inst_desc_from_label('fascicle-cross-section'));
+SELECT * FROM get_class_parent_edges(inst_desc_from_label('fascicle-cross-section'));
+SELECT * FROM get_all_class_parents();
+
+SELECT * FROM get_instance_parents(inst_from_dataset_id('diameter-orthogonal-to-anterior-posterior-axis'));
+SELECT * FROM get_instance_parent_edges(inst_from_dataset_id('diameter-orthogonal-to-anterior-posterior-axis'));
+SELECT * FROM get_all_instance_parents();
+
+-- hrm do we need get_x_children? answer seems to be yes?
+
+-- top down hierarchical query
+-- FIXME almost certainly faster to call get_aspect_children once and then do where a0.id in aspect_children ...
+-- using explain we can see that this version get_aspect_parents in a loop for all aspects (I think) which is dumb
+-- but the query planner may be able to figure it out diesn't actually need to do that for the entire sub select
+-- but only for a0.id ??? yeah, seems so
+select * from quant_values as qv
+join quant_descriptors as qd on qv.quant_desc = qd.id
+join aspects as a0 on qd.aspect = a0.id
+join (select a.id, p.parent from aspects as a cross join get_aspect_parents(a.id) as p) as ap on ap.id = a0.id
+where ap.parent = aspect_from_label('distance');
