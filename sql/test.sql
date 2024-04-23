@@ -9,11 +9,14 @@
 \set package_uuid_2 {6b823093-a26a-4930-95c5-3f2bc3cfe516}
 \set package_uuid_3 {527e9cfe-7925-414c-bcab-72c96813293c}
 
+\set internal_uuid_1 {2d0267ee-6fb9-449a-b0c3-3a46d1fc5783}
+\set max_uuid        {ffffffff-ffff-ffff-ffff-ffffffffffff} -- ignore the limits of 4 and b for now
+
 INSERT INTO objects (id_type, id) VALUES
 ('dataset', :'dataset_uuid_1'),
 ('dataset', :'dataset_uuid_2'),
 ('dataset', :'dataset_uuid_3'),
-('dataset', :'dataset_uuid_4')
+('dataset', :'dataset_uuid_4'),
 ;
 
 /* -- TODO test-negative
@@ -26,6 +29,10 @@ INSERT INTO objects (id_type, id, id_file) VALUES
 ('package', :'package_uuid_1', 0),
 ('package', :'package_uuid_2', 0),
 ('package', :'package_uuid_3', 0)
+;
+
+INSERT INTO objects (id_type, id, id_internal) VALUES
+('internal', :'internal_uuid_1', 'trigger_objects_uuid_zero_to_one')
 ;
 
 INSERT INTO class_measured (iri, label) VALUES -- NOTE TO SELF class measured is where we handle hierarchical resolution we don't do that for categorical values right now which is why we have the complexity in this table
@@ -125,6 +132,7 @@ INSERT INTO aspects (iri, label) VALUES
 -- this is becuase you have to pick two specific points in order to define length
 -- while distance is abstract and can unitized in countless ways (i.e. based on
 -- which two points you pick)
+
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance', 'distance'),
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/length', 'length'),
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/diameter', 'diameter'),
@@ -144,6 +152,8 @@ INSERT INTO aspect_parent (id, parent) VALUES
 INSERT INTO units (iri, label) VALUES
 -- obvious we need synonyms
 -- TODO need to decide on naming convention for units becuase label is likely to be the primary interface to the table
+--('http://uri.interlex.org/tgbugs/uris/readable/aspect/unit/unitless', 'unitless'), -- FIXME VS NULL
+
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/unit/micrometer', 'um'),
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/unit/meter', 'm')
 -- ('http://uri.interlex.org/tgbugs/uris/readable/aspect/unit/', ''),
@@ -152,6 +162,58 @@ INSERT INTO units (iri, label) VALUES
 
 INSERT INTO quant_descriptors (label, is_measuring, aspect, unit, aggregation_type) VALUES
 -- lack of support for hierarchical queries over aspects is a killer here, and also for classes
+
+('thing object uuid ratio', -- multiple objects means the entity will show up at multiple places, OR pick min or something ...
+/*
+FIXME technically in order to insert these we need to have an instance AND at least one object
+we don't want to create a bunch of file object instances though, the first time that we actually know that an
+object id has data about an instance id is when it is entered into quant_values or cat_values
+which means that if we don't want the uuid ratio process to create spurious entities then we can only
+run this on whole files that map directly subject or sample level, which is already what we assume
+for the reva ft vagus segment microct case
+another way to frame the issue is that if you have multiple files with data that maps to slightly different
+parts of an instance then you probably want/need slightly different instance ids to map because the data model
+assumes that the data inside individual records (sometimes records are whole files) correspond to a single instance
+cases of multiple reva ft uct images for single sample segment are an example of the issue
+i.e. we may need sites, otherwise files "about" the same thing are going to teleport and the location
+of an object in uuid space will change over time ... ah well, that is the issue with this coordinate system
+which is that objects are located in n dimensional uuid space, not just 1d uuid space, and n changes over
+time, so either you take the norm or you take the min across all axes but that has to be done after the fact
+
+quant_values or cat_values ? but that doesn't work because of the circularity, the problem is that we already
+instance ids for this to work
+*/
+NULL, -- inst_desc_from_label('file'), -- FIXME VS inst_desc_from_label('class thing'),
+aspect_from_label('distance-object-uuid-ratio'), -- yes this is an abstract distance in UUID space between zero and max int 128
+-- curator_note: non-locality of mapping to uuid space is fun
+NULL,
+'instance'
+),
+
+('thing min object uuid ratio',
+/*
+FIXME TODO practical issue: we assume objects are immutable, so thing object uuid ratio is ok
+because we create a obj_quant_descriptor for it for it that references the non-min version of
+this and will always be static, however min could change every time ... actually ... we are ok
+right now because there are no unique constraints on enabled right now, but as soon as we do
+enable them we are going to be in trouble and if we don't enable them then we will have multiple
+min values in the database, from a conceptual standpoint this means that internal objects have to
+be append only as well, they don't have to be immutable, but any additions to them can't result in
+a change to an existing record, this means that when we recompute the min we have to issue a new
+internal object id, but we might be able to be smart about and have e.g. one uuid for the 1st
+min addition, 2nd, etc. essentially pretending that there is an append only no duplicates file
+that tracks the min as things update ... this is ... not an ideal solution, and it also shows that
+there will be issue if there are multiple versions of the same measures ... this is already
+discussed in the context of aspects when dealing with multiple very similar columns
+either you factor out performance, or the analysis is different so the results may share a superclass
+but have to be distinct in their aspect name or something
+*/
+NULL,
+aspect_from_label('distance-object-uuid-ratio'),
+NULL,
+'min'
+),
+
 ('fascicle cross section diameter um',
 inst_desc_from_label('fascicle-cross-section'),
 aspect_from_label('diameter'),
@@ -189,7 +251,8 @@ INSERT INTO addresses (address_type, field_address) VALUES
 ('tabular-header', 'stain'),
 ('tabular-header', 'diameter'),
 ('tabular-header', 'diameter-min'),
-('tabular-header', 'diameter-max')
+('tabular-header', 'diameter-max'),
+--('image-axis-index', 'x'), -- TODO we aren't reading values out here, we are using implicit values to assign an id
 --(,)
 ;
 

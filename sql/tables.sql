@@ -176,14 +176,23 @@ local_identifier text, -- in spreadsheet mapping for the thing, could populate t
 --file_row_thing integer,
 -- could could have the gene id or similar, multiple levels of context
 
+-- these can still be checked against the parent table and if we are using a trigger to check references, these can both be checked in one go
+-- XXX we could, but choose not to enforce a foreign key on dataset and sub_id mapping to instance measured at this point
+sub_id text check (sub_id ~ '^sub-'), -- alternative to instance_subject FIXME should be require this even if type is subject for closure?
+sam_id text check (sam_id ~ '^sam-'), -- alternative to instance_sample
+
 -- FIXME TODO replace with parent
 -- NOTE re: jgrethe comment: since we are moving to have a single instance_measured table we want to avoid self reference foreign keys because it introduces an implicit order dependency, instead we will have a separate table beyond just the parent table so that we can insert without self reference, or something like that
 --specimen_id integer references sds_specimen(id) NOT NULL, -- always
 --subject_id integer references sds_specimen(id) NOT NULL, -- usually, edge cases are pools/pops XXX not null this for now and see what happens
 --sample_id integer references sds_specimen(id), -- sometimes
-UNIQUE (dataset, formal_id)
+UNIQUE (dataset, formal_id),
+constraint constraint_instance_measured_type_formal_id check (type = 'below' and not (formal_id ~ '^(sub|sam)-') or type = 'subject' and formal_id ~ '^sub-' or type = 'sample' and formal_id ~ '^sam-'),
+constraint constraint_instance_measured_type_sub_id check ((type = 'subject') or (sub_id is not null)), -- FIXME cases where a cell line is the subject are going to confuse people, welcome to names not matching their meaning
+constraint constraint_instance_measured_type_sam_id check (type = 'below' and (sub_id is not null or sam_id is not null)) -- XXX there is not a general way to enforce that there must be a sample, e.g. a mri experiment can have virtual of sections of the brain without there being samples in the dataset at all, only subjects and performances
 );
 
+/*
 create table instance_subject(
 id integer references instance_measured(id),
 subject integer references instance_measured(id),
@@ -223,6 +232,7 @@ END;
 $$ language plpgsql;
 
 CREATE OR REPLACE TRIGGER trigger_be_ins_inst_sam BEFORE INSERT ON instance_sample FOR EACH ROW EXECUTE PROCEDURE check_sample_is_sample();
+*/
 
 create table inst_equiv(
 -- convenience cache of the full bidirectional
@@ -926,3 +936,62 @@ SELECT * FROM tree;
 END;
 $$ language plpgsql;
 
+
+CREATE OR REPLACE FUNCTION check_inst_susa_parent() RETURNS trigger as $$
+-- FIXME as implemented the user has to know when to call this function OR we have to make it
+-- run as a trigger after any insert into and require that insert into values must include the
+-- full parent hierarchy for any and all instances that have been added to the instance_parent
+-- table ... actually ... this could run as a trigger if we require that inserts into the
+-- instance_parent table always be done in order so that the parents are always in the table
+-- before the children, it does mean that we can disable the trigger when loading from a dump
+-- though ...
+DECLARE
+parents record;
+subjects record;
+samples record;
+BEGIN
+
+SELECT im FROM instance_measured AS im WHERE im.id IN (SELECT * FROM get_instance_parents(NEW.id)) INTO parents;
+
+SELECT suim FROM instance_measured AS suim
+JOIN instance_measured AS suim ON im.dataset = suim.dataset AND suim.formal_id = im.sub_id
+WHERE im.id = NEW.id
+INTO subjects;
+
+SELECT saim FROM instance_measured AS im
+JOIN instance_measured AS saim ON im.dataset = saim.dataset AND saim.formal_id = im.sam_id
+WHERE im.id = NEW.id
+INTO samples;
+
+/*
+FIXME TODO must handle the multi-parent case, which can happen when samples are
+derived from multiple subjects, in those cases if we want this to work as it does
+now then we have to reify subject populations and sample populations for the purposes
+of referential integrity
+*/
+
+IF    (samples is not null or  subjects is not null and parents is     null) THEN
+
+RAISE EXCEPTION 'parents missing for instance which references a subject or a sample: % % %', NEW.id, suim, saim
+USING HINT = 'forgot to insert into the parents table';
+
+ELSIF (samples is     null and subjects is     null and parents is not null) THEN
+
+RAISE EXCEPTION 'subjects and samples missing on instance when there are parents: % %', NEW.id, parents
+USING HINT = 'instance did not include subject/sample reference when there should have been one';
+
+ELSIF
+NOT ((SELECT FROM parents INTERSECT SELECT FROM subjects) = subjects
+AND  (SELECT FROM parents INTERSECT SELECT FROM samples) = samples
+AND  (SELECT FROM parents INTERSECT SELECT FROM (SELECT FROM subjects UNION SELECT FROM samples)) = parents)
+THEN
+
+RAISE EXCEPTION 'mismatch between parents, subjects, or samples: % % % %', NEW.id, parents, subjects, samples
+USING HINT = 'there might be extra parents, subjects, or samples, check the set differences';
+
+END IF;
+
+END;
+$$ language plpgsql;
+
+CREATE OR REPLACE TRIGGER trigger_af_ins_instance_parent AFTER INSERT ON instance_parent FOR EACH ROW EXECUTE PROCEDURE check_inst_susa_parent();
