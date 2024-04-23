@@ -28,61 +28,69 @@ INSERT INTO objects (id_type, id, id_file) VALUES
 ('package', :'package_uuid_3', 0)
 ;
 
-INSERT INTO sds_specimen (dataset, specimen_id) VALUES
-(:'dataset_uuid_1', 'sub-1'),
-(:'dataset_uuid_2', 'sub-1'),
-(:'dataset_uuid_3', 'sub-1'),
-(:'dataset_uuid_4', 'sub-1')
-;
-
-SELECT * FROM  sds_specimen;
-
-INSERT INTO sds_specimen_equiv (left_thing, right_thing) VALUES (1, 2);
-SELECT * FROM  sds_specimen_equiv ORDER BY left_thing;
-
-INSERT INTO sds_specimen_equiv (left_thing, right_thing) VALUES (3, 4);
-SELECT * FROM  sds_specimen_equiv ORDER BY left_thing;
-
-SELECT * FROM get_all_equivs(2, 3);
-INSERT INTO sds_specimen_equiv (left_thing, right_thing) VALUES (2, 3);
-SELECT * FROM  sds_specimen_equiv ORDER BY left_thing;
-
-INSERT INTO class_measured (iri, label) VALUES
+INSERT INTO class_measured (iri, label) VALUES -- NOTE TO SELF class measured is where we handle hierarchical resolution we don't do that for categorical values right now which is why we have the complexity in this table
 ('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/sds/participant', 'participant'),
 ('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/sds/specimen', 'specimen'),
-('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/sds/subject', 'subject'),
-('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/sds/sample', 'sample'),
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/sds/subject', 'subject'),  -- XXX now dragged up to instance_type
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/sds/sample', 'sample'),  -- XXX now dragged up to instance_type
 ('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/sds/site', 'site'),
 ('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/sds/performance', 'performance'),
 
-('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/nerve', 'nerve'), -- nerve or branch
-('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/nerve/cross-section', 'nerve-cross-section'),
-('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/nerve/longitudinal', 'nerve-longitudinal'),
+-- FIXME ncbitax obvs, with subject now at type level we can include the species taxononmy here instead of in controlled terms
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/human', 'human'),
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/rat', 'rat'),
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/mouse', 'mouse'),
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/pig', 'pig'),
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/dog', 'dog'),
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/cat', 'cat'),
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/ferret', 'ferret'),
 
-('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/cell', 'cell'),
-('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/neuron', 'neuron'),
-('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/soma', 'soma'),
-('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/axon', 'axon'),
-('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/dendrite', 'dendrite'),
+--('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual', 'virtual'), -- a data signature of a real thing (don't do it this way)
 
-('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/nerve-segment', 'nerve-segment'), -- reva ft unit
-('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/fascicle', 'fascicle'),
-('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/fiber', 'fiber'),
-('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/tissue', 'tissue'),
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/nerve', 'nerve'), -- nerve or branch but really just nerve or part of nerve
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/nerve/volume', 'nerve-volume'), -- aka
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/nerve/cross-section', 'nerve-cross-section'), -- an atomic section wrt the data
+--('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/nerve-segment', 'nerve-segment'), -- reva ft unit XXX do not use equiv to volume
+--('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/segment/cross-section', 'segment-cross-section'), -- single z plane, TODO do we need a data perspective name for these, e.g. image-z-stack-plane 3d-volume-plane
 
-('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/segment/cross-section', 'segment-cross-section'), -- single z plane, TODO do we need a data perspective name for these, e.g. image-z-stack-plane 3d-volume-plane
-('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/fascicle/cross-section', 'fascicle-cross-section'),
-('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/fiber/cross-section', 'fiber-cross-section'),
-('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/tissue/cross-section', 'tissue-cross-section'),
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/cell', 'cell'),
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/neuron', 'neuron'),
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/soma', 'soma'),
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/axon', 'axon'),
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/dendrite', 'dendrite'),
 
-('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/fascicle/longitudinal', 'fascicle-longitudinal'),
-('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/fiber/longitudinal', 'fiber-longitudinal'), -- FIXME axon ??
-('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/virtual/tissue/longitudinal', 'tissue-longitudinal'), -- this is the class we probably use for uct
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/fascicle', 'fascicle'),
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/fiber', 'fiber'),
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/tissue', 'tissue'),
+
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/fascicle/cross-section', 'fascicle-cross-section'),
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/fiber/cross-section', 'fiber-cross-section'),
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/tissue/cross-section', 'tissue-cross-section'),
+
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/fascicle/volume', 'fascicle-volume'),
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/fiber/volume', 'fiber-volume'), -- FIXME axon ??
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/tissue/volume', 'tissue-volume'), -- this is the class we probably use for uct
 
 --('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/', ''),
 --('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/', ''),
 
 ('https://uri.interlex.org/tgbugs/uris/readable/quantdb/classes/thing', 'class thing')
+;
+
+INSERT INTO class_parent (id, parent) VALUES
+-- TODO populate from subClassOf query from sparc-methods.ttl
+-- FIXME also need to map to thing in cases where missing?
+(inst_desc_from_label('specimen'),               inst_desc_from_label('participant')),
+(inst_desc_from_label('subject'),                inst_desc_from_label('specimen')),
+(inst_desc_from_label('sample'),                 inst_desc_from_label('specimen')), -- FIXME TODO do we have multi-parent for samples with types?
+(inst_desc_from_label('nerve-volume'),           inst_desc_from_label('nerve')),
+(inst_desc_from_label('nerve-cross-section'),    inst_desc_from_label('nerve')),
+(inst_desc_from_label('fascicle-volume'),        inst_desc_from_label('fascicle')),
+(inst_desc_from_label('fascicle-cross-section'), inst_desc_from_label('fascicle')),
+(inst_desc_from_label('fiber-volume'),           inst_desc_from_label('fiber')),
+(inst_desc_from_label('fiber-cross-section'),    inst_desc_from_label('fiber'))
+--(inst_desc_from_label(''),                       inst_desc_from_label('')),
+
 ;
 
 INSERT INTO controlled_terms (iri, label) VALUES
@@ -101,10 +109,10 @@ INSERT INTO cat_descriptors (label, is_measuring, range) VALUES
 
 -- these are examples that probably should not be used on real data because they are too
 -- granular to be useful without the ability to traverse in the hierarchy
-('fasciclePositiveStainType', inst_desc_from_label('fascicle-longitudinal'),  'controlled'),
+('fasciclePositiveStainType', inst_desc_from_label('fascicle-volume'),  'controlled'),
 ('fasciclePositiveStainType', inst_desc_from_label('fascicle-cross-section'),  'controlled'),
 
-('fascicleNegativeStainType', inst_desc_from_label('fascicle-longitudinal'),  'controlled'),
+('fascicleNegativeStainType', inst_desc_from_label('fascicle-volume'),  'controlled'),
 ('fascicleNegativeStainType', inst_desc_from_label('fascicle-cross-section'),  'controlled'),
 
 ('positiveStainType', NULL, 'controlled'), -- this is a more practical approach
@@ -135,10 +143,12 @@ INSERT INTO aspect_parent (id, parent) VALUES
 
 INSERT INTO units (iri, label) VALUES
 -- obvious we need synonyms
+-- TODO need to decide on naming convention for units becuase label is likely to be the primary interface to the table
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/unit/micrometer', 'um'),
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/unit/meter', 'm')
 -- ('http://uri.interlex.org/tgbugs/uris/readable/aspect/unit/', ''),
 ;
+
 
 INSERT INTO quant_descriptors (label, is_measuring, aspect, unit, aggregation_type) VALUES
 -- lack of support for hierarchical queries over aspects is a killer here, and also for classes
@@ -160,14 +170,14 @@ aspect_from_label('diameter'),
 unit_from_label('um'),
 'max'), -- FIXME ... not really an agg type ...
 
-('fascicle longitudinal diameter orth-ap-axis um minimum',
-inst_desc_from_label('fascicle-longitudinal'),
+('fascicle volume diameter orth-ap-axis um minimum',
+inst_desc_from_label('fascicle-volume'),
 aspect_from_label('diameter-orthogonal-to-anterior-posterior-axis'), -- and here we see the problem
 unit_from_label('um'),
 'min'),
 
-('fascicle longitudinal length parallel-to-ap-axis um',
-inst_desc_from_label('fascicle-longitudinal'),
+('fascicle volume length parallel-to-ap-axis um',
+inst_desc_from_label('fascicle-volume'),
 aspect_from_label('length-parallel-to-anterior-posterior-axis'),
 unit_from_label('um'),
 'instance')
@@ -258,18 +268,54 @@ WHERE cv.object_id is NULL;
 
 -- the order of inserts here more or less corresponds to the order needed for the workflow
 
-INSERT INTO sds_specimen (dataset, specimen_id) VALUES
-(:'dataset_uuid_1', 'sam-seg-c7-A-level-1') -- FIXME I think we need a parent column here as well
+INSERT INTO instance_measured (type, inst_desc, dataset, formal_id) VALUES
+('subject', inst_desc_from_label('human'), :'dataset_uuid_1', 'sub-1'),
+('sample', inst_desc_from_label('nerve-volume'), :'dataset_uuid_1', 'sam-l'), -- FIXME and here we see the issue with nerve vs nerve-thing
+('sample', inst_desc_from_label('nerve-cross-section'), :'dataset_uuid_1', 'sam-l-seg-c7-A-level-1'),
+
+('subject', inst_desc_from_label('human'), :'dataset_uuid_2', 'sub-1'),
+('subject', inst_desc_from_label('human'), :'dataset_uuid_3', 'sub-1'),
+('subject', inst_desc_from_label('human'), :'dataset_uuid_4', 'sub-1')
 ;
 
-INSERT INTO instance_measured (inst_desc, dataset, formal_id, specimen_id, subject_id) VALUES
+SELECT * FROM  instance_measured;
+
+INSERT INTO inst_equiv (left_thing, right_thing) VALUES (1, 2);
+SELECT * FROM  inst_equiv ORDER BY left_thing;
+
+INSERT INTO inst_equiv (left_thing, right_thing) VALUES (3, 4);
+SELECT * FROM  inst_equiv ORDER BY left_thing;
+
+SELECT * FROM get_all_equivs(2, 3);
+INSERT INTO inst_equiv (left_thing, right_thing) VALUES (2, 3);
+SELECT * FROM  inst_equiv ORDER BY left_thing;
+
+INSERT INTO instance_subject (id, subject) VALUES
+(inst_from_dataset_id(:'dataset_uuid_1', 'sam-l'), inst_from_dataset_id(:'dataset_uuid_1', 'sub-1')),
+(inst_from_dataset_id(:'dataset_uuid_1', 'sam-l-seg-c7-A-level-1'), inst_from_dataset_id(:'dataset_uuid_1', 'sub-1'))
+;
+
+INSERT INTO instance_measured (type, inst_desc, dataset, formal_id) VALUES
 (
+'below',
 inst_desc_from_label('fascicle-cross-section'),
 :'dataset_uuid_1',
-'fsccs-1',
-spec_from_dataset_id(:'dataset_uuid_1', 'sam-seg-c7-A-level-1'),
-spec_from_dataset_id(:'dataset_uuid_1', 'sub-1') -- FIXME we need a way to validate this, which means we need the transitive parent table
+'fsccs-1'
 )
+;
+
+INSERT INTO instance_parent (id, parent) VALUES
+(inst_from_dataset_id(:'dataset_uuid_1', 'sam-l'), inst_from_dataset_id(:'dataset_uuid_1', 'sub-1')),
+(inst_from_dataset_id(:'dataset_uuid_1', 'sam-l-seg-c7-A-level-1'), inst_from_dataset_id(:'dataset_uuid_1', 'sam-l')),
+(inst_from_dataset_id(:'dataset_uuid_1', 'fsccs-1'), inst_from_dataset_id(:'dataset_uuid_1', 'sam-l-seg-c7-A-level-1'))
+;
+
+INSERT INTO instance_subject (id, subject) VALUES
+(inst_from_dataset_id(:'dataset_uuid_1', 'fsccs-1'), inst_from_dataset_id(:'dataset_uuid_1', 'sub-1'))
+;
+
+INSERT INTO instance_sample (id, sample) VALUES
+(inst_from_dataset_id(:'dataset_uuid_1', 'fsccs-1'), inst_from_dataset_id(:'dataset_uuid_1', 'sam-l-seg-c7-A-level-1'))
 ;
 
 INSERT INTO cat_values (object_id, inst_desc, cat_desc, measured_instance, value_open, value_controlled) VALUES
@@ -299,7 +345,6 @@ SELECT * FROM get_all_values_example();
 SELECT 'guo-2';
 SELECT * FROM get_unextracte_objects();
 
-
 -- hierachy testing
 SELECT * FROM get_aspect_parents(aspect_from_label('diameter-orthogonal-to-anterior-posterior-axis'));
 SELECT * FROM get_aspect_parent_edges(aspect_from_label('diameter-orthogonal-to-anterior-posterior-axis'));
@@ -309,8 +354,8 @@ SELECT * FROM get_class_parents(inst_desc_from_label('fascicle-cross-section'));
 SELECT * FROM get_class_parent_edges(inst_desc_from_label('fascicle-cross-section'));
 SELECT * FROM get_all_class_parents();
 
-SELECT * FROM get_instance_parents(inst_from_dataset_id('diameter-orthogonal-to-anterior-posterior-axis'));
-SELECT * FROM get_instance_parent_edges(inst_from_dataset_id('diameter-orthogonal-to-anterior-posterior-axis'));
+SELECT * FROM get_instance_parents(inst_from_dataset_id(:'dataset_uuid_1', 'fsccs-1'));
+SELECT * FROM get_instance_parent_edges(inst_from_dataset_id(:'dataset_uuid_1', 'fsccs-1'));
 SELECT * FROM get_all_instance_parents();
 
 -- hrm do we need get_x_children? answer seems to be yes?
@@ -320,8 +365,26 @@ SELECT * FROM get_all_instance_parents();
 -- using explain we can see that this version get_aspect_parents in a loop for all aspects (I think) which is dumb
 -- but the query planner may be able to figure it out diesn't actually need to do that for the entire sub select
 -- but only for a0.id ??? yeah, seems so
+/*
 select * from quant_values as qv
 join quant_descriptors as qd on qv.quant_desc = qd.id
 join aspects as a0 on qd.aspect = a0.id
 join (select a.id, p.parent from aspects as a cross join get_aspect_parents(a.id) as p) as ap on ap.id = a0.id
 where ap.parent = aspect_from_label('distance');
+*/
+
+-- FIXME for our join use case we likely want this to include the starting class itself
+SELECT * FROM get_aspect_children(aspect_from_label('distance'));
+SELECT * FROM get_aspect_child_edges(aspect_from_label('distance'));
+
+SELECT * FROM get_aspect_children(aspect_from_label('diameter'));
+SELECT * FROM get_aspect_child_edges(aspect_from_label('diameter'));
+
+select qv from get_aspect_children(aspect_from_label('distance')) as ap
+join quant_descriptors as qd on qd.aspect = ap.child
+join quant_values as qv on qv.quant_desc = qd.id;
+
+--SELECT * FROM get_class_children(inst_desc_from_label('participant'));
+
+SELECT cm.label FROM get_class_children(inst_desc_from_label('participant')) as c join class_measured as cm on c.child = cm.id ;
+SELECT cm.label FROM get_class_children(inst_desc_from_label('nerve')) as c join class_measured as cm on c.child = cm.id ;
