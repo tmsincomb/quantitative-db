@@ -16,7 +16,7 @@ INSERT INTO objects (id_type, id) VALUES
 ('dataset', :'dataset_uuid_1'),
 ('dataset', :'dataset_uuid_2'),
 ('dataset', :'dataset_uuid_3'),
-('dataset', :'dataset_uuid_4'),
+('dataset', :'dataset_uuid_4')
 ;
 
 /* -- TODO test-negative
@@ -31,8 +31,12 @@ INSERT INTO objects (id_type, id, id_file) VALUES
 ('package', :'package_uuid_3', 0)
 ;
 
+INSERT INTO objects_internal (id, label) VALUES
+(:'internal_uuid_1', 'trigger_objects_uuid_zero_to_one')
+;
+
 INSERT INTO objects (id_type, id, id_internal) VALUES
-('internal', :'internal_uuid_1', 'trigger_objects_uuid_zero_to_one')
+('internal', :'internal_uuid_1', :'internal_uuid_1')
 ;
 
 INSERT INTO class_measured (iri, label) VALUES -- NOTE TO SELF class measured is where we handle hierarchical resolution we don't do that for categorical values right now which is why we have the complexity in this table
@@ -251,7 +255,7 @@ INSERT INTO addresses (address_type, field_address) VALUES
 ('tabular-header', 'stain'),
 ('tabular-header', 'diameter'),
 ('tabular-header', 'diameter-min'),
-('tabular-header', 'diameter-max'),
+('tabular-header', 'diameter-max')
 --('image-axis-index', 'x'), -- TODO we aren't reading values out here, we are using implicit values to assign an id
 --(,)
 ;
@@ -331,14 +335,14 @@ WHERE cv.object_id is NULL;
 
 -- the order of inserts here more or less corresponds to the order needed for the workflow
 
-INSERT INTO instance_measured (type, inst_desc, dataset, formal_id) VALUES
-('subject', inst_desc_from_label('human'), :'dataset_uuid_1', 'sub-1'),
-('sample', inst_desc_from_label('nerve-volume'), :'dataset_uuid_1', 'sam-l'), -- FIXME and here we see the issue with nerve vs nerve-thing
-('sample', inst_desc_from_label('nerve-cross-section'), :'dataset_uuid_1', 'sam-l-seg-c7-A-level-1'),
+INSERT INTO instance_measured (type, inst_desc, dataset, formal_id, sub_id) VALUES
+('subject', inst_desc_from_label('human'), :'dataset_uuid_1', 'sub-1', NULL),
+('sample', inst_desc_from_label('nerve-volume'), :'dataset_uuid_1', 'sam-l', 'sub-1'), -- FIXME and here we see the issue with nerve vs nerve-thing
+('sample', inst_desc_from_label('nerve-cross-section'), :'dataset_uuid_1', 'sam-l-seg-c7-A-level-1', 'sub-1'),
 
-('subject', inst_desc_from_label('human'), :'dataset_uuid_2', 'sub-1'),
-('subject', inst_desc_from_label('human'), :'dataset_uuid_3', 'sub-1'),
-('subject', inst_desc_from_label('human'), :'dataset_uuid_4', 'sub-1')
+('subject', inst_desc_from_label('human'), :'dataset_uuid_2', 'sub-1', NULL),
+('subject', inst_desc_from_label('human'), :'dataset_uuid_3', 'sub-1', NULL),
+('subject', inst_desc_from_label('human'), :'dataset_uuid_4', 'sub-1', NULL)
 ;
 
 SELECT * FROM  instance_measured;
@@ -353,17 +357,21 @@ SELECT * FROM get_all_equivs(2, 3);
 INSERT INTO inst_equiv (left_thing, right_thing) VALUES (2, 3);
 SELECT * FROM  inst_equiv ORDER BY left_thing;
 
+/*
 INSERT INTO instance_subject (id, subject) VALUES
 (inst_from_dataset_id(:'dataset_uuid_1', 'sam-l'), inst_from_dataset_id(:'dataset_uuid_1', 'sub-1')),
 (inst_from_dataset_id(:'dataset_uuid_1', 'sam-l-seg-c7-A-level-1'), inst_from_dataset_id(:'dataset_uuid_1', 'sub-1'))
 ;
+*/
 
-INSERT INTO instance_measured (type, inst_desc, dataset, formal_id) VALUES
+INSERT INTO instance_measured (type, inst_desc, dataset, formal_id, sub_id, sam_id) VALUES
 (
 'below',
 inst_desc_from_label('fascicle-cross-section'),
 :'dataset_uuid_1',
-'fsccs-1'
+'fsccs-1',
+'sub-1',
+'sam-l-seg-c7-A-level-1'
 )
 ;
 
@@ -373,6 +381,7 @@ INSERT INTO instance_parent (id, parent) VALUES
 (inst_from_dataset_id(:'dataset_uuid_1', 'fsccs-1'), inst_from_dataset_id(:'dataset_uuid_1', 'sam-l-seg-c7-A-level-1'))
 ;
 
+/*
 INSERT INTO instance_subject (id, subject) VALUES
 (inst_from_dataset_id(:'dataset_uuid_1', 'fsccs-1'), inst_from_dataset_id(:'dataset_uuid_1', 'sub-1'))
 ;
@@ -380,6 +389,7 @@ INSERT INTO instance_subject (id, subject) VALUES
 INSERT INTO instance_sample (id, sample) VALUES
 (inst_from_dataset_id(:'dataset_uuid_1', 'fsccs-1'), inst_from_dataset_id(:'dataset_uuid_1', 'sam-l-seg-c7-A-level-1'))
 ;
+*/
 
 INSERT INTO cat_values (object_id, inst_desc, cat_desc, measured_instance, value_open, value_controlled) VALUES
 (

@@ -189,7 +189,7 @@ sam_id text check (sam_id ~ '^sam-'), -- alternative to instance_sample
 UNIQUE (dataset, formal_id),
 constraint constraint_instance_measured_type_formal_id check (type = 'below' and not (formal_id ~ '^(sub|sam)-') or type = 'subject' and formal_id ~ '^sub-' or type = 'sample' and formal_id ~ '^sam-'),
 constraint constraint_instance_measured_type_sub_id check ((type = 'subject') or (sub_id is not null)), -- FIXME cases where a cell line is the subject are going to confuse people, welcome to names not matching their meaning
-constraint constraint_instance_measured_type_sam_id check (type = 'below' and (sub_id is not null or sam_id is not null)) -- XXX there is not a general way to enforce that there must be a sample, e.g. a mri experiment can have virtual of sections of the brain without there being samples in the dataset at all, only subjects and performances
+constraint constraint_instance_measured_type_below check (type <> 'below' or type = 'below' and (sub_id is not null or sam_id is not null)) -- XXX there is not a general way to enforce that there must be a sample, e.g. a mri experiment can have virtual of sections of the brain without there being samples in the dataset at all, only subjects and performances
 );
 
 /*
@@ -671,10 +671,8 @@ JOIN aspects AS a ON qd.aspect = a.id
 JOIN class_measured AS id ON qv.inst_desc = id.id
 JOIN instance_measured AS im ON qv.measured_instance = im.id
 
-JOIN instance_subject AS isu ON isu.id = im.id
-JOIN instance_measured AS suim ON isu.subject = suim.id
-JOIN instance_sample AS isa ON isa.id = im.id
-JOIN instance_measured AS saim ON isa.sample = saim.id
+JOIN instance_measured AS suim ON im.dataset = suim.dataset AND im.sub_id = suim.formal_id
+JOIN instance_measured AS saim ON im.dataset = saim.dataset AND im.sam_id = saim.formal_id
 
 UNION
 
@@ -684,10 +682,8 @@ JOIN cat_descriptors AS cd ON cv.cat_desc = cd.id
 JOIN class_measured AS id ON cv.inst_desc = id.id
 JOIN instance_measured AS im ON cv.measured_instance = im.id
 
-JOIN instance_subject AS isu ON isu.id = im.id
-JOIN instance_measured AS suim ON isu.subject = suim.id
-JOIN instance_sample AS isa ON isa.id = im.id
-JOIN instance_measured AS saim ON isa.sample = saim.id
+JOIN instance_measured AS suim ON im.dataset = suim.dataset AND im.sub_id = suim.formal_id
+JOIN instance_measured AS saim ON im.dataset = saim.dataset AND im.sam_id = saim.formal_id
 
 ;
 
@@ -946,22 +942,27 @@ CREATE OR REPLACE FUNCTION check_inst_susa_parent() RETURNS trigger as $$
 -- before the children, it does mean that we can disable the trigger when loading from a dump
 -- though ...
 DECLARE
-parents record;
-subjects record;
-samples record;
+rec record;
 BEGIN
 
-SELECT im FROM instance_measured AS im WHERE im.id IN (SELECT * FROM get_instance_parents(NEW.id)) INTO parents;
-
-SELECT suim FROM instance_measured AS suim
+WITH
+parents AS (SELECT im FROM instance_measured AS im WHERE im.id IN (SELECT * FROM get_instance_parents(NEW.id))),
+subjects AS (SELECT suim FROM instance_measured AS im
 JOIN instance_measured AS suim ON im.dataset = suim.dataset AND suim.formal_id = im.sub_id
-WHERE im.id = NEW.id
-INTO subjects;
-
-SELECT saim FROM instance_measured AS im
+WHERE im.id = NEW.id),
+samples AS (SELECT saim FROM instance_measured AS im
 JOIN instance_measured AS saim ON im.dataset = saim.dataset AND saim.formal_id = im.sam_id
-WHERE im.id = NEW.id
-INTO samples;
+WHERE im.id = NEW.id)
+SELECT -- FIXME surely there is a more efficient way to do this
+(((SELECT count(*) FROM samples) > 0 OR  (SELECT count(*) from subjects) > 0) AND (SELECT count(*) FROM parents) = 0) AS one,
+( (SELECT count(*) FROM samples) = 0 AND (SELECT count(*) from subjects) = 0  AND (SELECT count(*) FROM parents) > 0) AS two,
+(    (SELECT count(*) FROM (SELECT * FROM parents INTERSECT SELECT * FROM subjects)) = (SELECT count(*) FROM subjects)
+AND  (SELECT count(*) FROM (SELECT * FROM parents INTERSECT SELECT * FROM samples))  = (SELECT count(*) FROM samples)) AS three
+/*
+-- we cannot check against parents in this last case because it can contain intermediates therefore we can only check parents contain all referenced subjects and samples, going the other way around we know we will be missing any intervening samples, but those will have been checked when they were inserted
+AND  (SELECT count(*) FROM (SELECT * FROM parents INTERSECT SELECT * FROM (SELECT * FROM subjects UNION SELECT * FROM samples))) = (SELECT count(*) FROM parents))
+*/
+INTO rec;
 
 /*
 FIXME TODO must handle the multi-parent case, which can happen when samples are
@@ -970,26 +971,24 @@ now then we have to reify subject populations and sample populations for the pur
 of referential integrity
 */
 
-IF    (samples is not null or  subjects is not null and parents is     null) THEN
+IF rec.one THEN
 
-RAISE EXCEPTION 'parents missing for instance which references a subject or a sample: % % %', NEW.id, suim, saim
+RAISE EXCEPTION 'parents missing for instance which references a subject or a sample: % % %', NEW.id, NEW.sub_id, NEW.sam_id
 USING HINT = 'forgot to insert into the parents table';
 
-ELSIF (samples is     null and subjects is     null and parents is not null) THEN
+ELSIF rec.two THEN
 
-RAISE EXCEPTION 'subjects and samples missing on instance when there are parents: % %', NEW.id, parents
+RAISE EXCEPTION 'subjects and samples missing on instance when there are parents: % %', NEW.id, (SELECT * FROM get_instance_parents(NEW.id))
 USING HINT = 'instance did not include subject/sample reference when there should have been one';
 
-ELSIF
-NOT ((SELECT FROM parents INTERSECT SELECT FROM subjects) = subjects
-AND  (SELECT FROM parents INTERSECT SELECT FROM samples) = samples
-AND  (SELECT FROM parents INTERSECT SELECT FROM (SELECT FROM subjects UNION SELECT FROM samples)) = parents)
-THEN
+ELSIF NOT rec.three THEN
 
-RAISE EXCEPTION 'mismatch between parents, subjects, or samples: % % % %', NEW.id, parents, subjects, samples
+RAISE EXCEPTION 'mismatch between parents, subjects, or samples: % % % %', NEW.id, (SELECT * FROM get_instance_parents(NEW.id)), NEW.sub_id, NEW.sam_id
 USING HINT = 'there might be extra parents, subjects, or samples, check the set differences';
 
 END IF;
+
+RETURN NULL;
 
 END;
 $$ language plpgsql;
