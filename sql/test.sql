@@ -111,8 +111,9 @@ INSERT INTO controlled_terms (iri, label) VALUES
 
 ('http://purl.obolibrary.org/obo/UBERON_0001021', 'nerve'),
 
---('https://uri.interlex.org/tgbugs/uris/readable/quantdb/controlled/', '')
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/controlled/microct', 'microct'),
 
+--('https://uri.interlex.org/tgbugs/uris/readable/quantdb/controlled/', ''),
 ('https://uri.interlex.org/tgbugs/uris/readable/quantdb/controlled/thing', 'controlled thing')
 ;
 
@@ -127,7 +128,9 @@ INSERT INTO cat_descriptors (label, is_measuring, range) VALUES
 ('fascicleNegativeStainType', inst_desc_from_label('fascicle-cross-section'),  'controlled'),
 
 ('positiveStainType', NULL, 'controlled'), -- this is a more practical approach
-('hasAnatomicalTag', NULL, 'controlled')
+('hasDataAboutItModality', NULL, 'controlled'),
+('hasAnatomicalTag', NULL, 'controlled'),
+('bottom', NULL, 'controlled')
 ;
 
 INSERT INTO aspects (iri, label) VALUES
@@ -138,6 +141,10 @@ INSERT INTO aspects (iri, label) VALUES
 -- which two points you pick)
 
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance', 'distance'),
+
+--('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-via-reva-ft-sample-id-raw', 'distance-via-reva-ft-sample-id-raw'),
+('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-via-reva-ft-sample-id-normalized', 'distance-via-reva-ft-sample-id-normalized'),
+
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/length', 'length'),
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/diameter', 'diameter'),
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/diameter-orthogonal-to-anterior-posterior-axis', 'diameter-orthogonal-to-anterior-posterior-axis'),
@@ -147,6 +154,8 @@ INSERT INTO aspects (iri, label) VALUES
 
 INSERT INTO aspect_parent (id, parent) VALUES
 (aspect_from_label('length'), aspect_from_label('distance')),
+--(aspect_from_label('distance-via-reva-ft-sample-id-raw'), aspect_from_label('distance')),
+(aspect_from_label('distance-via-reva-ft-sample-id-normalized'), aspect_from_label('distance')),
 (aspect_from_label('diameter'), aspect_from_label('length')),
 (aspect_from_label('diameter-orthogonal-to-anterior-posterior-axis'), aspect_from_label('diameter')),
 (aspect_from_label('length-parallel-to-anterior-posterior-axis'), aspect_from_label('length'))
@@ -218,6 +227,30 @@ NULL,
 'min'
 ),
 
+('reva ft sample anatomical location distance index raw',
+inst_desc_from_label('nerve-volume'),
+aspect_from_label('distance-via-reva-ft-sample-id-raw'),
+NULL,
+'instance'),
+
+('reva ft sample anatomical location distance index normalized',
+inst_desc_from_label('nerve-volume'),
+aspect_from_label('distance-via-reva-ft-sample-id-normalized'),
+NULL,
+'instance'),  -- FIXME this isn't really instance, it is normalized across a whole population, which we might want to indicate here
+
+('reva ft sample anatomical location distance index normalized min',
+inst_desc_from_label('nerve-volume'),
+aspect_from_label('distance-via-reva-ft-sample-id-normalized'),
+NULL,
+'min'),
+
+('reva ft sample anatomical location distance index normalized max',
+inst_desc_from_label('nerve-volume'),
+aspect_from_label('distance-via-reva-ft-sample-id-normalized'),
+NULL,
+'max'),
+
 ('fascicle cross section diameter um',
 inst_desc_from_label('fascicle-cross-section'),
 aspect_from_label('diameter'),
@@ -251,11 +284,41 @@ unit_from_label('um'),
 ;
 
 INSERT INTO addresses (address_type, field_address) VALUES
+('constant', NULL),
+('constant', 'literally this value right here'),
 ('tabular-header', 'id'),
 ('tabular-header', 'stain'),
 ('tabular-header', 'diameter'),
 ('tabular-header', 'diameter-min'),
-('tabular-header', 'diameter-max')
+('tabular-header', 'diameter-max'),
+
+('tabular-header', 'subject_id'),
+('tabular-header', 'sample_id'),
+('tabular-header', 'species'),
+('tabular-header', 'sample_type'),
+('tabular-header', 'modality'),
+
+('json-path-with-types', '#/curation-export/subjects/#int/subject_id'), -- [i for i, s in enumerate(subjects) if s['subject_id'] == subject_id][0]
+('json-path-with-types', '#/curation-export/subjects/#int/species'),
+('json-path-with-types', '#/curation-export/samples/#int/sample_id'),
+('json-path-with-types', '#/curation-export/samples/#int/sample_type'),
+('json-path-with-types', '#/curation-export/samples/#int/raw_anat_index'),
+('json-path-with-types', '#/curation-export/samples/#int/norm_anat_index'),
+('json-path-with-types', '#/curation-export/manifest/#int/modality'),  -- FIXME not real
+('json-path-with-types', '#/combined/{object_uuid}/external/modality'),  -- FIXME not real
+
+('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path'),
+('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-modality'),
+('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-raw-anat-index'),
+('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index'),
+('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-min'),
+('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-max'),
+('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-subject-id'),
+('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-sample-id'),
+
+('json-path-with-types', '#/local/tom-made-it-up/species'),
+('json-path-with-types', '#/local/tom-made-it-up/sample_type')
+
 --('image-axis-index', 'x'), -- TODO we aren't reading values out here, we are using implicit values to assign an id
 --(,)
 ;
