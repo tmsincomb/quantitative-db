@@ -23,8 +23,27 @@ exit
 ** scratch
 #+begin_src sql
 -- write queries here
-
 #+end_src
+
+** examples
+*** get_all_values_example
+#+begin_src sql
+select * from get_all_values_example() where agg_type in ('min', 'max') order by value limit 10;
+#+end_src
+
+#+RESULTS:
+|                value | ... | aspect_o_pred                             | agg_type | inst_desc    | formal_id    | ... | subject_id | dset          | obj           |
+|----------------------+-----+-------------------------------------------+----------+--------------+--------------+-----+------------+---------------+---------------|
+|                  0.0 |     | distance-via-reva-ft-sample-id-normalized | min      | nerve-volume | sam-l-seg-c1 |     | sub-f001   | aa43 ... 8afc | 59ca ... 11bc |
+|                  0.0 |     | distance-via-reva-ft-sample-id-normalized | min      | nerve-volume | sam-r-seg-c1 |     | sub-f001   | aa43 ... 8afc | 59ca ... 11bc |
+| 0.029325513196480937 |     | distance-via-reva-ft-sample-id-normalized | min      | nerve-volume | sam-l-seg-c2 |     | sub-f001   | aa43 ... 8afc | 59ca ... 11bc |
+| 0.029325513196480937 |     | distance-via-reva-ft-sample-id-normalized | min      | nerve-volume | sam-r-seg-c2 |     | sub-f001   | aa43 ... 8afc | 59ca ... 11bc |
+|  0.03225806451612903 |     | distance-via-reva-ft-sample-id-normalized | max      | nerve-volume | sam-r-seg-c1 |     | sub-f001   | aa43 ... 8afc | 59ca ... 11bc |
+|  0.03225806451612903 |     | distance-via-reva-ft-sample-id-normalized | max      | nerve-volume | sam-l-seg-c1 |     | sub-f001   | aa43 ... 8afc | 59ca ... 11bc |
+|  0.05865102639296187 |     | distance-via-reva-ft-sample-id-normalized | min      | nerve-volume | sam-r-seg-c3 |     | sub-f001   | aa43 ... 8afc | 59ca ... 11bc |
+|  0.05865102639296187 |     | distance-via-reva-ft-sample-id-normalized | min      | nerve-volume | sam-l-seg-c3 |     | sub-f001   | aa43 ... 8afc | 59ca ... 11bc |
+|  0.06158357771260997 |     | distance-via-reva-ft-sample-id-normalized | max      | nerve-volume | sam-r-seg-c2 |     | sub-f001   | aa43 ... 8afc | 59ca ... 11bc |
+|  0.06158357771260997 |     | distance-via-reva-ft-sample-id-normalized | max      | nerve-volume | sam-l-seg-c2 |     | sub-f001   | aa43 ... 8afc | 59ca ... 11bc |
 
 ** admin
 :PROPERTIES:
