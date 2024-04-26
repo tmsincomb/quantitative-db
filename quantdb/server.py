@@ -62,6 +62,10 @@ def test():
 
         f'{base}values/inst?object={actual_package_uuid}',
         f'{base}values/inst?object={actual_package_uuid}&union-cat-quant=true',
+
+        f'{base}desc/inst',
+        f'{base}desc/cat',
+        f'{base}desc/quant',
     )
     resps = []
     for url in urls:
@@ -108,6 +112,7 @@ url_sql_where = (  # TODO arity spec here
     ('unit', 'unit', 'u.label = any(:unit)', 'quant'),
     ('aspect', 'aspect', 'ain.label = any(:aspect)', 'quant'),
     ('agg-type', 'agg_type', 'qd.aggregation_type = :agg_type', 'quant'),
+    # TODO shape
 
     ('value-quant', 'value_quant', 'qv.value = :value_quant', 'quant'),
     ('value-quant-margin', 'value_quant_margin', 'qv.value <= :value_quant + :value_quant_margin AND qv.value >= :value_quant - :value_quant_margin', 'quant'),
@@ -285,6 +290,7 @@ def getArgs(request):
         'unit': [],
         'aspect': [],
         'agg-type': None,
+        # TODO shape
 
         'value-quant': None,
         'value-quant-margin': None,
@@ -363,7 +369,7 @@ def make_app(db=None, name='quantdb-server'):
 
     bp = '/api/1/'
 
-    def default_flow(endpoint, record_type, kwargs, query_fun, json_fun):
+    def default_flow(endpoint, record_type, query_fun, json_fun):
         try:
             kwargs = getArgs(request)
         except Exception as e:
@@ -394,40 +400,60 @@ def make_app(db=None, name='quantdb-server'):
     @app.route(f'{bp}/objects')
     def route_1_objects():
         "objects with derived values that match all criteria"
-        return default_flow('objects', 'object', kwargs, main_query, to_json)
+        return default_flow('objects', 'object', main_query, to_json)
 
     @app.route(f'{bp}/desc/inst')
     @app.route(f'{bp}/descriptors/inst')
     @app.route(f'{bp}/classes')
-    def route_1_desc_inst(): pass
+    def route_1_desc_inst():
+        def query(endpoint, kwargs):
+            return 'select id.iri, id.label from class_measured as id', {}
+
+        return default_flow('desc/inst', 'desc-inst', query, to_json)  # TODO likely need different args
 
     @app.route(f'{bp}/desc/cat')
     @app.route(f'{bp}/descriptors/cat')
     @app.route(f'{bp}/predicates')
-    def route_1_desc_cat(): pass
+    def route_1_desc_cat():
+        def query(endpoint, kwargs):
+            return ('select cd.label, cdid.label AS domain, cd.range, cd.description '
+                    'from cat_descriptors as cd '
+                    'left outer join class_measured as cdid on cdid.id = cd.is_measuring'
+                    ), {}
+
+        return default_flow('desc/cat', 'desc-cat', query, to_json)  # TODO likely need different args e.g. to filter by inst_desc
 
     @app.route(f'{bp}/desc/quant')
     @app.route(f'{bp}/descriptors/quant')
-    def route_1_desc_quant(): pass
+    def route_1_desc_quant():
+        def query(endpoint, kwargs):
+            return ('select qd.label, id.label AS inst_desc, qd.shape, qd.aggregation_type as agg_type, a.label AS aspect, u.label AS unit, qd.description '
+                    'from quant_descriptors as qd '
+                    'left outer join class_measured as id on id.id = qd.is_measuring '
+                    'left outer join units as u on u.id = qd.unit '
+                    'join aspects as a on a.id = qd.aspect'
+                    ), {}
+
+        return default_flow('desc/quant', 'desc-quant', query, to_json)  # TODO likely need different args e.g. to filter by inst_desc
 
     @app.route(f'{bp}/values/inst')
     @app.route(f'{bp}/instances')
     def route_1_val_inst():
         "instances associated with values that match all critiera"
-        return default_flow('instances', 'instance', kwargs, main_query, to_json)
+        return default_flow('instances', 'instance', main_query, to_json)
 
     @app.route(f'{bp}/values')
     @app.route(f'{bp}/values/cat-quant')
     def route_1_val_cat_quant():
-        return default_flow('values/cat-quant', None, kwargs, main_query, to_json)
+        return default_flow('values/cat-quant', None, main_query, to_json)
 
     @app.route(f'{bp}/values/cat')
     def route_1_val_cat():
-        return default_flow('values/cat', 'value-cat', kwargs, main_query, to_json)
+        return default_flow('values/cat', 'value-cat', main_query, to_json)
 
     @app.route(f'{bp}/values/quant')
     def route_1_val_quant():
-        return default_flow('values/quant', 'value-quant', kwargs, main_query, to_json)
+        return default_flow('values/quant', 'value-quant', main_query, to_json)
 
     @app.route(f'{bp}/terms')
     def route_1_cterms(): pass
