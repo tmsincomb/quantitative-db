@@ -363,6 +363,7 @@ CREATE TYPE field_value_type AS ENUM (
 
 CREATE TYPE field_address_type AS ENUM (
 -- FIXME XXX hardcoded remote conventions, essentially an optimization
+'constant',
 'tabular-header',
 'tabular-alt-header',
 
