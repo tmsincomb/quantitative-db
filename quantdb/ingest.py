@@ -186,12 +186,16 @@ dataset_object = list(set((d.uuid, o.uuid) for e in exts
                           ))
 
 subjects = {k: {'type': 'subject',
-                'desc_inst': 'human'} for k in sorted(set((e['dataset'], e['subject']) for e in exts))}
+                'desc_inst': 'human',
+                'id_sub': k[1],
+                } for k in sorted(set((e['dataset'], e['subject']) for e in exts))}
 segments = {k[:2]: {'type': 'sample',  # FIXME vs below ???
                     'desc_inst': 'nerve-volume',  # FIXME should this be nerve-segment and then we use nerve-volume for the 1:1 with files?
-                    'id_sub': k[-1]} for k in sorted(set((e['dataset'], e['sample'], e['subject']) for e in exts))}
+                    'id_sub': k[-1],
+                    'id_sam': k[1],
+                    } for k in sorted(set((e['dataset'], e['sample'], e['subject']) for e in exts))}
 parents = sorted(set((e['dataset'],) + p for e in exts for p in e['parents']))
-sam_other = {p[:2]:{'type': 'sample', 'desc_inst': 'nerve', 'id_sub': p[-1]} for p in parents if p[:2] not in segments}
+sam_other = {p[:2]:{'type': 'sample', 'desc_inst': 'nerve', 'id_sub': p[-1], 'id_sam': p[1]} for p in parents if p[:2] not in segments}
 samples = {**segments, **sam_other}
 instances = {**subjects, **samples}
 
