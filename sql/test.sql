@@ -36,7 +36,7 @@ INSERT INTO objects_internal (id, label) VALUES
 ;
 
 INSERT INTO objects (id_type, id, id_internal) VALUES
-('internal', :'internal_uuid_1', :'internal_uuid_1')
+('quantdb', :'internal_uuid_1', :'internal_uuid_1')
 ;
 
 INSERT INTO class_measured (iri, label) VALUES -- NOTE TO SELF class measured is where we handle hierarchical resolution we don't do that for categorical values right now which is why we have the complexity in this table

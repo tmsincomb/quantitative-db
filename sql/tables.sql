@@ -27,7 +27,7 @@ CREATE TYPE remote_id_type AS ENUM (
 'package',  -- XXX we do not currently support packages with multiple files so all packages entered should be to their file level
 -- 'file',
 -- technically also user is in here
-'internal'  -- explicitly not remote (amusingly), TODO see if we want to do it this way ... this should have a foreign key constraint but given that objects are almost always external we pretend that our internal objects table is external, thus no foreign key, the alternative is to add id_interal and then a check constraint, there are other things we probably want in the objects table ... so better
+'quantdb'  -- aka internal explicitly not remote (amusingly), TODO see if we want to do it this way ... this should have a foreign key constraint but given that objects are almost always external we pretend that our internal objects table is external, thus no foreign key, the alternative is to add id_interal and then a check constraint, there are other things we probably want in the objects table ... so better
 );
 
 CREATE table objects(
@@ -38,7 +38,7 @@ id_type remote_id_type NOT NULL,
 id_file integer, -- keep this for now to reduce the number of api calls, we may also need/want an s3 path or something
 id_internal uuid references objects_internal(id),
 constraint constraint_objects_remote_id_type_id_package check ((id_type != 'package') or (id_file is not null)),
-constraint constraint_objects_remote_id_type_id_internal check ((id_type != 'internal') or (id_internal is not null and id = id_internal))
+constraint constraint_objects_remote_id_type_id_internal check ((id_type != 'quantdb') or (id_internal is not null and id = id_internal))
 );
 
 ALTER table objects_internal ADD constraint constraint_oi_dataset_fk FOREIGN KEY (dataset) references objects(id);
@@ -700,7 +700,8 @@ BEGIN
 
 RETURN QUERY
 
-SELECT qv.value, NULL as open, NULL as controlled, u.label, a.label, qd.aggregation_type, id.label, im.formal_id, saim.formal_id, suim.formal_id, left_and_right_n(im.dataset::text, 4), left_and_right_n(qv.object_id::text, 4) FROM quant_values AS qv
+SELECT qv.value, NULL as open, NULL as controlled, u.label, a.label, qd.aggregation_type, id.label, im.formal_id, saim.formal_id, suim.formal_id, left_and_right_n(im.dataset::text, 4), left_and_right_n(qv.object_id::text, 4)
+FROM quant_values AS qv
 JOIN quant_descriptors AS qd ON qv.quant_desc = qd.id
 LEFT OUTER JOIN units AS u ON qd.unit = u.id -- loj because unitless is represented as null for now ?
 JOIN aspects AS a ON qd.aspect = a.id
@@ -712,7 +713,8 @@ LEFT OUTER JOIN instance_measured AS saim ON im.dataset = saim.dataset AND im.sa
 
 UNION
 
-SELECT NULL, cv.value_open, ct.label, cd.range::text, cd.label, NULL, id.label, im.formal_id, saim.formal_id, suim.formal_id, left_and_right_n(im.dataset::text, 4), left_and_right_n(cv.object_id::text, 4) FROM cat_values AS cv
+SELECT NULL, cv.value_open, ct.label, cd.range::text, cd.label, NULL, id.label, im.formal_id, saim.formal_id, suim.formal_id, left_and_right_n(im.dataset::text, 4), left_and_right_n(cv.object_id::text, 4)
+FROM cat_values AS cv
 JOIN controlled_terms AS ct ON cv.value_controlled = ct.id
 JOIN cat_descriptors AS cd ON cv.cat_desc = cd.id
 JOIN class_measured AS id ON cv.inst_desc = id.id

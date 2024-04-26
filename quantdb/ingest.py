@@ -408,7 +408,7 @@ this_dataset_updated_uuid = [i for i, in res1][0]
 
 res1_1 = session.execute(
     sql_text('INSERT INTO objects (id, id_type, id_internal) VALUES (:id, :id_type, :id) ON CONFLICT DO NOTHING'),  # FIXME bad ocdn here
-    dict(id=this_dataset_updated_uuid, id_type='internal'))
+    dict(id=this_dataset_updated_uuid, id_type='quantdb'))
 
 #fake_subjects_uuid = '9fd33009-dd23-4861-bdeb-ddeccdc6875a'
 #fake_samples_uuid = 'b71e86f8-10ca-40ce-b368-710aeb696d81'
