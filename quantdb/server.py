@@ -31,7 +31,7 @@ def test():
     runner = app.test_cli_runner()
 
     dataset_uuid = 'aa43eda8-b29a-4c25-9840-ecbd57598afc'
-    some_object_id = '414886a9-9ec7-447e-b4d8-3ae42fda93b7'  # XXX FAKE
+    some_object = '414886a9-9ec7-447e-b4d8-3ae42fda93b7'  # XXX FAKE
     actual_package_uuid = '15bcbcd5-b054-40ef-9b5c-6a260d441621'
     base = 'http://localhost:8989/api/1/'
     urls = (
@@ -91,7 +91,7 @@ class JENcode(json.JSONEncoder):
         elif isinstance(obj, datetime):
             return isoformat(obj)
         elif isinstance(obj, Decimal):
-            # FIXME TODO precision etc. see comment on quant_descriptors
+            # FIXME TODO precision etc. see comment on descriptors_quant
             return float(obj)
 
         return json.JSONEncoder.default(self, obj)
@@ -100,14 +100,14 @@ class JENcode(json.JSONEncoder):
 url_sql_where = (  # TODO arity spec here
 
     # dupes overwrite params but that is ok, this way we get the correct table alias for both cases
-    ('object', 'object', 'cv.object_id = any(:object)', 'cat'),  # XXX should not use this outside values/ unless we left outer due to intersect ?
-    ('object', 'object', 'qv.object_id = any(:object)', 'quant'),  # XXX should not use this outside values/ unless we left outer due to intersect ?
+    ('object', 'object', 'cv.object = any(:object)', 'cat'),  # XXX should not use this outside values/ unless we left outer due to intersect ?
+    ('object', 'object', 'qv.object = any(:object)', 'quant'),  # XXX should not use this outside values/ unless we left outer due to intersect ?
 
     ('desc-inst', 'desc_inst', 'idin.label = any(:desc_inst)', 'both'),
     ('dataset', 'dataset', 'im.dataset = :dataset', 'both'),
-    ('inst', 'inst', 'im.formal_id = any(:inst)', 'both'),
-    ('subject', 'subject', 'im.sub_id = any(:subject)', 'both'),
-    ('sample', 'sample', 'im.sam_id = any(:sample)', 'both'),
+    ('inst', 'inst', 'im.id_formal = any(:inst)', 'both'),
+    ('subject', 'subject', 'im.id_sub = any(:subject)', 'both'),
+    ('sample', 'sample', 'im.id_sam = any(:sample)', 'both'),
 
     ('desc-cat', 'desc_cat', 'cd.label = any(:desc_cat)', 'cat'),
 
@@ -151,13 +151,13 @@ def get_where(kwargs):
 
 def main_query(endpoint, kwargs):
     ep_select = {
-        #'instances': 'im.dataset, im.formal_id, im.sam_id, im.sub_id, id.label',
+        #'instances': 'im.dataset, im.id_formal, im.id_sam, im.id_sub, id.label',
         'instances': (
             'im.dataset, '
-            'im.formal_id AS inst, '
-            'im.sam_id AS sample, '
-            'im.sub_id AS subject, '
-            'id.label AS inst_desc'
+            'im.id_formal AS inst, '
+            'im.id_sam AS sample, '
+            'im.id_sub AS subject, '
+            'id.label AS desc_inst'
         ),
         'objects': (  # TODO probably some path metadata file type, etc. too
             'im.dataset, '
@@ -167,19 +167,19 @@ def main_query(endpoint, kwargs):
         ),
         'values/cat': (
             'im.dataset, '
-            'im.formal_id AS inst, '
-            'id.label AS inst_desc, '
+            'im.id_formal AS inst, '
+            'id.label AS desc_inst, '
             'cdid.label AS domain, '
             'cd.range, '
-            'cd.label AS cat_desc, '
+            'cd.label AS desc_cat, '
             'cv.value_open, '
             'ct.label AS value_controlled'  # TODO and where did it come from TODO iri
         ),
         # TODO will want/need to return the shape of the value for these as well since that will be needed to correctly interpret the contents of the value field in the future
         'values/quant': (
             'im.dataset, '
-            'im.formal_id AS inst, '
-            'id.label AS inst_desc, '
+            'im.id_formal AS inst, '
+            'id.label AS desc_inst, '
             'qd.aggregation_type AS agg_type, '
             'a.label AS aspect, '
             'u.label AS unit, qv.value'  # TODO and where did it come from
@@ -188,8 +188,8 @@ def main_query(endpoint, kwargs):
             (
                 "'value-cat'   AS type, "
                 'im.dataset, '
-                'im.formal_id AS inst, '
-                'id.label AS inst_desc, '
+                'im.id_formal AS inst, '
+                'id.label AS desc_inst, '
                 'cdid.label AS domain, '
                 'cd.range, '
                 'NULL as agg_type, '
@@ -199,7 +199,7 @@ def main_query(endpoint, kwargs):
                 'NULL AS value')
             , (
                 "'value-quant' AS type, im.dataset, "
-                'im.formal_id AS inst, id.label AS inst_desc, '
+                'im.id_formal AS inst, id.label AS desc_inst, '
                 'NULL AS domain, '
                 'NULL AS range, '
                 'qd.aggregation_type AS agg_type, '
@@ -209,10 +209,10 @@ def main_query(endpoint, kwargs):
             ))}[endpoint]
     # FIXME move extra and select out and pass then in in as arguments ? or retain control here?
     extra_cat = {
-        'objects':             '\nJOIN objects AS o ON cv.object_id = o.id LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id',
+        'objects':             '\nJOIN objects AS o ON cv.object = o.id LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id',
     }
     extra_quant = {
-        'objects':             '\nJOIN objects AS o ON qv.object_id = o.id LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id',
+        'objects':             '\nJOIN objects AS o ON qv.object = o.id LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id',
     }
     ep_extra_cat = extra_cat[endpoint] if endpoint in extra_cat else ''
     ep_extra_quant = extra_quant[endpoint] if endpoint in extra_quant else ''
@@ -220,25 +220,25 @@ def main_query(endpoint, kwargs):
     ep_select_cat, ep_select_quant = ep_select if isinstance(ep_select, tuple) else (ep_select, ep_select)
     select_cat, select_quant = f'SELECT {ep_select_cat}', f'SELECT {ep_select_quant}'
     where_cat, where_quant, params = get_where(kwargs)
-    q_cat = """FROM cat_values AS cv
+    q_cat = """FROM values_cat AS cv
 
-JOIN class_measured AS idin
-CROSS JOIN LATERAL get_class_children(idin.id) AS idc ON cv.inst_desc = idc.child
-JOIN class_measured AS id ON cv.inst_desc = id.id
-JOIN instance_measured AS im ON cv.measured_instance = im.id
+JOIN descriptors_inst AS idin
+CROSS JOIN LATERAL get_child_desc_inst(idin.id) AS idc ON cv.desc_inst = idc.child
+JOIN descriptors_inst AS id ON cv.desc_inst = id.id
+JOIN values_inst AS im ON cv.instance = im.id
 
-JOIN cat_descriptors AS cd ON cv.cat_desc = cd.id
-LEFT OUTER JOIN class_measured AS cdid ON cd.is_measuring = cdid.id  -- XXX TODO mismach
+JOIN descriptors_cat AS cd ON cv.desc_cat = cd.id
+LEFT OUTER JOIN descriptors_inst AS cdid ON cd.domain = cdid.id  -- XXX TODO mismach
 LEFT OUTER JOIN controlled_terms AS ct ON cv.value_controlled = ct.id"""
 
-    q_quant = """FROM quant_values AS qv
+    q_quant = """FROM values_quant AS qv
 
-JOIN class_measured AS idin
-CROSS JOIN LATERAL get_class_children(idin.id) AS idc ON qv.inst_desc = idc.child
-JOIN class_measured AS id ON qv.inst_desc = id.id
-JOIN instance_measured AS im ON qv.measured_instance = im.id
+JOIN descriptors_inst AS idin
+CROSS JOIN LATERAL get_child_desc_inst(idin.id) AS idc ON qv.desc_inst = idc.child
+JOIN descriptors_inst AS id ON qv.desc_inst = id.id
+JOIN values_inst AS im ON qv.instance = im.id
 
-JOIN quant_descriptors AS qd ON qv.quant_desc = qd.id
+JOIN descriptors_quant AS qd ON qv.desc_quant = qd.id
 JOIN aspects AS ain
 CROSS JOIN LATERAL get_aspect_children(ain.id) AS ac ON qd.aspect = ac.child
 JOIN aspects AS a ON ac.child = a.id
@@ -271,7 +271,7 @@ def to_json(record_type, res):
             rem_cat = 'value', 'agg_type'
             def type_fields_cat(k):
                 if k == 'pred_or_asp':
-                    return 'cat_desc'
+                    return 'desc_cat'
                 elif k == 'vo_or_unit':
                     return 'value_open'
                 else:
@@ -460,7 +460,7 @@ def make_app(db=None, name='quantdb-server'):
                     'id.iri, '
                     'id.label '
 
-                    'from class_measured as id'), {}
+                    'from descriptors_inst as id'), {}
 
         return default_flow('desc/inst', 'desc-inst', query, to_json)  # TODO likely need different args
 
@@ -476,11 +476,11 @@ def make_app(db=None, name='quantdb-server'):
                     'cd.range, '
                     'cd.description '
 
-                    'from cat_descriptors as cd '
-                    'left outer join class_measured as cdid on cdid.id = cd.is_measuring'
+                    'from descriptors_cat as cd '
+                    'left outer join descriptors_inst as cdid on cdid.id = cd.domain'
                     ), {}
 
-        return default_flow('desc/cat', 'desc-cat', query, to_json)  # TODO likely need different args e.g. to filter by inst_desc
+        return default_flow('desc/cat', 'desc-cat', query, to_json)  # TODO likely need different args e.g. to filter by desc_inst
 
     @app.route(f'{bp}/desc/quant')
     @app.route(f'{bp}/descriptors/quant')
@@ -489,20 +489,20 @@ def make_app(db=None, name='quantdb-server'):
             return ('select '
 
                     'qd.label, '
-                    'id.label AS inst_desc, '
+                    'id.label AS desc_inst, '
                     'qd.shape, '
                     'qd.aggregation_type as agg_type, '
                     'a.label AS aspect, '
                     'u.label AS unit, '
                     'qd.description '
 
-                    'from quant_descriptors as qd '
-                    'left outer join class_measured as id on id.id = qd.is_measuring '
+                    'from descriptors_quant as qd '
+                    'left outer join descriptors_inst as id on id.id = qd.domain '
                     'left outer join units as u on u.id = qd.unit '
                     'join aspects as a on a.id = qd.aspect'
                     ), {}
 
-        return default_flow('desc/quant', 'desc-quant', query, to_json)  # TODO likely need different args e.g. to filter by inst_desc
+        return default_flow('desc/quant', 'desc-quant', query, to_json)  # TODO likely need different args e.g. to filter by desc_inst
 
     @app.route(f'{bp}/values/inst')
     @app.route(f'{bp}/instances')

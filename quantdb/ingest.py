@@ -45,10 +45,10 @@ def anat_index(sample):
     # count the number of distinct values less than a given integer
     # create the map 
 
-    sam, sam_id, seg, seg_id = sample.split('-')
+    sam, id_sam, seg, seg_id = sample.split('-')
     # FIXME bad becase left and right are unstable and we don't care about this, we just want relative to max possible
     # don't do this with sort
-    sam_ind = sam_ordering[sam_id]
+    sam_ind = sam_ordering[id_sam]
     for k, v in seg_ordering.items():
         if seg_id.startswith(k):
             prefix = k
@@ -88,7 +88,7 @@ def pps(path_structure):
 def ext(j):
     out = {}
     out['dataset'] = j['dataset_id']
-    out['object_id'] = j['remote_id']
+    out['object'] = j['remote_id']
     out['file_id'] = j['file_id'] if 'file_id' in j else int(j['uri_api'].rsplit('/')[-1])  # XXX old pathmeta schema that didn't include file id
     ps = pathlib.Path(j['dataset_relative_path']).parts
     [p for p in ps if p.startswith('sub-') or p.startswith('sam-')]
@@ -140,7 +140,7 @@ if False:
     seaborn.scatterplot(x=x[:end], y=nyn[:end])
     seaborn.scatterplot(x=x[:end], y=nyx[:end])
 
-# obj_inst_desc =
+# obj_desc_inst =
 
 #values_inst_obj = [
     #for (d, f), i in instances.items()
@@ -156,28 +156,28 @@ packages = {i.uuid: {
     'id_file': e['file_id'],
 }
         for e in exts
-            if (i := e['object_id'])
+            if (i := e['object'])
             }
 
 objects = {**datasets, **packages}
 dataset_object = list(set((d.uuid, o.uuid) for e in exts
-                          if (d := e['dataset']) and (o := e['object_id'])
+                          if (d := e['dataset']) and (o := e['object'])
                           ))
 
 subjects = {k: {'type': 'subject',
-                'inst_desc': 'human'} for k in sorted(set((e['dataset'], e['subject']) for e in exts))}
+                'desc_inst': 'human'} for k in sorted(set((e['dataset'], e['subject']) for e in exts))}
 segments = {k[:2]: {'type': 'sample',  # FIXME vs below ???
-                    'inst_desc': 'nerve-volume',  # FIXME should this be nerve-segment and then we use nerve-volume for the 1:1 with files?
-                    'sub_id': k[-1]} for k in sorted(set((e['dataset'], e['sample'], e['subject']) for e in exts))}
+                    'desc_inst': 'nerve-volume',  # FIXME should this be nerve-segment and then we use nerve-volume for the 1:1 with files?
+                    'id_sub': k[-1]} for k in sorted(set((e['dataset'], e['sample'], e['subject']) for e in exts))}
 parents = sorted(set((e['dataset'],) + p for e in exts for p in e['parents']))
-sam_other = {p[:2]:{'type': 'sample', 'inst_desc': 'nerve', 'sub_id': p[-1]} for p in parents if p[:2] not in segments}
+sam_other = {p[:2]:{'type': 'sample', 'desc_inst': 'nerve', 'id_sub': p[-1]} for p in parents if p[:2] not in segments}
 samples = {**segments, **sam_other}
 instances = {**subjects, **samples}
 
 # this is where things get annoying with needing selects on instance measured
-cat_values = {
+values_cat = {
 }
-quant_values = {}
+values_quant = {}
 
 
 from sqlalchemy import create_engine
@@ -192,7 +192,7 @@ except NameError:
     session = Session(engine)
     sigh = True
 
-list(session.execute(sql_text('select * from instance_measured')))
+list(session.execute(sql_text('select * from values_inst')))
 import uuid
 
 # from interlex.core import makeParamsValues
@@ -299,24 +299,24 @@ def address_from_fadd_type_fadd(fadd_type, fadd):
         return res[0]
 
 
-def inst_desc_from_label(label):
+def desc_inst_from_label(label):
     # FIXME multi etc.
-    res = [i for i, in session.execute(sql_text("select * from inst_desc_from_label(:label)"), dict(label=label))]
+    res = [i for i, in session.execute(sql_text("select * from desc_inst_from_label(:label)"), dict(label=label))]
     if res:
         return res[0]
 
 
-def quant_desc_from_label(label):
+def desc_quant_from_label(label):
     # FIXME multi etc.
-    res = [i for i, in session.execute(sql_text("select * from quant_desc_from_label(:label)"), dict(label=label))]
+    res = [i for i, in session.execute(sql_text("select * from desc_quant_from_label(:label)"), dict(label=label))]
     if res:
         return res[0]
 
 
-def cat_desc_from_label_measuring_label(label, measuring_label):
+def desc_cat_from_label_domain_label(label, domain_label):
     # FIXME multi etc.
-    res = [i for i, in session.execute(sql_text("select * from cat_desc_from_label_measuring_label(:label, :measuring_label)"),
-                                       dict(label=label, measuring_label=measuring_label))]
+    res = [i for i, in session.execute(sql_text("select * from desc_cat_from_label_domain_label(:label, :domain_label)"),
+                                       dict(label=label, domain_label=domain_label))]
     if res:
         return res[0]
 
@@ -332,8 +332,8 @@ def insts_from_dataset_ids(dataset, ids):
     return list(session.execute(sql_text("select * from insts_from_dataset_ids(:dataset, :ids)"), dict(dataset=dataset, ids=ids)))
 
 
-addr_suid = address_from_fadd_type_fadd('tabular-header', 'subject_id')
-addr_said = address_from_fadd_type_fadd('tabular-header', 'sample_id')
+addr_suid = address_from_fadd_type_fadd('tabular-header', 'id_sub')
+addr_said = address_from_fadd_type_fadd('tabular-header', 'id_sam')
 addr_spec = address_from_fadd_type_fadd('tabular-header', 'species')
 addr_saty = address_from_fadd_type_fadd('tabular-header', 'sample_type')
 
@@ -364,22 +364,22 @@ addr_jpsaty = address_from_fadd_type_fadd('json-path-with-types', '#/local/tom-m
 #addr_jpmod = address_from_fadd_type_fadd('json-path-with-types', '#/curation-export/manifest/#int/modality')
 #addr_jprai = address_from_fadd_type_fadd('json-path-with-types', '#/curation-export/samples/#int/raw_anat_index')
 #addr_jpnai = address_from_fadd_type_fadd('json-path-with-types', '#/curation-export/samples/#int/norm_anat_index')
-#addr_jpsuid = address_from_fadd_type_fadd('json-path-with-types', '#/curation-export/subjects/#int/subject_id')
-#addr_jpsaid = address_from_fadd_type_fadd('json-path-with-types', '#/curation-export/samples/#int/sample_id')
+#addr_jpsuid = address_from_fadd_type_fadd('json-path-with-types', '#/curation-export/subjects/#int/id_sub')
+#addr_jpsaid = address_from_fadd_type_fadd('json-path-with-types', '#/curation-export/samples/#int/id_sam')
 
 addr_const_null = address_from_fadd_type_fadd('constant', None)
 
-qd_rai = quant_desc_from_label('reva ft sample anatomical location distance index raw')
-qd_nai = quant_desc_from_label('reva ft sample anatomical location distance index normalized')
-qd_nain = quant_desc_from_label('reva ft sample anatomical location distance index normalized min')
-qd_naix = quant_desc_from_label('reva ft sample anatomical location distance index normalized max')
+qd_rai = desc_quant_from_label('reva ft sample anatomical location distance index raw')
+qd_nai = desc_quant_from_label('reva ft sample anatomical location distance index normalized')
+qd_nain = desc_quant_from_label('reva ft sample anatomical location distance index normalized min')
+qd_naix = desc_quant_from_label('reva ft sample anatomical location distance index normalized max')
 
-cd_mod = cat_desc_from_label_measuring_label('hasDataAboutItModality', None)
-cd_bot = cat_desc_from_label_measuring_label('bottom', None)  # we just need something we can reference that points to null so we can have a refernce to all the objects
+cd_mod = desc_cat_from_label_domain_label('hasDataAboutItModality', None)
+cd_bot = desc_cat_from_label_domain_label('bottom', None)  # we just need something we can reference that points to null so we can have a refernce to all the objects
 
-id_human = inst_desc_from_label('human')
-id_nerve = inst_desc_from_label('nerve')
-id_nerve_volume = inst_desc_from_label('nerve-volume')
+id_human = desc_inst_from_label('human')
+id_nerve = desc_inst_from_label('nerve')
+id_nerve_volume = desc_inst_from_label('nerve-volume')
 
 ct_mod = cterm_from_label('microct')  # lol ct ct
 
@@ -423,9 +423,9 @@ values_objects = [
     if o['id_type'] != 'dataset'  # already did it above
                   ]
 values_dataset_object = dataset_object
-values_instances = [(d.uuid, f, i['type'], luid[i['inst_desc']],
-                     i['sub_id'] if 'sub_id' in i else None,
-                     i['sam_id'] if 'sam_id' in i else None,
+values_instances = [(d.uuid, f, i['type'], luid[i['desc_inst']],
+                     i['id_sub'] if 'id_sub' in i else None,
+                     i['id_sam'] if 'id_sam' in i else None,
                      ) for (d, f), i in instances.items()]
 
 dev = False
@@ -434,13 +434,13 @@ vt, params = makeParamsValues(values_objects)
 session.execute(sql_text(f'INSERT INTO objects (id, id_type, id_file) VALUES {vt}{ocdn}'), params)
 
 vt, params = makeParamsValues(values_dataset_object)
-session.execute(sql_text(f'INSERT INTO dataset_object (dataset_id, object_id) VALUES {vt}{ocdn}'), params)
+session.execute(sql_text(f'INSERT INTO dataset_object (dataset, object) VALUES {vt}{ocdn}'), params)
 
 vt, params = makeParamsValues(values_instances)
-session.execute(sql_text(f'INSERT INTO instance_measured (dataset, formal_id, type, inst_desc, sub_id, sam_id) VALUES {vt}{ocdn}'), params)
+session.execute(sql_text(f'INSERT INTO values_inst (dataset, id_formal, type, desc_inst, id_sub, id_sam) VALUES {vt}{ocdn}'), params)
 
 ilt = insts_from_dataset_ids(dataset_uuid, [f for d, f in instances])
-luim = {(str(dataset), formal_id): id for id, dataset, formal_id in ilt}
+luim = {(str(dataset), id_formal): id for id, dataset, id_formal in ilt}
 
 values_parents = [
     (luim[d.uuid, child], luim[d.uuid, parent])
@@ -470,15 +470,15 @@ void = [  # FIXME this is rather annoying because you have to list all expected 
      for o, b in objects.items() if b['id_type'] == 'package']
 
 # XXX REMINDER an object descriptor pair can be associated with an arbitrary number of measured instances
-# BUT that mapping only appears when there is _something_ in the qv or cv tables so we need an object_id
-# inst_desc pair, and an object_id cat or quant desc pair otherwise our constraints are violated
+# BUT that mapping only appears when there is _something_ in the qv or cv tables so we need an object
+# desc_inst pair, and an object cat or quant desc pair otherwise our constraints are violated
 # when there is only a single (or zero) records per object then we just create one so that the association
 # to a an instance can proceed, even if the mapping of that instance is from an external source
 # XXX the external source is part of the issue I think
 
 
 vt, params = makeParamsValues(void)
-session.execute(sql_text(f'INSERT INTO obj_inst_descriptors (object_id, inst_desc, field_address, class_address) VALUES {vt}{ocdn}'), params)
+session.execute(sql_text(f'INSERT INTO obj_desc_inst (object, desc_inst, addr_field, addr_desc_inst) VALUES {vt}{ocdn}'), params)
 
 vocd = [
     #(this_load_uuid, cd_mod, addr_jpmod), # pretty sure this is just wrong
@@ -490,7 +490,7 @@ vocd = [
      for o, b in objects.items() if b['id_type'] == 'package']
 
 vt, params = makeParamsValues(vocd)
-session.execute(sql_text(f'INSERT INTO obj_cat_descriptors (object_id, cat_desc, field_address) VALUES {vt}{ocdn}'), params)
+session.execute(sql_text(f'INSERT INTO obj_descriptors_cat (object, desc_cat, addr_field) VALUES {vt}{ocdn}'), params)
 
 voqd = [  # FIXME this isn't quite right, we should just do it to the segments and pretend it is from the samples file I think?
     #(fake_samples_uuid, qd_rai, addr_trai),
@@ -502,19 +502,19 @@ voqd = [  # FIXME this isn't quite right, we should just do it to the segments a
 ]
 
 vt, params = makeParamsValues(voqd)
-session.execute(sql_text(f'INSERT INTO obj_quant_descriptors (object_id, quant_desc, field_address) VALUES {vt}{ocdn}'), params)
+session.execute(sql_text(f'INSERT INTO obj_desc_quant (object, desc_quant, addr_field) VALUES {vt}{ocdn}'), params)
 
 
 
-#obj_index = {e['object_id']: e for e in exts}
+#obj_index = {e['object']: e for e in exts}
 values_cv = [
-    # value_open, value_controlled, object_id, inst_desc, cat_desc
+    # value_open, value_controlled, object, desc_inst, desc_cat
     (e[k],
      luct[e[k]],
      this_dataset_updated_uuid,
-     #e['object_id'].uuid,  # FIXME still not right this comes from the updated latest
+     #e['object'].uuid,  # FIXME still not right this comes from the updated latest
      id_nerve_volume,
-     cd,  # if we mess this up the fk ok obj_cat_descriptors will catch it :)
+     cd,  # if we mess this up the fk ok obj_descriptors_cat will catch it :)
      luim[e['dataset'].uuid, e['sample']],  # get us the instance
      )
     for e in exts
@@ -525,24 +525,24 @@ values_cv = [
 ] + [
     ('nothing to see here',
      None,
-     e['object_id'].uuid,
+     e['object'].uuid,
      id_nerve_volume,
-     cd_bot,  # if we mess this up the fk ok obj_cat_descriptors will catch it :)
+     cd_bot,  # if we mess this up the fk ok obj_descriptors_cat will catch it :)
      luim[e['dataset'].uuid, e['sample']],  # get us the instance
      )
     for e in exts
 ]
 
 vt, params = makeParamsValues(values_cv)
-session.execute(sql_text(f'INSERT INTO cat_values (value_open, value_controlled, object_id, inst_desc, cat_desc, measured_instance) VALUES {vt}{ocdn}'), params)
+session.execute(sql_text(f'INSERT INTO values_cat (value_open, value_controlled, object, desc_inst, desc_cat, instance) VALUES {vt}{ocdn}'), params)
 
 values_qv = [
-    # value, object_id, inst_desc, quant_desc, inst, value_blob
+    # value, object, desc_inst, desc_quant, inst, value_blob
     (e[k],
-     #e['object_id'].uuid,  # FIXME TODO we could fill this here but we choose to use this_dataset_updated_uuid instead I think
+     #e['object'].uuid,  # FIXME TODO we could fill this here but we choose to use this_dataset_updated_uuid instead I think
      this_dataset_updated_uuid,
      id_nerve_volume,
-     qd,  # if we mess this up the fk ok obj_cat_descriptors will catch it :)
+     qd,  # if we mess this up the fk ok obj_descriptors_cat will catch it :)
      luim[e['dataset'].uuid, e['sample']],  # get us the instance
      e[k],
      )
@@ -561,7 +561,7 @@ vt, params, bindparams = makeParamsValues(
     # now fixed in the local impl
     values_qv, row_types=(None, None, None, None, None, JSONB))
 
-t = sql_text(f'INSERT INTO quant_values (value, object_id, inst_desc, quant_desc, measured_instance, value_blob) VALUES {vt}{ocdn}')
+t = sql_text(f'INSERT INTO values_quant (value, object, desc_inst, desc_quant, instance, value_blob) VALUES {vt}{ocdn}')
 tin = t.bindparams(*bindparams)
 session.execute(tin, params)
 
@@ -574,7 +574,7 @@ if False:
 # an "internal" object which is path-metadata.json for a whole dataset at a timepoint
 # the newer version will have the updated timestamp which can make this easier
 # but we can use resp.headers['Last-Modified'] if needed
-#('INSERT INTO addresses (address_type, field_address, value_type) VALUES ')
+#('INSERT INTO addresses (addr_type, addr_field, value_type) VALUES ')
 #(
     #('json-path-with-types', '#/data/#int/dataset_relative_path', 'multi')  # we derive pretty much everything from dataset relative path
     #('json-path-with-types', '#/#int/')  # we aren't really pulling from path-metadata.json directly, this is some derive structure
@@ -587,15 +587,15 @@ if False:
 f'INSERT INTO objects (id, id_type) VALUES {vt}'
 f'INSERT INTO objects (id, id_type, id_file) VALUES {vt}'
 
-'INSERT INTO instance_measured VALUES'
-'INSERT INTO instance_parents VALUES'
+'INSERT INTO values_inst VALUES'
+'INSERT INTO parents_inst VALUES'
 
-'INSERT INTO obj_inst_descriptors VALUES'
-'INSERT INTO obj_quant_descriptors VALUES'
-'INSERT INTO obj_cat_descriptors VALUES'
+'INSERT INTO obj_desc_inst VALUES'
+'INSERT INTO obj_desc_quant VALUES'
+'INSERT INTO obj_descriptors_cat VALUES'
 
-'INSERT INTO quant_values VALUES'
-'INSERT INTO cat_values VALUES'
+'INSERT INTO values_quant VALUES'
+'INSERT INTO values_cat VALUES'
 
 if False:
     ps = top, subject, sam_1, sam_2, modality, file = pathlib.Path(jpx[0]['dataset_relative_path']).parts
