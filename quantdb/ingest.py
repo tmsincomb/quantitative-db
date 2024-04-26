@@ -27,17 +27,29 @@ updated_transitive = max([i['timestamp_updated'] for i in ir['data'][1:]])  # 1:
 
 jpx = [r for r in ir['data'] if 'mimetype' in r and r['mimetype'] == 'image/jpx']
 
+
+"""
+l left
+r right
+c cardiac not left or right but a branch on its own
+a abdominal
+p posterior
+
+c cervical
+t throacic
+a abdominal
+"""
 sam_ordering = {
-    'l': 0,
-    'r': 0,
-    'c': 1,  # coeliac ??? probalby not servical???
-    'a': 2,  # abdominal
-    'p': 3,  # FIXME ????
+    'l': 0,  # left
+    'r': 0,  # right
+    'c': 0,  # cardiac safe to keep at zero since the c index usually come after t
+    'a': 1,  # anterior abdominal
+    'p': 1,  # posterior abdominal
 }
 seg_ordering = {
-    'c': 0,  # cervical? 
+    'c': 0,  # cervical
     't': 1,  # thoracic
-    'a': 2,  # ???? abdominal ???
+    'a': 2,  # abdominal
 }
 
 
@@ -45,24 +57,31 @@ def anat_index(sample):
     # count the number of distinct values less than a given integer
     # create the map 
 
-    sam, id_sam, seg, seg_id = sample.split('-')
+    sam, sam_id, seg, seg_id = sample.split('-')
     # FIXME bad becase left and right are unstable and we don't care about this, we just want relative to max possible
     # don't do this with sort
-    sam_ind = sam_ordering[id_sam]
+    sam_ind = sam_ordering[sam_id]
     for k, v in seg_ordering.items():
         if seg_id.startswith(k):
             prefix = k
             seg_ind = v
             break
     else:
-        msg = f'unknown seg {sample}'
-        print(msg)  # FIXME TODO logging
-        #raise ValueError(msg)
-        #return int(f'{sam_ind}000')
-        return sam_ind, 0, 0
+        if sam_id == 'c':
+            #print('c sample', sample)
+            #rest = int(''.join(_ for _ in seg_id if _.isdigit()))
+            rest = int(seg_id[:-1])
+            suffix = int(seg_id[-1].encode().hex())
+            return sam_ind, 0, rest, suffix
+        else:
+            msg = f'unknown seg {sample}'
+            print(msg)  # FIXME TODO logging
+            #raise ValueError(msg)
+            #return int(f'{sam_ind}000')
+            return sam_ind, 0, 0, 0
 
     rest = int(seg_id[len(prefix):])  # FIXME this convention is not always followed
-    comps = sam_ind, seg_ind, rest
+    comps = sam_ind, seg_ind, rest, 0
     #return int(f'{sam_ind}{seg_ind}{rest:0>2d}')
     return comps
 
@@ -79,7 +98,7 @@ def pps(path_structure):
             'sample': segment,
             'modality': modality,
             # note that because we do not convert to a single value we cannot include raw_anat_index in the qdb but that's ok
-            'raw_anat_index': anat_index(segment),
+            'raw_anat_index_v1': anat_index(segment),
         }
     else:
         raise NotImplementedError(path_structure)
@@ -103,39 +122,41 @@ exts = [ext(j) for j in jpx]
 #log_max_rai = math.log10(max_rai)
 
 # normalize the index by mapping distinct values to the integers
-lin_distinct = {v:i for i, v in enumerate(sorted(set([e['raw_anat_index'] for e in exts])))}
+nondist = sorted([e['raw_anat_index_v1'] for e in exts])
+lin_distinct = {v:i for i, v in enumerate(sorted(set([e['raw_anat_index_v1'] for e in exts])))}
 max_distinct = len(lin_distinct)
 mdp1 = max_distinct + 0.1  # to simplify adding overlap
 
 dd = defaultdict(list)
 for e in exts:
     #e['norm_anat_index'] = math.log10(e['raw_anat_index']) / log_max_rai
-    pos = lin_distinct[e['raw_anat_index']]
-    e['norm_anat_index'] =  (pos + 0.55) / mdp1
-    e['norm_anat_index_min'] =  pos / mdp1
-    e['norm_anat_index_max'] =  (pos + 1.1) / mdp1  # ensure there is overlap between section for purposes of testing
+    pos = lin_distinct[e['raw_anat_index_v1']]
+    e['norm_anat_index_v1'] =  (pos + 0.55) / mdp1
+    e['norm_anat_index_v1_min'] =  pos / mdp1
+    e['norm_anat_index_v1_max'] =  (pos + 1.1) / mdp1  # ensure there is overlap between section for purposes of testing
     # TODO norm_anat_index_min
     # TODO norm_anat_index_max
     dd[e['dataset'], e['sample']].append(e)
 inst_obj_index = dict(dd)
 
-max_nai = max([e['norm_anat_index'] for e in exts])
-min_nain = min([e['norm_anat_index_min'] for e in exts])
-max_naix = max([e['norm_anat_index_max'] for e in exts])
+max_nai = max([e['norm_anat_index_v1'] for e in exts])
+min_nain = min([e['norm_anat_index_v1_min'] for e in exts])
+max_naix = max([e['norm_anat_index_v1_max'] for e in exts])
 
 if False:
     x = list(range(len(exts)))
     #ry = sorted([e['raw_anat_index'] for e in exts])
-    ny = sorted([e['norm_anat_index'] for e in exts])
-    nyn = sorted([e['norm_anat_index_min'] for e in exts])
-    nyx = sorted([e['norm_anat_index_max'] for e in exts])
+    ny = sorted([e['norm_anat_index_v1'] for e in exts])
+    nyn = sorted([e['norm_anat_index_v1_min'] for e in exts])
+    nyx = sorted([e['norm_anat_index_v1_max'] for e in exts])
     nnx = list(zip(nyn, nyx))
     import pylab as plt
     import seaborn
     #plt.figure()
     #seaborn.scatterplot(x=x, y=ry)
     plt.figure()
-    end = 10
+    #end = 10
+    end = len(x)
     seaborn.scatterplot(x=x[:end], y=ny[:end])
     seaborn.scatterplot(x=x[:end], y=nyn[:end])
     seaborn.scatterplot(x=x[:end], y=nyx[:end])
@@ -338,8 +359,8 @@ addr_spec = address_from_fadd_type_fadd('tabular-header', 'species')
 addr_saty = address_from_fadd_type_fadd('tabular-header', 'sample_type')
 
 addr_tmod = address_from_fadd_type_fadd('tabular-header', 'modality')
-addr_trai = address_from_fadd_type_fadd('tabular-header', 'raw_anat_index')
-addr_tnai = address_from_fadd_type_fadd('tabular-header', 'norm_anat_index')
+#addr_trai = address_from_fadd_type_fadd('tabular-header', 'raw_anat_index')
+#addr_tnai = address_from_fadd_type_fadd('tabular-header', 'norm_anat_index')
 #addr_context = address_from_fadd_type_fadd('context', '#/path-metadata/{index of match remote_id}/dataset_relative_path')  # XXX this doesn't do what we want, I think what we really would want in these contexts are objects_internal that reference the file system state for a given updated snapshot, that is the real "object" that corresponds to the path-metadata.json that we are working from
 
 #addr_jpmod = address_from_fadd_type_fadd('json-path-with-types', '#/#int/modality')
@@ -351,9 +372,9 @@ addr_jpdrp = address_from_fadd_type_fadd('json-path-with-types', '#/path-metadat
 # XXX these are more accurate if opaque
 addr_jpmod = address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-modality')
 #addr_jprai = address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-raw-anat-index')
-addr_jpnai = address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index')
-addr_jpnain = address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-min')
-addr_jpnaix = address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-max')
+addr_jpnai = address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1')
+addr_jpnain = address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1-min')
+addr_jpnaix = address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1-max')
 addr_jpsuid = address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-subject-id')
 addr_jpsaid = address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-sample-id')
 
@@ -369,10 +390,10 @@ addr_jpsaty = address_from_fadd_type_fadd('json-path-with-types', '#/local/tom-m
 
 addr_const_null = address_from_fadd_type_fadd('constant', None)
 
-qd_rai = desc_quant_from_label('reva ft sample anatomical location distance index raw')
-qd_nai = desc_quant_from_label('reva ft sample anatomical location distance index normalized')
-qd_nain = desc_quant_from_label('reva ft sample anatomical location distance index normalized min')
-qd_naix = desc_quant_from_label('reva ft sample anatomical location distance index normalized max')
+#qd_rai = desc_quant_from_label('reva ft sample anatomical location distance index raw')
+qd_nai = desc_quant_from_label('reva ft sample anatomical location distance index normalized v1')
+qd_nain = desc_quant_from_label('reva ft sample anatomical location distance index normalized v1 min')
+qd_naix = desc_quant_from_label('reva ft sample anatomical location distance index normalized v1 max')
 
 cd_mod = desc_cat_from_label_domain_label('hasDataAboutItModality', None)
 cd_bot = desc_cat_from_label_domain_label('bottom', None)  # we just need something we can reference that points to null so we can have a refernce to all the objects
@@ -419,14 +440,17 @@ res1_1 = session.execute(
 #    dict(suid=fake_subjects_uuid, said=fake_samples_uuid, maid=fake_manifest_uuid))
 
 values_objects = [
-    (i, o['id_type'], o['id_file'] if 'id_file' in o else None) for i, o in objects.items()
+    (i, o['id_type'], o['id_file'] if 'id_file' in o else None)
+    for i, o in objects.items()
     if o['id_type'] != 'dataset'  # already did it above
-                  ]
+]
 values_dataset_object = dataset_object
-values_instances = [(d.uuid, f, i['type'], luid[i['desc_inst']],
-                     i['id_sub'] if 'id_sub' in i else None,
-                     i['id_sam'] if 'id_sam' in i else None,
-                     ) for (d, f), i in instances.items()]
+values_instances = [
+    (d.uuid, f, i['type'], luid[i['desc_inst']],
+     i['id_sub'] if 'id_sub' in i else None,
+     i['id_sam'] if 'id_sam' in i else None,
+     )
+    for (d, f), i in instances.items()]
 
 dev = False
 ocdn = ' ON CONFLICT DO NOTHING' if dev else ''
@@ -504,8 +528,6 @@ voqd = [  # FIXME this isn't quite right, we should just do it to the segments a
 vt, params = makeParamsValues(voqd)
 session.execute(sql_text(f'INSERT INTO obj_desc_quant (object, desc_quant, addr_field) VALUES {vt}{ocdn}'), params)
 
-
-
 #obj_index = {e['object']: e for e in exts}
 values_cv = [
     # value_open, value_controlled, object, desc_inst, desc_cat
@@ -549,9 +571,9 @@ values_qv = [
     for e in exts
     for k, qd in (
             #('raw_anat_index', qd_rai),  # XXX this is a bad place to store object -> field -> qd mappings also risks mismatch on address
-            ('norm_anat_index', qd_nai),
-            ('norm_anat_index_min', qd_nain),
-            ('norm_anat_index_max', qd_naix),
+            ('norm_anat_index_v1', qd_nai),
+            ('norm_anat_index_v1_min', qd_nain),
+            ('norm_anat_index_v1_max', qd_naix),
     )
 ]
 

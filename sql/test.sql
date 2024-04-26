@@ -143,7 +143,10 @@ INSERT INTO aspects (iri, label) VALUES
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance', 'distance'),
 
 --('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-via-reva-ft-sample-id-raw', 'distance-via-reva-ft-sample-id-raw'),
+
+-- have a version independent aspect that can be used to pull back all related aspects
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-via-reva-ft-sample-id-normalized', 'distance-via-reva-ft-sample-id-normalized'),
+('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-via-reva-ft-sample-id-normalized-v1', 'distance-via-reva-ft-sample-id-normalized-v1'),
 
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/length', 'length'),
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/diameter', 'diameter'),
@@ -156,6 +159,7 @@ INSERT INTO aspect_parent (id, parent) VALUES
 (aspect_from_label('length'), aspect_from_label('distance')),
 --(aspect_from_label('distance-via-reva-ft-sample-id-raw'), aspect_from_label('distance')),
 (aspect_from_label('distance-via-reva-ft-sample-id-normalized'), aspect_from_label('distance')),
+(aspect_from_label('distance-via-reva-ft-sample-id-normalized-v1'), aspect_from_label('distance-via-reva-ft-sample-id-normalized')),
 (aspect_from_label('diameter'), aspect_from_label('length')),
 (aspect_from_label('diameter-orthogonal-to-anterior-posterior-axis'), aspect_from_label('diameter')),
 (aspect_from_label('length-parallel-to-anterior-posterior-axis'), aspect_from_label('length'))
@@ -227,27 +231,29 @@ NULL,
 'min'
 ),
 
+/*
 ('reva ft sample anatomical location distance index raw',
 desc_inst_from_label('nerve-volume'),
 aspect_from_label('distance-via-reva-ft-sample-id-raw'),
 NULL,
 'instance'),
+*/
 
-('reva ft sample anatomical location distance index normalized',
+('reva ft sample anatomical location distance index normalized v1',
 desc_inst_from_label('nerve-volume'),
-aspect_from_label('distance-via-reva-ft-sample-id-normalized'),
+aspect_from_label('distance-via-reva-ft-sample-id-normalized-v1'),
 NULL,
 'instance'),  -- FIXME this isn't really instance, it is normalized across a whole population, which we might want to indicate here
 
-('reva ft sample anatomical location distance index normalized min',
+('reva ft sample anatomical location distance index normalized v1 min',
 desc_inst_from_label('nerve-volume'),
-aspect_from_label('distance-via-reva-ft-sample-id-normalized'),
+aspect_from_label('distance-via-reva-ft-sample-id-normalized-v1'),
 NULL,
 'min'),
 
-('reva ft sample anatomical location distance index normalized max',
+('reva ft sample anatomical location distance index normalized v1 max',
 desc_inst_from_label('nerve-volume'),
-aspect_from_label('distance-via-reva-ft-sample-id-normalized'),
+aspect_from_label('distance-via-reva-ft-sample-id-normalized-v1'),
 NULL,
 'max'),
 
@@ -310,9 +316,9 @@ INSERT INTO addresses (addr_type, addr_field) VALUES
 ('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path'),
 ('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-modality'),
 ('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-raw-anat-index'),
-('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index'),
-('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-min'),
-('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-max'),
+('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1'),
+('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1-min'),
+('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1-max'),
 ('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-subject-id'),
 ('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-sample-id'),
 
