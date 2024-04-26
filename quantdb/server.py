@@ -66,6 +66,11 @@ def test():
         f'{base}desc/inst',
         f'{base}desc/cat',
         f'{base}desc/quant',
+
+        f'{base}terms',
+        f'{base}aspects',
+        f'{base}units',
+        # TODO maybe shapes here as well?
     )
     resps = []
     for url in urls:
@@ -147,18 +152,61 @@ def get_where(kwargs):
 def main_query(endpoint, kwargs):
     ep_select = {
         #'instances': 'im.dataset, im.formal_id, im.sam_id, im.sub_id, id.label',
-        'instances': 'im.dataset, im.formal_id AS inst, im.sam_id AS sample, im.sub_id AS subject, id.label AS inst_desc',
-        'objects': 'im.dataset, o.id, o.id_type, oi.updated_transitive',  # TODO probably some path metadata file type, etc. too
-
-        'values/cat':   'im.dataset, im.formal_id AS inst, id.label AS inst_desc, cdid.label AS domain, cd.range, cd.label AS cat_desc, cv.value_open, ct.label AS value_controlled',  # TODO and where did it come from TODO iri
+        'instances': (
+            'im.dataset, '
+            'im.formal_id AS inst, '
+            'im.sam_id AS sample, '
+            'im.sub_id AS subject, '
+            'id.label AS inst_desc'
+        ),
+        'objects': (  # TODO probably some path metadata file type, etc. too
+            'im.dataset, '
+            'o.id, '
+            'o.id_type, '
+            'oi.updated_transitive'
+        ),
+        'values/cat': (
+            'im.dataset, '
+            'im.formal_id AS inst, '
+            'id.label AS inst_desc, '
+            'cdid.label AS domain, '
+            'cd.range, '
+            'cd.label AS cat_desc, '
+            'cv.value_open, '
+            'ct.label AS value_controlled'  # TODO and where did it come from TODO iri
+        ),
         # TODO will want/need to return the shape of the value for these as well since that will be needed to correctly interpret the contents of the value field in the future
-        'values/quant': 'im.dataset, im.formal_id AS inst, id.label AS inst_desc, qd.aggregation_type AS agg_type, a.label AS aspect, u.label AS unit, qv.value',  # TODO and where did it come from
+        'values/quant': (
+            'im.dataset, '
+            'im.formal_id AS inst, '
+            'id.label AS inst_desc, '
+            'qd.aggregation_type AS agg_type, '
+            'a.label AS aspect, '
+            'u.label AS unit, qv.value'  # TODO and where did it come from
+        ),
         'values/cat-quant': (
-            "'value-cat'   AS type, im.dataset, im.formal_id AS inst, id.label AS inst_desc, cdid.label AS domain,      cd.range,    NULL as agg_type, cd.label AS pred_or_asp,  cv.value_open AS vo_or_unit, ct.label AS value_controlled, NULL AS value"
-            ,
-            "'value-quant' AS type, im.dataset, im.formal_id AS inst, id.label AS inst_desc,       NULL AS domain, NULL AS range, qd.aggregation_type,       a.label AS aspect,              u.label AS unit,                   NULL AS vc, qv.value"
-        )
-    }[endpoint]
+            (
+                "'value-cat'   AS type, "
+                'im.dataset, '
+                'im.formal_id AS inst, '
+                'id.label AS inst_desc, '
+                'cdid.label AS domain, '
+                'cd.range, '
+                'NULL as agg_type, '
+                'cd.label AS pred_or_asp, '
+                'cv.value_open AS vo_or_unit, '
+                'ct.label AS value_controlled, '
+                'NULL AS value')
+            , (
+                "'value-quant' AS type, im.dataset, "
+                'im.formal_id AS inst, id.label AS inst_desc, '
+                'NULL AS domain, '
+                'NULL AS range, '
+                'qd.aggregation_type AS agg_type, '
+                'a.label AS aspect, '
+                'u.label AS unit, '
+                'NULL AS vc, qv.value'
+            ))}[endpoint]
     # FIXME move extra and select out and pass then in in as arguments ? or retain control here?
     extra_cat = {
         'objects':             '\nJOIN objects AS o ON cv.object_id = o.id LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id',
@@ -407,7 +455,12 @@ def make_app(db=None, name='quantdb-server'):
     @app.route(f'{bp}/classes')
     def route_1_desc_inst():
         def query(endpoint, kwargs):
-            return 'select id.iri, id.label from class_measured as id', {}
+            return ('select '
+
+                    'id.iri, '
+                    'id.label '
+
+                    'from class_measured as id'), {}
 
         return default_flow('desc/inst', 'desc-inst', query, to_json)  # TODO likely need different args
 
@@ -416,7 +469,13 @@ def make_app(db=None, name='quantdb-server'):
     @app.route(f'{bp}/predicates')
     def route_1_desc_cat():
         def query(endpoint, kwargs):
-            return ('select cd.label, cdid.label AS domain, cd.range, cd.description '
+            return ('select '
+
+                    'cd.label, '
+                    'cdid.label AS domain, '
+                    'cd.range, '
+                    'cd.description '
+
                     'from cat_descriptors as cd '
                     'left outer join class_measured as cdid on cdid.id = cd.is_measuring'
                     ), {}
@@ -427,7 +486,16 @@ def make_app(db=None, name='quantdb-server'):
     @app.route(f'{bp}/descriptors/quant')
     def route_1_desc_quant():
         def query(endpoint, kwargs):
-            return ('select qd.label, id.label AS inst_desc, qd.shape, qd.aggregation_type as agg_type, a.label AS aspect, u.label AS unit, qd.description '
+            return ('select '
+
+                    'qd.label, '
+                    'id.label AS inst_desc, '
+                    'qd.shape, '
+                    'qd.aggregation_type as agg_type, '
+                    'a.label AS aspect, '
+                    'u.label AS unit, '
+                    'qd.description '
+
                     'from quant_descriptors as qd '
                     'left outer join class_measured as id on id.id = qd.is_measuring '
                     'left outer join units as u on u.id = qd.unit '
@@ -456,18 +524,41 @@ def make_app(db=None, name='quantdb-server'):
         return default_flow('values/quant', 'value-quant', main_query, to_json)
 
     @app.route(f'{bp}/terms')
-    def route_1_cterms(): pass
+    @app.route(f'{bp}/controlled-terms')
+    def route_1_cterms():
+        def query(endpoint, kwargs):
+            return ('select '
+
+                    'ct.iri, '
+                    'ct.label '
+
+                    'from controlled_terms as ct'), {}
+
+        return default_flow('terms', 'term', query, to_json)  # TODO likely need different args
 
     @app.route(f'{bp}/units')
-    def route_1_units(): pass
+    def route_1_units():
+        def query(endpoint, kwargs):
+            return ('select '
+
+                    'u.iri, '
+                    'u.label '
+
+                    'from units as u'), {}
+
+        return default_flow('units', 'unit', query, to_json)  # TODO likely need different args
 
     @app.route(f'{bp}/aspects')
-    def route_1_aspects(): pass
+    def route_1_aspects():
+        def query(endpoint, kwargs):
+            return ('select '
 
-    def route_datasets(id=None):
-        # TODO improve this to pull from meta add uris etc.
-        table, title = report.size()
-        return wrap_tables(table, title=title)
+                    'a.iri, '
+                    'a.label '
+
+                    'from aspects as a'), {}
+
+        return default_flow('aspects', 'aspect', query, to_json)  # TODO likely need different args
 
     return app
 
