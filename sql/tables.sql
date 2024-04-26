@@ -190,7 +190,8 @@ local_identifier text, -- in spreadsheet mapping for the thing, could populate t
 
 -- these can still be checked against the parent table and if we are using a trigger to check references, these can both be checked in one go
 -- XXX we could, but choose not to enforce a foreign key on dataset and id_sub mapping to instance measured at this point
-id_sub text check (id_sub ~ '^sub-'), -- alternative to instance_subject FIXME should be require this even if type is subject for closure?
+ -- FIXME cases where a cell line is the subject are going to confuse people, welcome to names not matching their meaning
+id_sub text NOT NULL check (id_sub ~ '^sub-'), -- alternative to instance_subject FIXME should be require this even if type is subject for closure?
 id_sam text check (id_sam ~ '^sam-'), -- alternative to instance_sample
 
 -- FIXME TODO replace with parent
@@ -200,8 +201,9 @@ id_sam text check (id_sam ~ '^sam-'), -- alternative to instance_sample
 --id_sam integer references sds_specimen(id), -- sometimes
 UNIQUE (dataset, id_formal),
 constraint constraint_values_inst_type_id_formal check (type = 'below' and not (id_formal ~ '^(sub|sam)-') or type = 'subject' and id_formal ~ '^sub-' or type = 'sample' and id_formal ~ '^sam-'),
-constraint constraint_values_inst_type_id_sub check ((type = 'subject') or (id_sub is not null)), -- FIXME cases where a cell line is the subject are going to confuse people, welcome to names not matching their meaning
-constraint constraint_values_inst_type_below check (type <> 'below' or type = 'below' and (id_sub is not null or id_sam is not null)) -- XXX there is not a general way to enforce that there must be a sample, e.g. a mri experiment can have virtual of sections of the brain without there being samples in the dataset at all, only subjects and performances
+constraint constraint_values_inst_type_id_sub check (type != 'subject' or (id_sub = id_formal and id_sam is null)),
+constraint constraint_values_inst_type_id_sam check (type != 'sample' or (id_sam is not null and id_sam = id_formal)),
+constraint constraint_values_inst_type_below check (type != 'below' or (id_sub is not null or id_sam is not null)) -- XXX there is not a general way to enforce that there must be a sample, e.g. a mri experiment can have virtual of sections of the brain without there being samples in the dataset at all, only subjects and performances
 );
 
 /*
@@ -987,10 +989,10 @@ BEGIN
 WITH
 parents AS (SELECT im FROM values_inst AS im WHERE im.id IN (SELECT * FROM get_parents_inst(NEW.id))),
 subjects AS (SELECT suim FROM values_inst AS im
-JOIN values_inst AS suim ON im.dataset = suim.dataset AND suim.id_formal = im.id_sub
+JOIN values_inst AS suim ON im.dataset = suim.dataset AND suim.id_formal = im.id_sub AND suim.id != NEW.id
 WHERE im.id = NEW.id),
 samples AS (SELECT saim FROM values_inst AS im
-JOIN values_inst AS saim ON im.dataset = saim.dataset AND saim.id_formal = im.id_sam
+JOIN values_inst AS saim ON im.dataset = saim.dataset AND saim.id_formal = im.id_sam AND saim.id != NEW.id
 WHERE im.id = NEW.id)
 SELECT -- FIXME surely there is a more efficient way to do this
 (((SELECT count(*) FROM samples) > 0 OR  (SELECT count(*) from subjects) > 0) AND (SELECT count(*) FROM parents) = 0) AS one,
@@ -1012,17 +1014,17 @@ of referential integrity
 
 IF rec.one THEN
 
-RAISE EXCEPTION 'parents missing for instance which references a subject or a sample: % % %', NEW.id, NEW.id_sub, NEW.id_sam
+RAISE EXCEPTION 'parents missing for instance which references a subject or a sample: %', (select id_formal from values_inst where id = NEW.id) --, .id_sub, .id_sam
 USING HINT = 'forgot to insert into the parents table';
 
 ELSIF rec.two THEN
 
-RAISE EXCEPTION 'subjects and samples missing on instance when there are parents: % %', NEW.id, (SELECT * FROM get_parents_inst(NEW.id))
+RAISE EXCEPTION 'subjects and samples missing on instance when there are parents: % %', (select id_formal from values_inst where id = NEW.id), (SELECT vi.id_formal FROM values_inst as vi JOIN get_parents_inst(NEW.id) as gpi ON vi.id = gpi.parent)
 USING HINT = 'instance did not include subject/sample reference when there should have been one';
 
 ELSIF NOT rec.three THEN
 
-RAISE EXCEPTION 'mismatch between parents, subjects, or samples: % % % %', NEW.id, (SELECT * FROM get_parents_inst(NEW.id)), NEW.id_sub, NEW.id_sam
+RAISE EXCEPTION 'mismatch between parents, subjects, or samples: % %', (select id_formal from values_inst where id = NEW.id), (SELECT vi.id_formal FROM values_inst as vi JOIN get_parents_inst(NEW.id) as gpi ON vi.id = gpi.parent)--, NEW.id_sub, NEW.id_sam
 USING HINT = 'there might be extra parents, subjects, or samples, check the set differences';
 
 END IF;

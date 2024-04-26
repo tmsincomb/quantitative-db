@@ -404,14 +404,14 @@ WHERE cv.object is NULL;
 
 -- the order of inserts here more or less corresponds to the order needed for the workflow
 
-INSERT INTO values_inst (type, desc_inst, dataset, id_formal, id_sub) VALUES
-('subject', desc_inst_from_label('human'), :'dataset_uuid_1', 'sub-1', NULL),
-('sample', desc_inst_from_label('nerve-volume'), :'dataset_uuid_1', 'sam-l', 'sub-1'), -- FIXME and here we see the issue with nerve vs nerve-thing
-('sample', desc_inst_from_label('nerve-cross-section'), :'dataset_uuid_1', 'sam-l-seg-c7-A-level-1', 'sub-1'),
+INSERT INTO values_inst (type, desc_inst, dataset, id_formal, id_sub, id_sam) VALUES
+('subject', desc_inst_from_label('human'), :'dataset_uuid_1', 'sub-1', 'sub-1', NULL),
+('sample', desc_inst_from_label('nerve-volume'), :'dataset_uuid_1', 'sam-l', 'sub-1', 'sam-l'), -- FIXME and here we see the issue with nerve vs nerve-thing
+('sample', desc_inst_from_label('nerve-cross-section'), :'dataset_uuid_1', 'sam-l-seg-c7-A-level-1', 'sub-1', 'sam-l-seg-c7-A-level-1'),
 
-('subject', desc_inst_from_label('human'), :'dataset_uuid_2', 'sub-1', NULL),
-('subject', desc_inst_from_label('human'), :'dataset_uuid_3', 'sub-1', NULL),
-('subject', desc_inst_from_label('human'), :'dataset_uuid_4', 'sub-1', NULL)
+('subject', desc_inst_from_label('human'), :'dataset_uuid_2', 'sub-1', 'sub-1', NULL),
+('subject', desc_inst_from_label('human'), :'dataset_uuid_3', 'sub-1', 'sub-1', NULL),
+('subject', desc_inst_from_label('human'), :'dataset_uuid_4', 'sub-1', 'sub-1', NULL)
 ;
 
 SELECT * FROM  values_inst;
