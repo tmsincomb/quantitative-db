@@ -4,8 +4,8 @@ from decimal import Decimal
 from datetime import datetime
 from flask import Flask, request
 from sqlalchemy.sql import text as sql_text
-from quantdb import config
 from quantdb.utils import log, dbUri, isoformat
+from quantdb.config import auth
 from quantdb import exceptions as exc
 
 
@@ -385,7 +385,7 @@ def getArgs(request):
 
 def make_app(db=None, name='quantdb-api-server'):
     app = Flask(name)
-    kwargs = {k:config.auth.get(f'db-{k}')  # TODO integrate with cli options
+    kwargs = {k:auth.get(f'db-{k}')  # TODO integrate with cli options
               for k in ('user', 'host', 'port', 'database')}
     kwargs['dbuser'] = kwargs.pop('user')
     app.config['SQLALCHEMY_DATABASE_URI'] = dbUri(**kwargs)  # use os.environ.update

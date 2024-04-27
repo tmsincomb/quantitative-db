@@ -503,7 +503,7 @@ SELECT * FROM get_all_parents_inst();
 -- hrm do we need get_x_children? answer seems to be yes?
 
 -- top down hierarchical query
--- FIXME almost certainly faster to call get_aspect_children once and then do where a0.id in aspect_children ...
+-- FIXME almost certainly faster to call get_child_aspect once and then do where a0.id in aspect_children ...
 -- using explain we can see that this version get_parents_aspect in a loop for all aspects (I think) which is dumb
 -- but the query planner may be able to figure it out diesn't actually need to do that for the entire sub select
 -- but only for a0.id ??? yeah, seems so
@@ -516,13 +516,13 @@ where ap.parent = aspect_from_label('distance');
 */
 
 -- FIXME for our join use case we likely want this to include the starting class itself
-SELECT * FROM get_aspect_children(aspect_from_label('distance'));
+SELECT * FROM get_child_aspect(aspect_from_label('distance'));
 SELECT * FROM get_aspect_child_edges(aspect_from_label('distance'));
 
-SELECT * FROM get_aspect_children(aspect_from_label('diameter'));
+SELECT * FROM get_child_aspect(aspect_from_label('diameter'));
 SELECT * FROM get_aspect_child_edges(aspect_from_label('diameter'));
 
-select qv from get_aspect_children(aspect_from_label('distance')) as ap
+select qv from get_child_aspect(aspect_from_label('distance')) as ap
 join descriptors_quant as qd on qd.aspect = ap.child
 join values_quant as qv on qv.desc_quant = qd.id;
 

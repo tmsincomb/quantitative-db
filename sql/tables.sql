@@ -579,7 +579,7 @@ CREATE INDEX IF NOT EXISTS idx_values_cat_object ON values_cat (object);
 CREATE INDEX IF NOT EXISTS idx_values_cat_desc_inst ON values_cat (desc_inst);
 CREATE INDEX IF NOT EXISTS idx_values_cat_desc_cat ON values_cat (desc_cat);
 CREATE INDEX IF NOT EXISTS idx_values_cat_instance ON values_cat (instance);
-CREATE INDEX IF NOT EXISTS idx_values_cat_instance ON values_cat (value_controlled);
+CREATE INDEX IF NOT EXISTS idx_values_cat_value_controlled ON values_cat (value_controlled);
 
 ------------------- convenience functions
 

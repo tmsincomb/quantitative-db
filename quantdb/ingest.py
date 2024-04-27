@@ -665,8 +665,9 @@ def ingest_reva_ft_all(session, source_local=False, do_insert=True, batch=False,
             ingest(duuid, None, session, commit=commit, dev=dev, values_args=vargs)
 
 
-def main(commit=False, echo=True):
-    dbkwargs = {k:config.auth.get(f'db-{k}')  # TODO integrate with cli options
+def main(source_local=False, commit=False, echo=True):
+    from quantdb.config import auth
+    dbkwargs = {k:auth.get(f'db-{k}')  # TODO integrate with cli options
                 for k in ('user', 'host', 'port', 'database')}
     dbkwargs['dbuser'] = dbkwargs.pop('user')
     engine = create_engine(dbUri(**dbkwargs))
@@ -674,7 +675,7 @@ def main(commit=False, echo=True):
     session = Session(engine)
 
     try:
-        ingest_reva_ft_all(session, source_local=False, do_insert=True, batch=True, commit=commit, dev=True)
+        ingest_reva_ft_all(session, source_local=source_local, do_insert=True, batch=True, commit=commit, dev=True)
     except Exception as e:
         session.rollback()
         session.close()
