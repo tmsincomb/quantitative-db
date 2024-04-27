@@ -1,4 +1,3 @@
-import sys
 import json
 import uuid
 from decimal import Decimal
@@ -7,6 +6,7 @@ from flask import Flask, request
 from sqlalchemy.sql import text as sql_text
 from quantdb import config
 from quantdb.utils import log, dbUri, isoformat
+from quantdb import exceptions as exc
 
 
 log = log.getChild('api')
@@ -73,7 +73,7 @@ def get_where(kwargs):
 
     where_cat = ' AND '.join(_where_cat)
     where_quant = ' AND '.join(_where_quant)
-    log.debug(f'\nwhere-quant\n{where_quant}\nwhere-quant')
+    log.log(9, f'\nwhere-quant\n{where_quant}\nwhere-quant')
     return where_cat, where_quant, params
 
 
@@ -136,11 +136,54 @@ def main_query(endpoint, kwargs):
                 'NULL AS vc, qv.value'
             ))}[endpoint]
     # FIXME move extra and select out and pass then in in as arguments ? or retain control here?
+
+    def gkw(k):
+        return k in kwargs and kwargs[k]
+
+    class sn:  # select needs
+        desc_inst = endpoint != 'objects'
+        desc_cat = endpoint in ('values/cat', 'values/cat-quant')
+        value_cat = endpoint in ('values/cat', 'values/cat-quant')
+        aspect = endpoint in ('values/quant', 'values/cat-quant')
+        unit = endpoint in ('values/quant', 'values/cat-quant')
+        agg_type = endpoint in ('values/quant', 'values/cat-quant')
+
+    class kw:  # keywords
+        source_only = gkw('source-only')
+        desc_inst = gkw('desc-inst')
+        desc_cat = gkw('desc-cat')
+        value_cat = gkw('value-cat')
+        aspect = gkw('aspect')
+        unit = gkw('unit')
+        agg_type = gkw('agg-type')
+
     extra_cat = {
-        'objects':             '\nJOIN objects AS o ON cv.object = o.id LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id',
+        'objects':
+        (('\n'
+          'JOIN objects AS o ON cv.object = o.id\n'
+          'LEFT OUTER JOIN objects_internal AS oi\n'
+          'ON oi.id = o.id\n')
+         if kw.source_only else
+         ('\n'  # have to use LEFT OUTER because object might have only one of cat or quant
+          'LEFT OUTER JOIN values_quant AS qv ON qv.instance = im.id\n'
+          'JOIN objects AS o ON cv.object = o.id OR qv.object = o.id\n'
+          'LEFT OUTER JOIN objects_internal AS oi\n'
+          'ON oi.id = o.id\n')
+         ),
     }
     extra_quant = {
-        'objects':             '\nJOIN objects AS o ON qv.object = o.id LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id',
+        'objects':
+        (('\n'
+          'JOIN objects AS o ON qv.object = o.id\n'
+          'LEFT OUTER JOIN objects_internal AS oi\n'
+          'ON oi.id = o.id\n')
+         if kw.source_only else
+         ('\n'  # have to use LEFT OUTER because object might have only one of cat or quant
+          'LEFT OUTER JOIN values_cat AS cv ON cv.instance = im.id\n'
+          'JOIN objects AS o ON qv.object = o.id OR cv.object = o.id\n'
+          'LEFT OUTER JOIN objects_internal AS oi\n'
+          'ON oi.id = o.id\n')
+         ),
     }
     ep_extra_cat = extra_cat[endpoint] if endpoint in extra_cat else ''
     ep_extra_quant = extra_quant[endpoint] if endpoint in extra_quant else ''
@@ -150,29 +193,40 @@ def main_query(endpoint, kwargs):
     _where_cat, _where_quant, params = get_where(kwargs)
     where_cat = f'WHERE {_where_cat}' if _where_cat else ''
     where_quant = f'WHERE {_where_quant}' if _where_quant else ''
-    q_cat = """FROM values_cat AS cv
 
-JOIN descriptors_inst AS idin
-CROSS JOIN LATERAL get_child_desc_inst(idin.id) AS idc ON cv.desc_inst = idc.child
-JOIN descriptors_inst AS id ON cv.desc_inst = id.id
-JOIN values_inst AS im ON cv.instance = im.id
+    # FIXME even trying to be smart here about which joins to pull just papers over the underlying perf issue
+    # shaves about 140ms off but the underlying issue remains
+    q_cat = '\n'.join((
+        'FROM values_cat AS cv',
+        '\n'.join((
+            'JOIN descriptors_inst AS idin',
+            'CROSS JOIN LATERAL get_child_closed_desc_inst(idin.id) AS idc ON cv.desc_inst = idc.child -- FIXME',
+        )) if kw.desc_inst else '',
+        'JOIN descriptors_inst AS id ON cv.desc_inst = id.id' if sn.desc_inst or kw.desc_inst else '',
+        'JOIN values_inst AS im ON cv.instance = im.id',
+        '\n'.join((
+            'JOIN descriptors_cat AS cd ON cv.desc_cat = cd.id',
+            'LEFT OUTER JOIN descriptors_inst AS cdid ON cd.domain = cdid.id  -- XXX TODO mismach',
+        )) if sn.desc_cat or kw.desc_cat else '',
+        'LEFT OUTER JOIN controlled_terms AS ct ON cv.value_controlled = ct.id' if sn.value_cat or kw.value_cat else '',
+    ))
 
-JOIN descriptors_cat AS cd ON cv.desc_cat = cd.id
-LEFT OUTER JOIN descriptors_inst AS cdid ON cd.domain = cdid.id  -- XXX TODO mismach
-LEFT OUTER JOIN controlled_terms AS ct ON cv.value_controlled = ct.id"""
-
-    q_quant = """FROM values_quant AS qv
-
-JOIN descriptors_inst AS idin
-CROSS JOIN LATERAL get_child_desc_inst(idin.id) AS idc ON qv.desc_inst = idc.child
-JOIN descriptors_inst AS id ON qv.desc_inst = id.id
-JOIN values_inst AS im ON qv.instance = im.id
-
-JOIN descriptors_quant AS qd ON qv.desc_quant = qd.id
-JOIN aspects AS ain
-CROSS JOIN LATERAL get_aspect_children(ain.id) AS ac ON qd.aspect = ac.child
-JOIN aspects AS a ON ac.child = a.id
-LEFT OUTER JOIN units AS u ON qd.unit = u.id"""
+    q_quant = '\n'.join((
+        'FROM values_quant AS qv',
+        '\n'.join((
+            'JOIN descriptors_inst AS idin',
+            'CROSS JOIN LATERAL get_child_closed_desc_inst(idin.id) AS idc ON qv.desc_inst = idc.child -- FIXME',
+        )) if kw.desc_inst else '',
+        'JOIN descriptors_inst AS id ON qv.desc_inst = id.id' if sn.desc_inst or kw.desc_inst else '',
+        'JOIN values_inst AS im ON qv.instance = im.id',
+        'JOIN descriptors_quant AS qd ON qv.desc_quant = qd.id' if sn.aspect or sn.unit or sn.agg_type or kw.aspect or kw.unit or kw.agg_type else '',
+        '\n'.join((
+            'JOIN aspects AS ain',
+            'CROSS JOIN LATERAL get_child_closed_aspect(ain.id) AS ac ON qd.aspect = ac.child',
+            'JOIN aspects AS a ON ac.child = a.id',
+        )) if kw.aspect else ('JOIN aspects AS a ON qd.aspect = a.id' if sn.aspect else ''), # TODO we filter these out based on endpoint
+        'LEFT OUTER JOIN units AS u ON qd.unit = u.id' if sn.unit or kw.unit else '',
+    ))
 
     sw_cat = f'{select_cat}\n{q_cat}{ep_extra_cat}\n{where_cat}'  # XXX yes this can be malformed in some cases
     sw_quant = f'{select_quant}\n{q_quant}{ep_extra_quant}\n{where_quant}'  # XXX yes this can be malformed in some cases
@@ -184,7 +238,7 @@ LEFT OUTER JOIN units AS u ON qd.unit = u.id"""
         operator = 'UNION' if 'union-cat-quant' in kwargs and kwargs['union-cat-quant'] else 'INTERSECT'
         query = f'{sw_cat}\n{operator}\n{sw_quant}'
 
-    log.debug(query)
+    log.log(9, '\n' + query)
     return query, params
 
 
@@ -258,7 +312,7 @@ def getArgs(request):
         'include-equivalent': False,
 
         ## cat
-        'dsec-cat': [],  # aka predicate
+        'desc-cat': [],  # aka predicate
 
         'value-cat': [],
         'value-cat-open': [],
@@ -278,6 +332,7 @@ def getArgs(request):
         'limit': 100,
         #'operator': 'INTERSECT',  # XXX ...
         'union-cat-quant': False,  # by default we intersect but sometimes you want the union instead e.g. if object is passed
+        'source-only': False,
 
         #'cat-value': [],
         #'class': [],
@@ -293,7 +348,8 @@ def getArgs(request):
     extras = set(request.args) - set(default)
     if extras:
         # FIXME raise this as a 401, TODO need error types for this
-        raise ValueError(f'unknown args {extras}')
+        nl = '\n'
+        raise exc.UnknownArg(f'unknown args: {nl.join(extras)}')
 
     def convert(k, d):
         if k in request.args:
@@ -342,6 +398,8 @@ def make_app(db=None, name='quantdb-api-server'):
     def default_flow(endpoint, record_type, query_fun, json_fun):
         try:
             kwargs = getArgs(request)
+        except exc.UnknownArg as e:
+            return json.dumps({'error': e.args[0], 'http_response_status': 422}), 422
         except Exception as e:
             breakpoint()
             raise e

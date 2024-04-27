@@ -666,7 +666,10 @@ def ingest_reva_ft_all(session, source_local=False, do_insert=True, batch=False,
 
 
 def main(commit=False, echo=True):
-    engine = create_engine(f'postgresql+psycopg2{"cffi" if hasattr(sys, "pypy_version_info") else ""}://quantdb-user@localhost/quantdb_test')
+    dbkwargs = {k:config.auth.get(f'db-{k}')  # TODO integrate with cli options
+                for k in ('user', 'host', 'port', 'database')}
+    dbkwargs['dbuser'] = dbkwargs.pop('user')
+    engine = create_engine(dbUri(**dbkwargs))
     engine.echo = echo
     session = Session(engine)
 

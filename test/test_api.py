@@ -1,7 +1,8 @@
 import json
 import pprint
-from quantdb.api import make_app
 from flask_sqlalchemy import SQLAlchemy
+from quantdb.api import make_app
+from quantdb.utils import log
 
 
 def test():
@@ -18,15 +19,32 @@ def test():
         f'{base}values/inst?dataset={dataset_uuid}',
         f'{base}values/inst?dataset={dataset_uuid}&aspect=distance&aspect=time',
         f'{base}values/inst?dataset={dataset_uuid}&aspect=distance&value-quant-min=0.5',
-
+        f'{base}values/inst?desc-inst=nerve-volume',
 
         f'{base}objects?dataset={dataset_uuid}',
         f'{base}objects?dataset={dataset_uuid}&aspect=distance',
         f'{base}objects?dataset={dataset_uuid}&aspect=distance&value-quant-min=0.5',  # expect nothing
         f'{base}objects?dataset={dataset_uuid}&aspect=distance&value-quant-min=0.5&union-cat-quant=true',
 
+        f'{base}objects?dataset={dataset_uuid}&subject=sub-f001',
+        f'{base}objects?subject=sub-f001',
+        f'{base}objects?subject=sub-f001&union-cat-quant=true',
+        f'{base}objects?subject=sub-f001&subject=sub-f002&subject=sub-f003&subject=sub-f004&subject=sub-f005',
+        f'{base}objects?subject=sub-f001&subject=sub-f002&subject=sub-f003&subject=sub-f004&subject=sub-f005&union-cat-quant=true',
+        f'{base}objects?subject=sub-f001&desc-cat=none&value-quant-min=0.5&union-cat-quant=true',
+        f'{base}objects?subject=sub-f001&desc-cat=none&aspect=distance&value-quant-min=0.5&union-cat-quant=true',
+        f'{base}objects?subject=sub-f001&aspect=distance&value-quant-min=0.5&union-cat-quant=true',
+        f'{base}objects?aspect=distance&value-quant-min=0.5&union-cat-quant=true',
+        f'{base}objects?desc-cat=none&aspect=distance&value-quant-min=0.5&union-cat-quant=true',
+        f'{base}objects?desc-cat=none&aspect=distance&value-quant-min=0.5',
+        f'{base}objects?aspect=distance&value-quant-min=0.5',
+        f'{base}objects?aspect=distance&value-quant-min=0.5&source-only=true',
+        f'{base}objects?desc-inst=nerve-volume&aspect=distance&value-quant-min=0.5&source-only=true',
+
         f'{base}values/quant?dataset={dataset_uuid}&aspect=distance',
         f'{base}values/quant?object={actual_package_uuid}&aspect=distance',
+        f'{base}values/quant?aspect=distance',
+        f'{base}values/quant?aspect=distance-via-reva-ft-sample-id-normalized-v1',
 
         f'{base}values/cat?object={actual_package_uuid}',
         f'{base}values/cat?object={actual_package_uuid}&union-cat-quant=true',  # shouldn't need it in this case
@@ -51,9 +69,12 @@ def test():
         f'{base}aspects',
         f'{base}units',
         # TODO maybe shapes here as well?
+
     )
+    #log.setLevel(9)
     resps = []
     for url in urls:
+        log.debug(url)
         resp = client.get(url)
         resp.ok = resp.status_code < 400
         resp.url = resp.request.url
@@ -61,5 +82,6 @@ def test():
         resps.append(json.loads(resp.data.decode()))
 
     pprint.pprint(resps, width=120)
+    # (i := 6, resps[i], urls[i])
     breakpoint()
 
