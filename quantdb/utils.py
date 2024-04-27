@@ -1,5 +1,6 @@
 import os
 import logging
+from datetime import datetime
 
 
 def makeSimpleLogger(name, level=logging.INFO):
@@ -32,4 +33,24 @@ def setPS1(script__file__):
     except AttributeError as e:
         log.exception(e)
 
+
+def dbUri(dbuser, host, port, database):
+    if hasattr(sys, 'pypy_version_info'):
+        dialect = 'psycopg2cffi'
+    else:
+        dialect = 'psycopg2'
+    return f'postgresql+{dialect}://{dbuser}@{host}:{port}/{database}'
+
+
+# from pyontutils.utils_fast import isoformat
+def isoformat(datetime_instance, timespec='auto'):
+    kwargs = {}
+    if isinstance(datetime_instance, datetime):
+        # don't pass timespec if type is not date not datetime
+        kwargs['timespec'] = timespec
+
+    return (datetime_instance
+            .isoformat(**kwargs)
+            .replace('.', ',')
+            .replace('+00:00', 'Z'))
 

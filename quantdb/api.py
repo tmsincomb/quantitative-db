@@ -6,23 +6,10 @@ from datetime import datetime
 from flask import Flask, request
 from sqlalchemy.sql import text as sql_text
 from quantdb import config
-from quantdb.utils import log
+from quantdb.utils import log, dbUri, isoformat
 
 
 log = log.getChild('api')
-
-
-# from pyontutils.utils_fast import isoformat
-def isoformat(datetime_instance, timespec='auto'):
-    kwargs = {}
-    if isinstance(datetime_instance, datetime):
-        # don't pass timespec if type is not date not datetime
-        kwargs['timespec'] = timespec
-
-    return (datetime_instance
-            .isoformat(**kwargs)
-            .replace('.', ',')
-            .replace('+00:00', 'Z'))
 
 
 class JEncode(json.JSONEncoder):
@@ -338,14 +325,6 @@ def getArgs(request):
 
     out = {k:convert(k, v) for k, v in default.items()}
     return out
-
-
-def dbUri(dbuser, host, port, database):
-    if hasattr(sys, 'pypy_version_info'):
-        dialect = 'psycopg2cffi'
-    else:
-        dialect = 'psycopg2'
-    return f'postgresql+{dialect}://{dbuser}@{host}:{port}/{database}'
 
 
 def make_app(db=None, name='quantdb-api-server'):
