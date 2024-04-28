@@ -439,7 +439,7 @@ def getArgs(request, endpoint, dev=False):
     if not endpoint.startswith('values/'):
         default.pop('prov')
     elif endpoint == 'values/cat':
-        [default.pop(k) for k in list(default) if k.startswith('value-quant-') or k in ('unit', 'aspect', 'agg-type')]
+        [default.pop(k) for k in list(default) if k.startswith('value-quant') or k in ('unit', 'aspect', 'agg-type')]
     elif endpoint == 'values/quant':
         [default.pop(k) for k in list(default) if k in ('desc-cat', 'value-cat', 'value-cat-open')]
 
