@@ -490,15 +490,15 @@ SELECT 'guo-2';
 SELECT * FROM get_unextracte_objects();
 
 -- hierachy testing
-SELECT * FROM get_parents_aspect(aspect_from_label('diameter-orthogonal-to-anterior-posterior-axis'));
+SELECT * FROM get_parent_aspect(aspect_from_label('diameter-orthogonal-to-anterior-posterior-axis'));
 SELECT * FROM get_aspect_parent_edges(aspect_from_label('diameter-orthogonal-to-anterior-posterior-axis'));
 SELECT * FROM get_all_parents_aspect();
 
-SELECT * FROM get_parents_desc_inst(desc_inst_from_label('fascicle-cross-section'));
+SELECT * FROM get_parent_desc_inst(desc_inst_from_label('fascicle-cross-section'));
 SELECT * FROM get_class_parent_edges(desc_inst_from_label('fascicle-cross-section'));
 SELECT * FROM get_all_parents_desc_inst();
 
-SELECT * FROM get_parents_inst(inst_from_dataset_id(:'dataset_uuid_1', 'fsccs-1'));
+SELECT * FROM get_parent_inst(inst_from_dataset_id(:'dataset_uuid_1', 'fsccs-1'));
 SELECT * FROM get_instance_parent_edges(inst_from_dataset_id(:'dataset_uuid_1', 'fsccs-1'));
 SELECT * FROM get_all_parents_inst();
 
@@ -506,14 +506,14 @@ SELECT * FROM get_all_parents_inst();
 
 -- top down hierarchical query
 -- FIXME almost certainly faster to call get_child_aspect once and then do where a0.id in aspect_children ...
--- using explain we can see that this version get_parents_aspect in a loop for all aspects (I think) which is dumb
+-- using explain we can see that this version get_parent_aspect in a loop for all aspects (I think) which is dumb
 -- but the query planner may be able to figure it out diesn't actually need to do that for the entire sub select
 -- but only for a0.id ??? yeah, seems so
 /*
 select * from values_quant as qv
 join descriptors_quant as qd on qv.desc_quant = qd.id
 join aspects as a0 on qd.aspect = a0.id
-join (select a.id, p.parent from aspects as a cross join get_parents_aspect(a.id) as p) as ap on ap.id = a0.id
+join (select a.id, p.parent from aspects as a cross join get_parent_aspect(a.id) as p) as ap on ap.id = a0.id
 where ap.parent = aspect_from_label('distance');
 */
 

@@ -5,6 +5,10 @@ in the table below. If multiple values are provided then the api will
 return records that match any one of the provided values (that is
 =union=, or =or= behavior).
 
+If a parameter is passed to an endpoint that is unknown or not
+accepted by that endpoint a response with a 422 status code listing
+the bad parameter(s) will be returned.
+
 For example if a query string with the form
 ~?dataset=uuid&aspect=distance&aspect=time~
 will translate into sql as something like
@@ -36,10 +40,21 @@ resolved to match all subclasses, so if =distance= is provided results
 will match values with aspects =distance-metric-m-version-1= and
 =distance-metric-m-version-2= along with other subclasses of distance.
 
+Behavior or =desc/*=, =terms=, =units=, and =aspects= endpoints is
+currently limited to only querying values of the same type, so e.g.
+it is not possible to limit the results of a query to the =aspects=
+endpoint by passing ~?value-cat=some-cat-value~ and it is not possible
+to limit the results of a query to the =terms= endpoint by passing
+~?aspect=some-aspect~. This will be fixed eventually.
+
 - =prov= only accepted on =values/*= endpoints
 - =source-only= only accepted on the =objects= endpoint
 - =value-cat*= and =desc-cat= not accepted on =values/quant=
 - =value-quant*=, =unit=, =aspect=, and =agg-type= not accepted on =values/cat=
+- =desc-*= are not accepted on =desc/*=
+- =value-cat= is not accepted on =terms=
+- =unit= is not accepted on =units=
+- =aspect= is not accepted on =aspects=
 
 # TODO need a parents endpoint probably
 
@@ -72,7 +87,44 @@ will match values with aspects =distance-metric-m-version-1= and
 | limit              | integer   |     1 |
 | union-cat-quant    | bool      |     1 |
 | source-only        | bool      |     1 |
+| include-unused     | bool      |     1 |
 | prov               | bool      |     1 |
+
+Invalid combinations are marked with an x.
+Non-meaningful combinations are marked with a q.
+Not-implemented are marked with ni.
+
+| arg V endpoint >   | objects | values/inst | values/cat | values/quant | desc/inst | desc/cat | desc/quant | terms | units | aspects |
+|--------------------+---------+-------------+------------+--------------+-----------+----------+------------+-------+-------+---------|
+| object             |         |             |            |              |           |          |            |       |       |         |
+| updated-transitive |         |             |            |              |           |          |            |       |       |         |
+|--------------------+---------+-------------+------------+--------------+-----------+----------+------------+-------+-------+---------|
+| desc-inst          |         |             |            |              | x         |          |            |       |       |         |
+|--------------------+---------+-------------+------------+--------------+-----------+----------+------------+-------+-------+---------|
+| dataset            |         |             |            |              |           |          |            |       |       |         |
+| inst               |         |             |            |              |           |          |            |       |       |         |
+| subject            |         |             |            |              |           |          |            |       |       |         |
+| sample             |         |             |            |              |           |          |            |       |       |         |
+| include-equivalent | ni      | ni          | ni         | ni           | ni        | ni       | ni         | ni    | ni    | ni      |
+|--------------------+---------+-------------+------------+--------------+-----------+----------+------------+-------+-------+---------|
+| desc-cat           |         |             |            | x            |           | x        | q          |       | q     | q       |
+| value-cat          |         |             |            | x            |           |          | q          | x     | q     | q       |
+| value-cat-open     |         |             |            | x            |           |          | q          |       | q     | q       |
+|--------------------+---------+-------------+------------+--------------+-----------+----------+------------+-------+-------+---------|
+| unit               |         |             | x          |              |           | q        |            | q     | x     |         |
+| aspect             |         |             | x          |              |           | q        |            | q     |       | x       |
+| agg-type           |         |             | x          |              |           | q        |            | q     |       |         |
+|--------------------+---------+-------------+------------+--------------+-----------+----------+------------+-------+-------+---------|
+| value-quant        |         |             | x          |              |           | q        |            | q     |       |         |
+| value-quant-margin |         |             | x          |              |           | q        |            | q     |       |         |
+| value-quant-min    |         |             | x          |              |           | q        |            | q     |       |         |
+| value-quant-max    |         |             | x          |              |           | q        |            | q     |       |         |
+|--------------------+---------+-------------+------------+--------------+-----------+----------+------------+-------+-------+---------|
+| limit              | ni      | ni          | ni         | ni           | ni        | ni       | ni         | ni    | ni    | ni      |
+| union-cat-quant    |         |             |            |              |           |          |            |       |       |         |
+| source-only        |         | x           | x          | x            | x         | x        | x          | x     | x     | x       |
+| include-unused     | x       | x           | x          | x            |           |          |            |       |       |         |
+| prov               | x       |             |            |              | x         | x        | x          | x     | x     | x       |
 
 ** endpoints
 *** =objects=
@@ -199,7 +251,7 @@ original brainstorm
 /{endpoint}?instance_classes=[]&aspects=[]&categorical_filter=[]&agg_type=[]
 #+end_src
 *** =values= or =values/cat-quant=
-- query categorical and quantitative values matching query parameters
+- query categorical and quantitative values matching parameters
 - accepts standard query parameters
 *** =values/cat=
 - query categorical values matching parameters
@@ -209,23 +261,21 @@ original brainstorm
 - accepts standard query parameters (but will ignore those for categorical values)
 *** =desc/inst= or =descriptors/inst= or =classes=
 - list instance descriptors (aka classes) matching parameters
+- accepts standard query parameters (see notes on limitations above)
 # instance classes are ... owl classes that are the domain for the measurement
 # TODO make sure this returns only classes that have data associated with them by default
 *** =desc/cat= or =descriptors/cat= or =predicates=
-- list categorical descriptors (aka predicates or properties)
-**** TODO query parameters
+- list categorical descriptors (aka predicates or properties) matching parameters
+- accepts standard query parameters (see notes on limitations above)
 *** =desc/quant= or =desciptors/quant=
-- list quantitative descriptors
-**** TODO query parameters
-***** =units=
-***** =aspects=
-***** =instances=
+- list quantitative descriptors matching parameters
+- accepts standard query parameters (see notes on limitations above)
 *** =terms= or =controlled-terms=
-- list terms
-**** TODO query parameters
+- list terms matching parameters
+- accepts standard query parameters (see notes on limitations above)
 *** =units=
-- list units
-**** TODO query parameters
+- list units matching parameters
+- accepts standard query parameters (see notes on limitations above)
 *** =aspects=
-- list aspects
-**** TODO query parameters
+- list aspects matching parameters
+- accepts standard query parameters (see notes on limitations above)

@@ -134,20 +134,56 @@ def main_query(endpoint, kwargs):
                 'a.label AS aspect, '
                 'u.label AS unit, '
                 'NULL AS vc, qv.value'
-            ))}[endpoint]
+            )),
+        'desc/inst': (
+            'id.iri, '
+            'id.label, '
+            'idpar.label as subclassof '
+        ),
+        'desc/cat': (
+            'cd.label, '
+            'cdid.label AS domain, '
+            'cd.range, '
+            'cd.description '
+        ),
+        'desc/quant': (
+            'qd.label, '
+            'id.label AS domain, '
+            'qd.shape, '
+            'qd.aggregation_type as agg_type, '
+            'a.label AS aspect, '
+            'u.label AS unit, '
+            'qd.description '
+        ),
+        'terms': (
+            'ct.iri, '
+            'ct.label '
+        ),
+        'units': (
+            'u.iri, '
+            'u.label '
+        ),
+        'aspects': (
+            'a.iri, '
+            'a.label, '
+            'aspar.label as subclassof '
+        ),
+    }[endpoint]
     # FIXME move extra and select out and pass then in in as arguments ? or retain control here?
 
-    def gkw(k):
-        return k in kwargs and kwargs[k]
+    def gkw(k): return k in kwargs and kwargs[k]
 
     class sn:  # select needs
         objects = endpoint == 'objects'
-        desc_inst = endpoint != 'objects'
-        desc_cat = endpoint in ('values/cat', 'values/cat-quant')
-        value_cat = endpoint in ('values/cat', 'values/cat-quant')
-        aspect = endpoint in ('values/quant', 'values/cat-quant')
-        unit = endpoint in ('values/quant', 'values/cat-quant')
+        desc_inst = endpoint not in ('objects', 'terms', 'units', 'aspects',)
+        desc_cat = endpoint in ('values/cat', 'values/cat-quant', 'desc/cat')
+        value_cat = endpoint in ('values/cat', 'values/cat-quant', 'terms')
+        aspect = endpoint in ('values/quant', 'values/cat-quant', 'desc/quant', 'aspects')
+        unit = endpoint in ('values/quant', 'values/cat-quant', 'desc/quant', 'units')
         agg_type = endpoint in ('values/quant', 'values/cat-quant')
+        desc_quant = (aspect or unit or agg_type)
+        parent_aspect = endpoint == 'aspects'
+        parent_desc_inst = endpoint == 'desc/inst'
 
     class kw:  # keywords
         prov = gkw('prov')
@@ -158,6 +194,23 @@ def main_query(endpoint, kwargs):
         aspect = gkw('aspect')
         unit = gkw('unit')
         agg_type = gkw('agg-type')
+        desc_quant = (aspect or unit or agg_type)
+
+    q_par_desc_inst = """
+JOIN descriptors_inst AS idstart ON idstart.id = {join_to}.desc_inst
+JOIN descriptors_inst AS id
+CROSS JOIN LATERAL get_parent_closed_desc_inst(idstart.id) AS idp ON idp.parent = id.id
+LEFT OUTER JOIN class_parent AS ip ON ip.id = id.id
+LEFT OUTER JOIN descriptors_inst AS idpar ON idpar.id = ip.parent
+"""
+
+    q_par_aspect = """
+JOIN aspects AS astart ON qd.aspect = astart.id
+JOIN aspects AS a
+CROSS JOIN LATERAL get_parent_closed_aspect(astart.id) AS asp ON asp.parent = a.id
+LEFT OUTER JOIN aspect_parent AS ap ON ap.id = a.id
+LEFT OUTER JOIN aspects AS aspar ON aspar.id = ap.parent
+"""
 
     s_prov_objs = """
 ,
@@ -223,7 +276,10 @@ LEFT OUTER JOIN addresses AS adu ON adu.id = odq.addr_unit
 LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
 """
 
-    maybe_distinct = 'DISTINCT ' if (sn.objects or kw.prov) and not kw.source_only else ''
+    maybe_distinct = 'DISTINCT ' if (
+        endpoint.startswith('desc/') or
+        endpoint in ('terms', 'units', 'aspects') or
+        (sn.objects or kw.prov) and not kw.source_only) else ''
     ep_select_cat, ep_select_quant = ep_select if isinstance(ep_select, tuple) else (ep_select, ep_select)
     select_cat = f'SELECT {maybe_distinct}{ep_select_cat}' + (
         (s_prov_objs + s_prov_i + ((',\n' + s_prov_c) if endpoint != 'values/inst' else '')) if kw.prov else '')
@@ -241,7 +297,9 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
             'JOIN descriptors_inst AS idin',
             'CROSS JOIN LATERAL get_child_closed_desc_inst(idin.id) AS idc ON cv.desc_inst = idc.child -- FIXME',
         )) if kw.desc_inst else '',
-        'JOIN descriptors_inst AS id ON cv.desc_inst = id.id' if sn.desc_inst or kw.desc_inst else '',
+        (q_par_desc_inst.format(join_to='cv') if sn.parent_desc_inst else
+         'JOIN descriptors_inst AS id ON cv.desc_inst = id.id'
+         ) if sn.desc_inst or kw.desc_inst else '',  # FIXME handle parents case
         'JOIN values_inst AS im ON cv.instance = im.id',
         '\n'.join((
             'JOIN descriptors_cat AS cd ON cv.desc_cat = cd.id',
@@ -268,14 +326,20 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
             'JOIN descriptors_inst AS idin',
             'CROSS JOIN LATERAL get_child_closed_desc_inst(idin.id) AS idc ON qv.desc_inst = idc.child -- FIXME',
         )) if kw.desc_inst else '',
-        'JOIN descriptors_inst AS id ON qv.desc_inst = id.id' if sn.desc_inst or kw.desc_inst else '',
+        (q_par_desc_inst.format(join_to='qv') if sn.parent_desc_inst else
+         'JOIN descriptors_inst AS id ON qv.desc_inst = id.id'
+         ) if sn.desc_inst or kw.desc_inst else '',  # FIXME handle parents case
         'JOIN values_inst AS im ON qv.instance = im.id',
-        'JOIN descriptors_quant AS qd ON qv.desc_quant = qd.id' if sn.aspect or sn.unit or sn.agg_type or kw.aspect or kw.unit or kw.agg_type else '',
+        'JOIN descriptors_quant AS qd ON qv.desc_quant = qd.id' if (
+            sn.desc_quant or kw.desc_quant) else '',
         '\n'.join((
             'JOIN aspects AS ain',
             'CROSS JOIN LATERAL get_child_closed_aspect(ain.id) AS ac ON qd.aspect = ac.child',
             'JOIN aspects AS a ON ac.child = a.id',
-        )) if kw.aspect else ('JOIN aspects AS a ON qd.aspect = a.id' if sn.aspect else ''), # TODO we filter these out based on endpoint
+        )) if kw.aspect else (
+            (q_par_aspect if sn.parent_aspect else
+             'JOIN aspects AS a ON qd.aspect = a.id'
+             ) if sn.aspect else ''),  # FIXME handle parents case
         'LEFT OUTER JOIN units AS u ON qd.unit = u.id' if sn.unit or kw.unit else '',
         (('\n'
           'JOIN objects AS o ON qv.object = o.id\n'
@@ -291,9 +355,9 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
 
     sw_cat = f'{select_cat}\n{q_cat}\n{where_cat}'  # XXX yes this can be malformed in some cases
     sw_quant = f'{select_quant}\n{q_quant}\n{where_quant}'  # XXX yes this can be malformed in some cases
-    if endpoint == 'values/cat':
+    if endpoint in ('values/cat', 'terms', 'desc/cat'):
         query = sw_cat
-    elif endpoint == 'values/quant':
+    elif endpoint in ('values/quant', 'units', 'aspects', 'desc/quant'):  # FIXME TODO make it possible to cross query terms, units, aspects
         query = sw_quant
     else:
         operator = 'UNION' if 'union-cat-quant' in kwargs and kwargs['union-cat-quant'] else 'INTERSECT'
@@ -345,9 +409,13 @@ def to_json(record_type, res, prov=False):
         else:
             result = [r._asdict() for r in rows]
 
-        if record_type is not None:
-            for r in result:
+        for r in result:
+            if record_type is not None:
                 r['type'] = record_type
+
+            for cull_none in ('subclassof',):
+                if cull_none in r and r[cull_none] is None:
+                    r.pop(cull_none)
 
         if prov:
             def pop_prefix(d, prefix):
@@ -415,6 +483,7 @@ def getArgs(request, endpoint, dev=False):
         #'operator': 'INTERSECT',  # XXX ...
         'union-cat-quant': False,  # by default we intersect but sometimes you want the union instead e.g. if object is passed
         'source-only': False,
+        'include-unused': False,
         'prov': False,
 
         #'cat-value': [],
@@ -435,6 +504,21 @@ def getArgs(request, endpoint, dev=False):
     # modify defaults by endpoint
     if endpoint != 'objects':
         default.pop('source-only')
+
+    if not (endpoint.startswith('desc/') or endpoint in ('terms', 'units', 'aspects')):
+        default.pop('include-unused')
+    else:
+        # prevent filtering on the thing we are trying to query
+        if endpoint == 'terms':
+            default.pop('value-cat')
+        elif endpoint == 'units':
+            default.pop('unit')
+        elif endpoint == 'aspects':
+            default.pop('aspect')
+        elif endpoint == 'desc/inst':
+            default.pop('desc-inst')
+        elif endpoint == 'desc/cat':
+            default.pop('desc-cat')
 
     if not endpoint.startswith('values/'):
         default.pop('prov')
@@ -469,7 +553,7 @@ def getArgs(request, endpoint, dev=False):
                 return False
             else:
                 raise TypeError(f'Expected a bool, got "{v}" instead.')
-        elif k.startswith('value-quant-') or k in ('limit',):
+        elif k.startswith('value-quant') or k in ('limit',):
             try:
                 return float(v)
             except ValueError as e:
@@ -493,7 +577,7 @@ def make_app(db=None, name='quantdb-api-server', dev=False):
 
     bp = '/api/1/'
 
-    def default_flow(endpoint, record_type, query_fun, json_fun):
+    def default_flow(endpoint, record_type, query_fun, json_fun, alt_query_fun=None):
         try:
             kwargs = getArgs(request, endpoint, dev=dev)
         except exc.UnknownArg as e:
@@ -501,7 +585,12 @@ def make_app(db=None, name='quantdb-api-server', dev=False):
         except Exception as e:
             breakpoint()
             raise e
-        # TODO error handling and stuff
+
+        def gkw(k): return k in kwargs and kwargs[k]
+
+        if gkw('include-unused'):
+            query_fun = alt_query_fun
+
         # FIXME record_type is actually determined entirely in query_fun right now
         try:
             query, params = query_fun(endpoint, kwargs)
@@ -509,7 +598,7 @@ def make_app(db=None, name='quantdb-api-server', dev=False):
             breakpoint()
             raise e
 
-        if 'return-query' in kwargs and kwargs['return-query']:
+        if gkw('return-query'):
             return query
 
         try:
@@ -536,14 +625,19 @@ def make_app(db=None, name='quantdb-api-server', dev=False):
     @app.route(f'{bp}/classes')
     def route_1_desc_inst():
         def query(endpoint, kwargs):
-            return ('select '
+            return ('SELECT '
 
                     'id.iri, '
-                    'id.label '
+                    'id.label, '
+                    'idpar.label as subclassof'
 
-                    'from descriptors_inst as id'), {}
+                    """
+FROM descriptors_inst AS id
+LEFT OUTER JOIN class_parent AS ip ON ip.id = id.id
+LEFT OUTER JOIN descriptors_inst AS idpar ON idpar.id = ip.parent
+"""), {}
 
-        return default_flow('desc/inst', 'desc-inst', query, to_json)  # TODO likely need different args
+        return default_flow('desc/inst', 'desc-inst', main_query, to_json, alt_query_fun=query)
 
     @app.route(f'{bp}/desc/cat')
     @app.route(f'{bp}/descriptors/cat')
@@ -561,7 +655,7 @@ def make_app(db=None, name='quantdb-api-server', dev=False):
                     'left outer join descriptors_inst as cdid on cdid.id = cd.domain'
                     ), {}
 
-        return default_flow('desc/cat', 'desc-cat', query, to_json)  # TODO likely need different args e.g. to filter by desc_inst
+        return default_flow('desc/cat', 'desc-cat', main_query, to_json, alt_query_fun=query)  # TODO likely need different args e.g. to filter by desc_inst
 
     @app.route(f'{bp}/desc/quant')
     @app.route(f'{bp}/descriptors/quant')
@@ -570,7 +664,7 @@ def make_app(db=None, name='quantdb-api-server', dev=False):
             return ('select '
 
                     'qd.label, '
-                    'id.label AS desc_inst, '
+                    'id.label AS domain, '
                     'qd.shape, '
                     'qd.aggregation_type as agg_type, '
                     'a.label AS aspect, '
@@ -583,7 +677,7 @@ def make_app(db=None, name='quantdb-api-server', dev=False):
                     'join aspects as a on a.id = qd.aspect'
                     ), {}
 
-        return default_flow('desc/quant', 'desc-quant', query, to_json)  # TODO likely need different args e.g. to filter by desc_inst
+        return default_flow('desc/quant', 'desc-quant', main_query, to_json, alt_query_fun=query)  # TODO likely need different args e.g. to filter by desc_inst
 
     @app.route(f'{bp}/values/inst')
     @app.route(f'{bp}/instances')
@@ -615,7 +709,7 @@ def make_app(db=None, name='quantdb-api-server', dev=False):
 
                     'from controlled_terms as ct'), {}
 
-        return default_flow('terms', 'term', query, to_json)  # TODO likely need different args
+        return default_flow('terms', 'term', main_query, to_json, alt_query_fun=query)
 
     @app.route(f'{bp}/units')
     def route_1_units():
@@ -627,18 +721,23 @@ def make_app(db=None, name='quantdb-api-server', dev=False):
 
                     'from units as u'), {}
 
-        return default_flow('units', 'unit', query, to_json)  # TODO likely need different args
+        return default_flow('units', 'unit', main_query, to_json, alt_query_fun=query)
 
     @app.route(f'{bp}/aspects')
     def route_1_aspects():
         def query(endpoint, kwargs):
-            return ('select '
+            return ('SELECT '
 
                     'a.iri, '
-                    'a.label '
+                    'a.label, '
+                    'aspar.label AS subclassof '
 
-                    'from aspects as a'), {}
+                    """
+FROM aspects AS a
+LEFT OUTER JOIN aspect_parent AS ap ON ap.id = a.id
+LEFT OUTER JOIN aspects AS aspar ON aspar.id = ap.parent
+"""), {}
 
-        return default_flow('aspects', 'aspect', query, to_json)  # TODO likely need different args
+        return default_flow('aspects', 'aspect', main_query, to_json, alt_query_fun=query)
 
     return app

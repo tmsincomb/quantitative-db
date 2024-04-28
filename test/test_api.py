@@ -43,17 +43,20 @@ def test():
         f'{base}objects?aspect=distance&value-quant-min=0.5&source-only=true',
         f'{base}objects?desc-inst=nerve-volume&aspect=distance&value-quant-min=0.5&source-only=true',
 
+        # values-quant
         f'{base}values/quant?dataset={dataset_uuid}&aspect=distance',
         f'{base}values/quant?object={actual_package_uuid}&aspect=distance',
         f'{base}values/quant?aspect=distance',
         f'{base}values/quant?aspect=distance-via-reva-ft-sample-id-normalized-v1',
 
+        # values-cat
         f'{base}values/cat?object={actual_package_uuid}',
         f'{base}values/cat?object={actual_package_uuid}&union-cat-quant=true',  # shouldn't need it in this case
 
         f'{base}values/cat-quant?object={actual_package_uuid}',
         f'{base}values/cat-quant?object={actual_package_uuid}&union-cat-quant=true',
 
+        # values-cat-quant
         f'{base}values?dataset={dataset_uuid}&aspect=distance&value-quant-min=0.5',
         f'{base}values?dataset={dataset_uuid}&aspect=distance&value-quant-min=0.5&union-cat-quant=true',
 
@@ -63,15 +66,7 @@ def test():
         f'{base}values/inst?object={actual_package_uuid}',
         f'{base}values/inst?object={actual_package_uuid}&union-cat-quant=true',
 
-        f'{base}desc/inst',
-        f'{base}desc/cat',
-        f'{base}desc/quant',
-
-        f'{base}terms',
-        f'{base}aspects',
-        f'{base}units',
-        # TODO maybe shapes here as well?
-
+        # prov
         f'{base}values/inst?prov=true',
 
         f'{base}values/quant?aspect=distance&prov=true',
@@ -87,6 +82,25 @@ def test():
 
         f'{base}values/cat-quant?union-cat-quant=true',
         f'{base}values/cat-quant?union-cat-quant=true&prov=true',
+
+        # desc
+        f'{base}desc/inst',
+        f'{base}desc/cat',
+        f'{base}desc/quant',
+
+        f'{base}desc/inst?include-unused=true',
+        f'{base}desc/cat?include-unused=true',
+        f'{base}desc/quant?include-unused=true',
+
+        # descriptor values
+        f'{base}terms',
+        f'{base}aspects',
+        f'{base}units',
+
+        f'{base}terms?include-unused=true',
+        f'{base}aspects?include-unused=true',
+        f'{base}units?include-unused=true',
+        # TODO maybe shapes here as well?
 
     )
     #log.setLevel(9)

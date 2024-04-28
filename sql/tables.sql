@@ -825,7 +825,7 @@ SELECT * FROM tree;
 END;
 $$ language plpgsql;
 
-CREATE OR REPLACE FUNCTION get_parents_aspect(id_aspect_start integer) RETURNS TABLE (
+CREATE OR REPLACE FUNCTION get_parent_aspect(id_aspect_start integer) RETURNS TABLE (
 parent integer
 ) AS $$
 -- single transitive parent list
@@ -839,6 +839,25 @@ FROM aspect_parent AS ap
 JOIN tree AS t ON ap.id = t.id
 )
 SELECT * FROM tree;
+END;
+$$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION get_parent_closed_aspect(id_aspect_start integer) RETURNS TABLE (
+parent integer
+) AS $$
+-- single transitive parent list
+BEGIN
+RETURN QUERY
+WITH RECURSIVE tree(id) AS (
+SELECT ap0.parent FROM aspect_parent AS ap0 WHERE id = id_aspect_start
+UNION ALL
+SELECT ap.parent
+FROM aspect_parent AS ap
+JOIN tree AS t ON ap.id = t.id
+)
+SELECT * FROM tree
+UNION
+SELECT id_aspect_start;
 END;
 $$ language plpgsql;
 
@@ -925,7 +944,7 @@ SELECT id_class_start;
 END;
 $$ language plpgsql;
 
-CREATE OR REPLACE FUNCTION get_parents_desc_inst(id_class_start integer) RETURNS TABLE (
+CREATE OR REPLACE FUNCTION get_parent_desc_inst(id_class_start integer) RETURNS TABLE (
 parent integer
 ) AS $$
 -- single transitive parent list
@@ -939,6 +958,25 @@ FROM class_parent AS cp
 JOIN tree AS t ON cp.id = t.id
 )
 SELECT * FROM tree;
+END;
+$$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION get_parent_closed_desc_inst(id_class_start integer) RETURNS TABLE (
+parent integer
+) AS $$
+-- single transitive parent list
+BEGIN
+RETURN QUERY
+WITH RECURSIVE tree(id) AS (
+SELECT cp0.parent FROM class_parent AS cp0 WHERE id = id_class_start
+UNION ALL
+SELECT cp.parent
+FROM class_parent AS cp
+JOIN tree AS t ON cp.id = t.id
+)
+SELECT * FROM tree
+UNION
+SELECT id_class_start;
 END;
 $$ language plpgsql;
 
@@ -984,7 +1022,7 @@ $$ language plpgsql;
 
 -------- instances
 
-CREATE OR REPLACE FUNCTION get_parents_inst(id_instance_start integer) RETURNS TABLE (
+CREATE OR REPLACE FUNCTION get_parent_inst(id_instance_start integer) RETURNS TABLE (
 parent integer
 ) AS $$
 -- single transitive parent list
@@ -1055,7 +1093,7 @@ rec record;
 BEGIN
 
 WITH
-parents AS (SELECT im FROM values_inst AS im WHERE im.id IN (SELECT * FROM get_parents_inst(NEW.id))),
+parents AS (SELECT im FROM values_inst AS im WHERE im.id IN (SELECT * FROM get_parent_inst(NEW.id))),
 subjects AS (SELECT suim FROM values_inst AS im
 JOIN values_inst AS suim ON im.dataset = suim.dataset AND suim.id_formal = im.id_sub AND suim.id != NEW.id
 WHERE im.id = NEW.id),
@@ -1087,12 +1125,12 @@ USING HINT = 'forgot to insert into the parents table';
 
 ELSIF rec.two THEN
 
-RAISE EXCEPTION 'subjects and samples missing on instance when there are parents: % %', (select id_formal from values_inst where id = NEW.id), (SELECT vi.id_formal FROM values_inst as vi JOIN get_parents_inst(NEW.id) as gpi ON vi.id = gpi.parent)
+RAISE EXCEPTION 'subjects and samples missing on instance when there are parents: % %', (select id_formal from values_inst where id = NEW.id), (SELECT vi.id_formal FROM values_inst as vi JOIN get_parent_inst(NEW.id) as gpi ON vi.id = gpi.parent)
 USING HINT = 'instance did not include subject/sample reference when there should have been one';
 
 ELSIF NOT rec.three THEN
 
-RAISE EXCEPTION 'mismatch between parents, subjects, or samples: % %', (select id_formal from values_inst where id = NEW.id), (SELECT vi.id_formal FROM values_inst as vi JOIN get_parents_inst(NEW.id) as gpi ON vi.id = gpi.parent)--, NEW.id_sub, NEW.id_sam
+RAISE EXCEPTION 'mismatch between parents, subjects, or samples: % %', (select id_formal from values_inst where id = NEW.id), (SELECT vi.id_formal FROM values_inst as vi JOIN get_parent_inst(NEW.id) as gpi ON vi.id = gpi.parent)--, NEW.id_sub, NEW.id_sam
 USING HINT = 'there might be extra parents, subjects, or samples, check the set differences';
 
 END IF;
