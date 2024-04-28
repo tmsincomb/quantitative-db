@@ -105,6 +105,7 @@ INSERT INTO class_parent (id, parent) VALUES
 ;
 
 INSERT INTO controlled_terms (iri, label) VALUES
+('https://uri.interlex.org/tgbugs/uris/readable/quantdb/controlled/hack-associate-some-value', 'hack-associate-some-value'),
 ('https://uri.interlex.org/tgbugs/uris/readable/quantdb/controlled/fascicleStainType/chat', 'chat'),
 ('https://uri.interlex.org/tgbugs/uris/readable/quantdb/controlled/fascicleStainType/myelin', 'myelin'),
 ('https://uri.interlex.org/tgbugs/uris/readable/quantdb/controlled/fascicleStainType/neurofilament', 'neurofilament'),
@@ -169,7 +170,7 @@ INSERT INTO aspect_parent (id, parent) VALUES
 INSERT INTO units (iri, label) VALUES
 -- obvious we need synonyms
 -- TODO need to decide on naming convention for units becuase label is likely to be the primary interface to the table
---('http://uri.interlex.org/tgbugs/uris/readable/aspect/unit/unitless', 'unitless'), -- FIXME VS NULL
+('http://uri.interlex.org/tgbugs/uris/readable/aspect/unit/unitless', 'unitless'), --  we need explicit unitless so we can distinguish cases where there was a partial ingest
 
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/unit/micrometer', 'um'),
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/unit/meter', 'm')
@@ -210,7 +211,7 @@ NULL,
 ('thing min object uuid ratio',
 /*
 FIXME TODO practical issue: we assume objects are immutable, so thing object uuid ratio is ok
-because we create a obj_desc_quantriptor for it for it that references the non-min version of
+because we create a obj_desc_quant for it for it that references the non-min version of
 this and will always be static, however min could change every time ... actually ... we are ok
 right now because there are no unique constraints on enabled right now, but as soon as we do
 enable them we are going to be in trouble and if we don't enable them then we will have multiple
@@ -227,7 +228,7 @@ but have to be distinct in their aspect name or something
 */
 NULL,
 aspect_from_label('distance-object-uuid-ratio'),
-NULL,
+unit_from_label('unitless'),
 'min'
 ),
 
@@ -235,26 +236,26 @@ NULL,
 ('reva ft sample anatomical location distance index raw',
 desc_inst_from_label('nerve-volume'),
 aspect_from_label('distance-via-reva-ft-sample-id-raw'),
-NULL,
+unit_from_label('unitless'),
 'instance'),
 */
 
 ('reva ft sample anatomical location distance index normalized v1',
 desc_inst_from_label('nerve-volume'),
 aspect_from_label('distance-via-reva-ft-sample-id-normalized-v1'),
-NULL,
+unit_from_label('unitless'),
 'instance'),  -- FIXME this isn't really instance, it is normalized across a whole population, which we might want to indicate here
 
 ('reva ft sample anatomical location distance index normalized v1 min',
 desc_inst_from_label('nerve-volume'),
 aspect_from_label('distance-via-reva-ft-sample-id-normalized-v1'),
-NULL,
+unit_from_label('unitless'),
 'min'),
 
 ('reva ft sample anatomical location distance index normalized v1 max',
 desc_inst_from_label('nerve-volume'),
 aspect_from_label('distance-via-reva-ft-sample-id-normalized-v1'),
-NULL,
+unit_from_label('unitless'),
 'max'),
 
 ('fascicle cross section diameter um',
@@ -292,6 +293,7 @@ unit_from_label('um'),
 INSERT INTO addresses (addr_type, addr_field) VALUES
 ('constant', NULL),
 ('constant', 'literally this value right here'),
+--('curator', 'tgbugs'),
 ('tabular-header', 'id'),
 ('tabular-header', 'stain'),
 ('tabular-header', 'diameter'),
@@ -341,7 +343,7 @@ desc_inst_from_label('fascicle-cross-section'),
 address_from_fadd_type_fadd('tabular-header', 'id'))
 ;
 
-INSERT INTO obj_descriptors_cat (object, desc_cat, addr_field) VALUES
+INSERT INTO obj_desc_cat (object, desc_cat, addr_field) VALUES
 (:'package_uuid_1', -- FIXME obviously a bad example because there could be multiple positive strains
 desc_cat_from_label_domain_label('fasciclePositiveStainType', 'fascicle-cross-section'),
 address_from_fadd_type_fadd_vtype('tabular-header', 'stain', 'multi')),
@@ -392,7 +394,7 @@ WHERE qv.object is NULL
 
 UNION
 
-SELECT objects.id_type, ocd.object FROM obj_descriptors_cat AS ocd
+SELECT objects.id_type, ocd.object FROM obj_desc_cat AS ocd
 -- FIXME this can't detect cases where an UPDATE modified a desc_cat address value type or changed an address
 -- e.g. if a curator makes a mistake, I guess we can have a force rerun option or add an AFTER UPDATE trigger
 -- the obj_x_descriptor tables ??

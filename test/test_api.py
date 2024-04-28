@@ -7,7 +7,7 @@ from quantdb.utils import log
 
 def test():
     db = SQLAlchemy()
-    app = make_app(db=db)
+    app = make_app(db=db, dev=True)
     client = app.test_client()
     runner = app.test_cli_runner()
 
@@ -16,7 +16,9 @@ def test():
     actual_package_uuid = '15bcbcd5-b054-40ef-9b5c-6a260d441621'
     base = 'http://localhost:8989/api/1/'
     urls = (
+        f'{base}values/inst',
         f'{base}values/inst?dataset={dataset_uuid}',
+        f'{base}values/inst?dataset={dataset_uuid}&union-cat-quant=true',
         f'{base}values/inst?dataset={dataset_uuid}&aspect=distance&aspect=time',
         f'{base}values/inst?dataset={dataset_uuid}&aspect=distance&value-quant-min=0.5',
         f'{base}values/inst?desc-inst=nerve-volume',
@@ -70,6 +72,22 @@ def test():
         f'{base}units',
         # TODO maybe shapes here as well?
 
+        f'{base}values/inst?prov=true',
+
+        f'{base}values/quant?aspect=distance&prov=true',
+
+        f'{base}values/cat?object={actual_package_uuid}',
+        f'{base}values/cat?object={actual_package_uuid}&prov=true',  # FIXME somehow this has a 3x increase in records, and non-distinct
+
+        f'{base}values/cat-quant?object={actual_package_uuid}&union-cat-quant=true',
+        f'{base}values/cat-quant?object={actual_package_uuid}&union-cat-quant=true&prov=true',
+
+        f'{base}values/cat-quant',
+        f'{base}values/cat-quant?prov=true',
+
+        f'{base}values/cat-quant?union-cat-quant=true',
+        f'{base}values/cat-quant?union-cat-quant=true&prov=true',
+
     )
     #log.setLevel(9)
     resps = []
@@ -83,5 +101,8 @@ def test():
 
     pprint.pprint(resps, width=120)
     # (i := 6, resps[i], urls[i])
+    #q = client.get(f'{base}values/quant?dataset={dataset_uuid}&aspect=distance&return-query=true').data.decode()
+    #q = client.get(f'{base}values/cat?object={actual_package_uuid}&prov=true&return-query=true').data.decode()
+    #print(q)
     breakpoint()
 

@@ -313,7 +313,9 @@ class InternalIds:
         }
 
         self.ct_mod = q.cterm_from_label('microct')  # lol ct ct
+        self.ct_hack = q.cterm_from_label('hack-associate-some-value')
         self.luct = {
+            'ct-hack': self.ct_hack,
             'microct': self.ct_mod,
         }
 
@@ -389,7 +391,7 @@ def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_a
     session.execute(sql_text(f'INSERT INTO obj_desc_inst (object, desc_inst, addr_field, addr_desc_inst) VALUES {vt}{ocdn}'), params)
 
     vt, params = makeParamsValues(vocd)
-    session.execute(sql_text(f'INSERT INTO obj_descriptors_cat (object, desc_cat, addr_field) VALUES {vt}{ocdn}'), params)
+    session.execute(sql_text(f'INSERT INTO obj_desc_cat (object, desc_cat, addr_field) VALUES {vt}{ocdn}'), params)
 
     vt, params = makeParamsValues(voqd)
     session.execute(sql_text(f'INSERT INTO obj_desc_quant (object, desc_quant, addr_field) VALUES {vt}{ocdn}'), params)
@@ -575,6 +577,7 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
 
     def make_voqd(this_dataset_updated_uuid, i):
         voqd = [  # FIXME this isn't quite right, we should just do it to the segments and pretend it is from the samples file I think?
+            # FIXME addr_aspect and addr_unit are ... implicit, there is no conditional dispatch but the choice of the constant quantative descriptor comes from ... tgbugs? or what? I think we just leave it as null because it is a constant across all fields, but maybe we just use constant null? but why bother in that case?
             (this_dataset_updated_uuid, i.qd_nai, i.addr_jpnai),
             (this_dataset_updated_uuid, i.qd_nain, i.addr_jpnain),  # XXX FIXME is this really an aggregation type in this case? I guess it technically if the sample space is over all the points inside the segment or something
             (this_dataset_updated_uuid, i.qd_naix, i.addr_jpnaix),
@@ -590,7 +593,7 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
             this_dataset_updated_uuid,
             #e['object'].uuid,  # FIXME still not right this comes from the updated latest
             i.id_nerve_volume,
-            cd,  # if we mess this up the fk ok obj_descriptors_cat will catch it :)
+            cd,  # if we mess this up the fk ok obj_desc_cat will catch it :)
             luinst[e['dataset'].uuid, e['sample']],  # get us the instance
             )
             for e in exts
@@ -599,12 +602,12 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
             )
 
         ] + [
-            ('nothing to see here',
-            None,
-            e['object'].uuid,
-            i.id_nerve_volume,
-            i.cd_bot,  # if we mess this up the fk ok obj_descriptors_cat will catch it :)
-            luinst[e['dataset'].uuid, e['sample']],  # get us the instance
+            (None,
+             i.ct_hack,
+             e['object'].uuid,
+             i.id_nerve_volume,
+             i.cd_bot,  # if we mess this up the fk ok obj_desc_cat will catch it :)
+             luinst[e['dataset'].uuid, e['sample']],  # get us the instance
             )
             for e in exts
         ]
@@ -617,7 +620,7 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
             #e['object'].uuid,  # FIXME TODO we could fill this here but we choose to use this_dataset_updated_uuid instead I think
             this_dataset_updated_uuid,
             i.id_nerve_volume,
-            qd,  # if we mess this up the fk ok obj_descriptors_cat will catch it :)
+            qd,  # if we mess this up the fk ok obj_desc_cat will catch it :)
             luinst[e['dataset'].uuid, e['sample']],  # get us the instance
             e[k],
             )
