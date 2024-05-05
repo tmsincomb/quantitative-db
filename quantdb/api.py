@@ -1,5 +1,6 @@
 import json
 import uuid
+import copy
 from decimal import Decimal
 from datetime import datetime
 from flask import Flask, request
@@ -443,60 +444,80 @@ def to_json(record_type, res, prov=False):
     else:
         out = []
 
-    return json.dumps(out, cls=JEncode), 200, {'Content-Type': 'application/json'}
+    return out
+
+
+def wrap_out(endpoint, kwargs, out):
+    # TODO limit and instructions on how to get consistent results
+    # TODO we could filter out limit here as well if is the default
+    # but it is probably better to just return that even if they
+    # didn't pass it
+    parameters = {k: v for k, v in kwargs.items() if v}
+    n_records = len(out)
+    blob = {
+        'type': 'quantdb-query-result',
+        'endpoint': endpoint,
+        'parameters': parameters,
+        'records': n_records,
+        'result': out,
+    }
+    return blob
+
+
+args_default = {
+    'object': [],
+    'updated-transitive': None,  # TODO needed to query for some internal
+
+    ## inst
+    'desc-inst': [],  # aka class
+
+    # value-inst
+    'dataset': None,
+    'inst': [],
+    'subject': [],
+    'sample': [],
+    'include-equivalent': False,
+
+    ## cat
+    'desc-cat': [],  # aka predicate
+
+    'value-cat': [],
+    'value-cat-open': [],
+
+    ## quant
+    # desc-quant
+    'unit': [],
+    'aspect': [],
+    'agg-type': None,
+    # TODO shape
+
+    'value-quant': None,
+    'value-quant-margin': None,
+    'value-quant-min': None,
+    'value-quant-max': None,
+
+    'limit': 100,
+    #'operator': 'INTERSECT',  # XXX ...
+    'union-cat-quant': False,  # by default we intersect but sometimes you want the union instead e.g. if object is passed
+    'source-only': False,
+    'include-unused': False,
+    'prov': False,
+
+    #'cat-value': [],
+    #'class': [],
+    #'predicate': None,
+    #'object': None,
+    #'filter': [],
+
+    #'quant-value': None,
+    #'quant-margin': None,
+    #'quant-min': None,
+    #'quant-max': None,
+}
 
 
 def getArgs(request, endpoint, dev=False):
-    default = {
-        'object': [],
-        'updated-transitive': None,  # TODO needed to query for some internal
-
-        ## inst
-        'desc-inst': [],  # aka class
-
-        # value-inst
-        'dataset': None,
-        'inst': [],
-        'subject': [],
-        'sample': [],
-        'include-equivalent': False,
-
-        ## cat
-        'desc-cat': [],  # aka predicate
-
-        'value-cat': [],
-        'value-cat-open': [],
-
-        ## quant
-        # desc-quant
-        'unit': [],
-        'aspect': [],
-        'agg-type': None,
-        # TODO shape
-
-        'value-quant': None,
-        'value-quant-margin': None,
-        'value-quant-min': None,
-        'value-quant-max': None,
-
-        'limit': 100,
-        #'operator': 'INTERSECT',  # XXX ...
-        'union-cat-quant': False,  # by default we intersect but sometimes you want the union instead e.g. if object is passed
-        'source-only': False,
-        'include-unused': False,
-        'prov': False,
-
-        #'cat-value': [],
-        #'class': [],
-        #'predicate': None,
-        #'object': None,
-        #'filter': [],
-
-        #'quant-value': None,
-        #'quant-margin': None,
-        #'quant-min': None,
-        #'quant-max': None,
-    }
+    default = copy.deepcopy(args_default)
 
     if dev:
         default['return-query'] = False
@@ -535,7 +556,8 @@ def getArgs(request, endpoint, dev=False):
 
     def convert(k, d):
         if k in request.args:
-            if k in ('dataset', 'include-equivalent', 'union-cat-quant') or k.startswith('value-quant-'):
+            # arity is determined here
+            if k in ('dataset', 'include-equivalent', 'union-cat-quant', 'include-unused') or k.startswith('value-quant-'):
                 v = request.args[k]
                 if k in ('dataset',):
                     v = uuid.UUID(v)
@@ -546,7 +568,7 @@ def getArgs(request, endpoint, dev=False):
         else:
             return d
 
-        if k in ('include-equivalent', 'union-cat-quant'):
+        if k in ('include-equivalent', 'union-cat-quant', 'include-unused'):
             if v.lower() == 'true':
                 return True
             elif v.lower() == 'false':
@@ -608,7 +630,8 @@ def make_app(db=None, name='quantdb-api-server', dev=False):
             raise e
 
         try:
-            resp = json_fun(record_type, res, prov=('prov' in kwargs and kwargs['prov']))
+            out = json_fun(record_type, res, prov=('prov' in kwargs and kwargs['prov']))
+            resp = json.dumps(wrap_out(endpoint, kwargs, out), cls=JEncode), 200, {'Content-Type': 'application/json'}
         except Exception as e:
             breakpoint()
             raise e

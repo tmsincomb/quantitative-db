@@ -125,6 +125,30 @@ Not-implemented are marked with ni.
 | source-only        |         | x           | x          | x            | x         | x        | x          | x     | x     | x       |
 | include-unused     | x       | x           | x          | x            |           |          |            |       |       |         |
 | prov               | x       |             |            |              | x         | x        | x          | x     | x     | x       |
+** response
+If everything proceeds as expected then you will receive an HTTP
+response with a 200 status code containing json structured as show below.
+- =endpoint= is the normalized endpoint name
+- =parameters= are the interpretation of the url query string parameters passed
+- =records= is the number of results
+- =result= is the list of objects returned by the query
+
+#+begin_src json
+{
+    "type": "quantdb-query-result",
+    "endpoint": "some/endpoint",
+    "parameters": {"include-unused": true},
+    "records": 1,
+    "result": [ {"type": ...} ... ]
+}
+#+end_src
+
+If a query parameter is passed that is not valid for an the endpoint then you will receive a 422 response.
+#+begin_src json
+{"error": ["unknown-parameter-name-that-was-passed"], "http_response_status": 422}
+#+end_src
+
+All other errors return a standard abort that is not json.
 
 ** endpoints
 *** =objects=
