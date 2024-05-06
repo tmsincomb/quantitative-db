@@ -9,8 +9,8 @@ while [ -h "$SOURCE" ]; do # resolve all symlinks
 done
 ABS_PATH="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
-SQL="${ABS_PATH}/../sql/"
-RESOURCES="${ABS_PATH}/../resources/"
+SQL="${ABS_PATH}/../sql"
+RESOURCES="${ABS_PATH}/../resources"
 
 if [ -z $1 ]; then
     PORT=5432
@@ -25,7 +25,12 @@ else
     DATABASE=$2
 fi
 
-HOST=localhost
+if [ -z $3 ]; then
+    HOST=localhost
+else
+    HOST=$3
+fi
+
 SETUP=0
 TESTING=0
 
@@ -45,6 +50,6 @@ fi
 if test ${TESTING} -eq 0; then
 
 # testing
-psql -U quantdb-user -h localhost -p $PORT -d $DATABASE -f "${SQL}/test.sql" -v database=$DATABASE -v ON_ERROR_STOP=on
+psql -U quantdb-user -h ${HOST} -p $PORT -d $DATABASE -f "${SQL}/test.sql" -v database=$DATABASE -v ON_ERROR_STOP=on
 
 fi
