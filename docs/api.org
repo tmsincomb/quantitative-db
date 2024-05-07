@@ -1,10 +1,176 @@
-* endpoints
-** =/api/1/=
-*** =measured_instances/=
-returns measured instances matching criteria
-this joins the instance measured table with the categorical values table
-**** query parameters
+* =/api/1/=
+** standard query parameters
+Multiple arguments may be provided for those fields with =arity= =n=
+in the table below. If multiple values are provided then the api will
+return records that match any one of the provided values (that is
+=union=, or =or= behavior).
+
+If a parameter is passed to an endpoint that is unknown or not
+accepted by that endpoint a response with a 422 status code listing
+the bad parameter(s) will be returned.
+
+For example if a query string with the form
+~?dataset=uuid&aspect=distance&aspect=time~
+will translate into sql as something like
+~WHERE i.dataset = uuid AND a.label = ANY('{"distance", "time"}')~.
+
+Most of these query parameters operate as =WHERE= clauses
+that are all matched against quantitative or categorical values,
+that is they are connected by =AND= (unlike multiple arguments).
+
+By default categorical and quantitative values are connected by
+an =INTERSECT=, however for some queries, e.g. ones that provide
+and =?object= argument, this means that the results set will
+always be empty except in cases where a single object provided
+both cat and quant values. You can pass =?union-cat-quant=true=
+to change the behavior to =UNION=. The default behavior for
+this may change per endpoint in which case we will document which
+endpoints default to =UNION=.
+
+All arguments that are provided must satisfy on at least one single
+quantitative or categorical value, so e.g. ~?aspect=a&value-quant-min=1~
+selects for values with aspect a that are greater than or equal to 1.
+When providing multiple aspects this means that the range restriction
+will apply to values from any of those aspects which can be a bit
+confusing if they are =distance= and =time= but less confusing if they
+are e.g. =distance-metric-m-version-1= and =distance-metric-m-version-2=.
+
+The values provided as arguments for =desc-inst= and =aspect= are
+resolved to match all subclasses, so if =distance= is provided results
+will match values with aspects =distance-metric-m-version-1= and
+=distance-metric-m-version-2= along with other subclasses of distance.
+
+Behavior or =desc/*=, =terms=, =units=, and =aspects= endpoints is
+currently limited to only querying values of the same type, so e.g.
+it is not possible to limit the results of a query to the =aspects=
+endpoint by passing ~?value-cat=some-cat-value~ and it is not possible
+to limit the results of a query to the =terms= endpoint by passing
+~?aspect=some-aspect~. This will be fixed eventually.
+
+- =prov= only accepted on =values/*= endpoints
+- =source-only= only accepted on the =objects= endpoint
+- =value-cat*= and =desc-cat= not accepted on =values/quant=
+- =value-quant*=, =unit=, =aspect=, and =agg-type= not accepted on =values/cat=
+- =desc-*= are not accepted on =desc/*=
+- =value-cat= is not accepted on =terms=
+- =unit= is not accepted on =units=
+- =aspect= is not accepted on =aspects=
+
+# TODO need a parents endpoint probably
+
+| name               | type      | arity |
+|--------------------+-----------+-------|
+| object             | uuid      |     n |
+| updated-transitive | timestamp |     1 |
+|--------------------+-----------+-------|
+| desc-inst          | string    |     n |
+|--------------------+-----------+-------|
+| dataset            | uuid      |     1 |
+| inst               | string    |     n |
+| subject            | string    |     n |
+| sample             | string    |     n |
+| include-equivalent | bool      |     1 |
+|--------------------+-----------+-------|
+| desc-cat           | string    |     n |
+| value-cat          | string    |     n |
+| value-cat-open     | string    |     n |
+|--------------------+-----------+-------|
+| unit               | string    |     n |
+| aspect             | string    |     n |
+| agg-type           | string    |     1 |
+|--------------------+-----------+-------|
+| value-quant        | numeric   |     1 |
+| value-quant-margin | numeric   |     1 |
+| value-quant-min    | numeric   |     1 |
+| value-quant-max    | numeric   |     1 |
+|--------------------+-----------+-------|
+| limit              | integer   |     1 |
+| union-cat-quant    | bool      |     1 |
+| source-only        | bool      |     1 |
+| include-unused     | bool      |     1 |
+| prov               | bool      |     1 |
+
+Invalid combinations are marked with an x.
+Non-meaningful combinations are marked with a q.
+Not-implemented are marked with ni.
+
+| arg V endpoint >   | objects | values/inst | values/cat | values/quant | desc/inst | desc/cat | desc/quant | terms | units | aspects |
+|--------------------+---------+-------------+------------+--------------+-----------+----------+------------+-------+-------+---------|
+| object             |         |             |            |              |           |          |            |       |       |         |
+| updated-transitive |         |             |            |              |           |          |            |       |       |         |
+|--------------------+---------+-------------+------------+--------------+-----------+----------+------------+-------+-------+---------|
+| desc-inst          |         |             |            |              | x         |          |            |       |       |         |
+|--------------------+---------+-------------+------------+--------------+-----------+----------+------------+-------+-------+---------|
+| dataset            |         |             |            |              |           |          |            |       |       |         |
+| inst               |         |             |            |              |           |          |            |       |       |         |
+| subject            |         |             |            |              |           |          |            |       |       |         |
+| sample             |         |             |            |              |           |          |            |       |       |         |
+| include-equivalent | ni      | ni          | ni         | ni           | ni        | ni       | ni         | ni    | ni    | ni      |
+|--------------------+---------+-------------+------------+--------------+-----------+----------+------------+-------+-------+---------|
+| desc-cat           |         |             |            | x            |           | x        | q          |       | q     | q       |
+| value-cat          |         |             |            | x            |           |          | q          | x     | q     | q       |
+| value-cat-open     |         |             |            | x            |           |          | q          |       | q     | q       |
+|--------------------+---------+-------------+------------+--------------+-----------+----------+------------+-------+-------+---------|
+| unit               |         |             | x          |              |           | q        |            | q     | x     |         |
+| aspect             |         |             | x          |              |           | q        |            | q     |       | x       |
+| agg-type           |         |             | x          |              |           | q        |            | q     |       |         |
+|--------------------+---------+-------------+------------+--------------+-----------+----------+------------+-------+-------+---------|
+| value-quant        |         |             | x          |              |           | q        |            | q     |       |         |
+| value-quant-margin |         |             | x          |              |           | q        |            | q     |       |         |
+| value-quant-min    |         |             | x          |              |           | q        |            | q     |       |         |
+| value-quant-max    |         |             | x          |              |           | q        |            | q     |       |         |
+|--------------------+---------+-------------+------------+--------------+-----------+----------+------------+-------+-------+---------|
+| limit              | ni      | ni          | ni         | ni           | ni        | ni       | ni         | ni    | ni    | ni      |
+| union-cat-quant    |         |             |            |              |           |          |            |       |       |         |
+| source-only        |         | x           | x          | x            | x         | x        | x          | x     | x     | x       |
+| include-unused     | x       | x           | x          | x            |           |          |            |       |       |         |
+| prov               | x       |             |            |              | x         | x        | x          | x     | x     | x       |
+** response
+If everything proceeds as expected then you will receive an HTTP
+response with a 200 status code containing json structured as show below.
+- =endpoint= is the normalized endpoint name
+- =parameters= are the interpretation of the url query string parameters passed
+- =records= is the number of results
+- =result= is the list of objects returned by the query
+
+#+begin_src json
+{
+    "type": "quantdb-query-result",
+    "endpoint": "some/endpoint",
+    "parameters": {"include-unused": true},
+    "records": 1,
+    "result": [ {"type": ...} ... ]
+}
+#+end_src
+
+If a query parameter is passed that is not valid for an the endpoint then you will receive a 422 response.
+#+begin_src json
+{"error": ["unknown-parameter-name-that-was-passed"], "http_response_status": 422}
+#+end_src
+
+All other errors return a standard abort that is not json.
+
+** endpoints
+*** =objects=
+- query data objects associated with instances matching parameters
+- accepts standard query parameters
+*** =/values/inst= or =instances=
+- query instances matching parameters
+- accepts standard query parameters
+**** use cases
+show me all measurements that have been made on a subject
+or part of that subject or sample derived from that subject
+
+for this just stick it in instances
+**** COMMENT query parameters :old:
 *None of these resolve any subClassOf or partOf hierarchy.*
+TODO and option to return null
+/?subject_id=[f001]&instance_classes=[virtual-image-section]&aspects=[random-between-0-and-1]
+/?subject_id=[f001]&instance_classes=[virtual-image-section]&aspects=[richards-single-subject-scaffold-v1]
+/?subject_id=[f001]&instance_classes=[virtual-image-section]&aspects=[file-sample-id-hierarchy-ration-index]
+/?subject_id=[f001]&instance_classes=[virtual-image-section]&aspects=[random-between-0-and-1]&quantitative_value=.5&quntative_margin=0.1
+/?instance_classes[subject]  # TODO figure out how this interacts with the subject_id not being the primary
+***** TODO =datset_id=
 ***** =formal_ids=
 union
 #+begin_example
@@ -69,11 +235,11 @@ both must be provided
 &quantiative_range_beg=0
 &quantiative_range_end=1
 #+end_example
-***** COMMENT =categorical_predicate= :donotuse:
+***** COMMENT =categorical_predicate=                              :donotuse:
 #+begin_example
 &cat_predicate=location
 #+end_example
-***** COMMENT =categorical_values= :donotuse:
+***** COMMENT =categorical_values=                                 :donotuse:
 TODO do we also require/allow a predicate?
 need to default to union for this parameter
 
@@ -104,34 +270,36 @@ original brainstorm
 &ccf_name=random&ccf_start_coordinate=0.5&ccf_end_coordinate=0.4
 &ccf_name=random&ccf_point=0.5&ccf_error=0.1
 #+end_example
-**** examples
+**** COMMENT examples
 #+begin_src bash
 /{endpoint}?instance_classes=[]&aspects=[]&categorical_filter=[]&agg_type=[]
 #+end_src
-**** use cases
-show me all measurements that have been made on a subject
-or part of that subject or sample derived from that subject
-
-for this just stick it in the measured_instances
-*** =files/=
-like measured_instances but returns files associated with a given measured instance, join on prov and return field source
-# ** utility endpoints :ignore:
-*** =quant_desciptors/=
-**** query parameters
-***** =units=
-***** =aspects=
-***** =instance_classes=
-*** =units/=
-list known units
-*** =aspects/=
-list known aspects
-**** query parameters
-***** =instance_classes=
-***** =categorical_values=
-*** =instance_classes/=
-list known instance classes
-instance classes are ... owl classes that are the domain for the measurement
-*** =categorical_predicates/=
-list known categorical descriptors
-*** =categorical_values/=
-list known categorical values
+*** =values= or =values/cat-quant=
+- query categorical and quantitative values matching parameters
+- accepts standard query parameters
+*** =values/cat=
+- query categorical values matching parameters
+- accepts standard query parameters (but will ignore those for quantitative values)
+*** =values/quant=
+- query quantitative values matching parameters
+- accepts standard query parameters (but will ignore those for categorical values)
+*** =desc/inst= or =descriptors/inst= or =classes=
+- list instance descriptors (aka classes) matching parameters
+- accepts standard query parameters (see notes on limitations above)
+# instance classes are ... owl classes that are the domain for the measurement
+# TODO make sure this returns only classes that have data associated with them by default
+*** =desc/cat= or =descriptors/cat= or =predicates=
+- list categorical descriptors (aka predicates or properties) matching parameters
+- accepts standard query parameters (see notes on limitations above)
+*** =desc/quant= or =desciptors/quant=
+- list quantitative descriptors matching parameters
+- accepts standard query parameters (see notes on limitations above)
+*** =terms= or =controlled-terms=
+- list terms matching parameters
+- accepts standard query parameters (see notes on limitations above)
+*** =units=
+- list units matching parameters
+- accepts standard query parameters (see notes on limitations above)
+*** =aspects=
+- list aspects matching parameters
+- accepts standard query parameters (see notes on limitations above)

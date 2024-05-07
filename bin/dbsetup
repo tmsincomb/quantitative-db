@@ -9,8 +9,8 @@ while [ -h "$SOURCE" ]; do # resolve all symlinks
 done
 ABS_PATH="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
-SQL="${ABS_PATH}/../sql/"
-RESOURCES="${ABS_PATH}/../resources/"
+SQL="${ABS_PATH}/../sql"
+RESOURCES="${ABS_PATH}/../resources"
 
 if [ -z $1 ]; then
     PORT=5432
@@ -18,18 +18,52 @@ else
     PORT=$1
 fi
 
+TEST_DATABASE=$(python -c 'from quantdb.config import auth; print(auth.get("test-db-database"))')
 if [ -z $2 ]; then
-    #DATABASE=$(python -c 'from quantdb.config import auth; print(auth.get("test-database"))')
-    DATABASE=quantdb_test
+    DATABASE=${TEST_DATABASE}
 else
     DATABASE=$2
 fi
 
+if [ -z $3 ]; then
+    HOST=localhost
+else
+    HOST=$3
+fi
+
+PROD=1
+SETUP=0
+TESTING=0
+
+if test ${SETUP} -eq 0; then
+
 # postgres setup (these need to fail loudly)
-psql -U postgres -h localhost -p $PORT -d postgres  -f "${SQL}/postgres.sql" -v database=$DATABASE &&
-#psql -U postgres -h localhost -p $PORT -d $DATABASE -f "${SQL}/extensions.sql" &&
+psql -U postgres -h ${HOST} -p $PORT -d postgres  -f "${SQL}/postgres.sql" -v ON_ERROR_STOP=on -v test_database=${TEST_DATABASE} -v database=$DATABASE
+
+if test ${PROD} -eq 0; then
+psql -U postgres -h ${HOST} -p $PORT -d postgres  -f "${SQL}/database.sql" -v ON_ERROR_STOP=on -v database=$DATABASE
+else
+psql -U postgres -h ${HOST} -p $PORT -d postgres  -f "${SQL}/test_database.sql" -v ON_ERROR_STOP=on -v test_database=${TEST_DATABASE}
+fi
+
+#psql -U postgres -h ${HOST} -p $PORT -d $DATABASE -f "${SQL}/extensions.sql" -v ON_ERROR_STOP=on
 
 # quantdb-admin setup
-psql -U quantdb-admin -h localhost -p $PORT -d $DATABASE -f "${SQL}/schemas.sql" &&
-psql -U quantdb-admin -h localhost -p $PORT -d $DATABASE -f "${SQL}/tables.sql" &&
-psql -U quantdb-admin -h localhost -p $PORT -d $DATABASE -f "${SQL}/permissions.sql" -v database=$DATABASE
+if test ${PROD} -eq 0; then
+admin_user=quantdb-admin
+qdb_user=quantdb-user
+else
+admin_user=quantdb-test-admin
+qdb_user=quantdb-test-user
+fi
+
+psql -U ${admin_user} -h ${HOST} -p $PORT -d $DATABASE -f "${SQL}/schemas.sql" -v ON_ERROR_STOP=on
+psql -U ${admin_user} -h ${HOST} -p $PORT -d $DATABASE -f "${SQL}/tables.sql" -v ON_ERROR_STOP=on
+psql -U ${admin_user} -h ${HOST} -p $PORT -d $DATABASE -f "${SQL}/permissions.sql" -v ON_ERROR_STOP=on -v database=$DATABASE -v perm_user=${qdb_user}
+
+fi
+
+# testing
+if test ${TESTING} -eq 0; then
+psql -U quantdb-test-user -h ${HOST} -p $PORT -d $DATABASE -f "${SQL}/test.sql" -v ON_ERROR_STOP=on
+fi
