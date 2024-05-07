@@ -590,6 +590,14 @@ CREATE INDEX IF NOT EXISTS idx_values_cat_value_controlled ON values_cat (value_
 
 ------------------- convenience functions
 
+CREATE FUNCTION ensure_test_user() RETURNS void AS $$
+BEGIN
+IF CURRENT_USER != 'quantdb-test-user' THEN
+   RAISE EXCEPTION 'current_user % != quantdb-test-user', CURRENT_USER;
+END IF;
+END
+$$ language plpgsql;
+
 CREATE OR REPLACE FUNCTION left_and_right_n(string text, n integer, OUT ret text) AS $$
 BEGIN
 SELECT LEFT(string, n) || ' ... ' || RIGHT(string, n) INTO ret;

@@ -12,6 +12,8 @@
 \set internal_uuid_1 {2d0267ee-6fb9-449a-b0c3-3a46d1fc5783}
 \set max_uuid        {ffffffff-ffff-ffff-ffff-ffffffffffff} -- ignore the limits of 4 and b for now
 
+SELECT ensure_test_user();
+
 INSERT INTO objects (id_type, id) VALUES
 ('dataset', :'dataset_uuid_1'),
 ('dataset', :'dataset_uuid_2'),
