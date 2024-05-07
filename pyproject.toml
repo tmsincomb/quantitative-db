@@ -15,7 +15,7 @@ dependencies = [
     "uvicorn ~= 0.29.0",
     "pydantic-settings ~= 2.2.1",
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 
 # [project.scripts]
 # quantdb-fastapi = "uvicorn quantdb.main:app --reload"

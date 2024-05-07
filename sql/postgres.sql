@@ -36,19 +36,3 @@ ALTER ROLE "quantdb-test-user" SET search_path = quantdb, public;
 ALTER ROLE "quantdb-admin" SET search_path = quantdb, public;
 ALTER ROLE "quantdb-user" SET search_path = quantdb, public;
 
-<<<<<<< HEAD
--- postgres postgres
-
-DROP DATABASE IF EXISTS :database;
-
--- postgres postgres
-
-CREATE DATABASE :database -- quantdb
-    WITH OWNER = 'quantdb-admin'
-    ENCODING = 'UTF8'
-    TABLESPACE = pg_default
-    LC_COLLATE = 'en_US.UTF-8'  -- this was a gentoo locale issue check ${LANG}
-    LC_CTYPE = 'en_US.UTF-8'
-    CONNECTION LIMIT = -1;
-=======
->>>>>>> master
