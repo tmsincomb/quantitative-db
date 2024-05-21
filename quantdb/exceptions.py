@@ -1,6 +1,6 @@
 class QuantdbError(Exception):
-    """ base """
+    """base"""
 
 
 class UnknownArg(QuantdbError):
-    """ url query parameter unknown """
+    """url query parameter unknown"""

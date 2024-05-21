@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.wsgi import WSGIMiddleware
+
 from quantdb.api_server import app as flask_app
 
 app = FastAPI()
