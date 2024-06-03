@@ -51,7 +51,7 @@ url_sql_where = (  # TODO arity spec here
     ('value-quant', 'value_quant', 'qv.value = :value_quant', 'quant'),
     ('value-quant-margin', 'value_quant_margin', 'qv.value <= :value_quant + :value_quant_margin AND qv.value >= :value_quant - :value_quant_margin', 'quant'),
     ('value-quant-min', 'value_quant_min', 'qv.value >= :value_quant_min', 'quant'),
-    ('value-quant-max', 'value_quant_max', 'qv.value <= :value_quant_min', 'quant'),
+    ('value-quant-max', 'value_quant_max', 'qv.value <= :value_quant_max', 'quant'),
 )
 
 
