@@ -557,7 +557,7 @@ def getArgs(request, endpoint, dev=False):
     def convert(k, d):
         if k in request.args:
             # arity is determined here
-            if k in ('dataset', 'include-equivalent', 'union-cat-quant', 'include-unused') or k.startswith('value-quant-'):
+            if k in ('dataset', 'include-equivalent', 'union-cat-quant', 'include-unused', 'agg-type') or k.startswith('value-quant-'):
                 v = request.args[k]
                 if k in ('dataset',):
                     v = uuid.UUID(v)
