@@ -53,15 +53,11 @@ url_sql_where = (  # TODO arity spec here
     ("aspect", "aspect", "ain.label = any(:aspect)", "quant"),
     ("agg-type", "agg_type", "qd.aggregation_type = :agg_type", "quant"),
     # TODO shape
-    ("value-quant", "value_quant", "qv.value = :value_quant", "quant"),
-    (
-        "value-quant-margin",
-        "value_quant_margin",
-        "qv.value <= :value_quant + :value_quant_margin AND qv.value >= :value_quant - :value_quant_margin",
-        "quant",
-    ),
-    ("value-quant-min", "value_quant_min", "qv.value >= :value_quant_min", "quant"),
-    ("value-quant-max", "value_quant_max", "qv.value <= :value_quant_min", "quant"),
+
+    ('value-quant', 'value_quant', 'qv.value = :value_quant', 'quant'),
+    ('value-quant-margin', 'value_quant_margin', 'qv.value <= :value_quant + :value_quant_margin AND qv.value >= :value_quant - :value_quant_margin', 'quant'),
+    ('value-quant-min', 'value_quant_min', 'qv.value >= :value_quant_min', 'quant'),
+    ('value-quant-max', 'value_quant_max', 'qv.value <= :value_quant_max', 'quant'),
 )
 
 
@@ -74,9 +70,15 @@ def get_where(kwargs):
             params[s] = kwargs[u]
             if t == "cat":
                 _where_cat.append(w)
-            elif t == "quant":
-                _where_quant.append(w)
-            elif t == "both":
+            elif t == 'quant':
+                # do not include value-quant if value-quant-margin is provided
+                if (u == 'value-quant' and
+                    'value-quant-margin' in kwargs and
+                    kwargs['value-quant-margin']):
+                    continue
+                else:
+                    _where_quant.append(w)
+            elif t == 'both':
                 _where_cat.append(w)
                 _where_quant.append(w)
             else:
@@ -632,9 +634,7 @@ def getArgs(request, endpoint, dev=False):
     def convert(k, d):
         if k in request.args:
             # arity is determined here
-            if k in ("dataset", "include-equivalent", "union-cat-quant", "include-unused") or k.startswith(
-                "value-quant-"
-            ):
+            if k in ('dataset', 'include-equivalent', 'union-cat-quant', 'include-unused', 'agg-type') or k.startswith('value-quant'):
                 v = request.args[k]
                 if k in ("dataset",):
                     v = uuid.UUID(v)
