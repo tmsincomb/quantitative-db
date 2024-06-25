@@ -65,7 +65,13 @@ def get_where(kwargs):
             if t == 'cat':
                 _where_cat.append(w)
             elif t == 'quant':
-                _where_quant.append(w)
+                # do not include value-quant if value-quant-margin is provided
+                if (u == 'value-quant' and
+                    'value-quant-margin' in kwargs and
+                    kwargs['value-quant-margin']):
+                    continue
+                else:
+                    _where_quant.append(w)
             elif t == 'both':
                 _where_cat.append(w)
                 _where_quant.append(w)
@@ -557,7 +563,7 @@ def getArgs(request, endpoint, dev=False):
     def convert(k, d):
         if k in request.args:
             # arity is determined here
-            if k in ('dataset', 'include-equivalent', 'union-cat-quant', 'include-unused', 'agg-type') or k.startswith('value-quant-'):
+            if k in ('dataset', 'include-equivalent', 'union-cat-quant', 'include-unused', 'agg-type') or k.startswith('value-quant'):
                 v = request.args[k]
                 if k in ('dataset',):
                     v = uuid.UUID(v)
