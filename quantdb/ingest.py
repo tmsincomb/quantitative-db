@@ -275,11 +275,12 @@ class InternalIds:
     def __init__(self, queries):
         q = queries
         self._q = queries
-
-        self.addr_suid = q.address_from_fadd_type_fadd("tabular-header", "id_sub")
-        self.addr_said = q.address_from_fadd_type_fadd("tabular-header", "id_sam")
-        self.addr_spec = q.address_from_fadd_type_fadd("tabular-header", "species")
-        self.addr_saty = q.address_from_fadd_type_fadd("tabular-header", "sample_type")
+    
+        self.addr_suid = q.address_from_fadd_type_fadd('tabular-header', 'id_sub')
+        self.addr_said = q.address_from_fadd_type_fadd('tabular-header', 'id_sam')
+        self.addr_spec = q.address_from_fadd_type_fadd('tabular-header', 'species')
+        self.addr_saty = q.address_from_fadd_type_fadd('tabular-header', 'sample_type')
+        self.addr_faid = q.address_from_fadd_type_fadd('tabular-header', 'fascicle')  # for REVA ft
 
         self.addr_tmod = q.address_from_fadd_type_fadd("tabular-header", "modality")
         # addr_trai = address_from_fadd_type_fadd('tabular-header', 'raw_anat_index')
@@ -480,6 +481,136 @@ def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_a
 
     if commit:
         session.commit()
+
+
+def sample_id_from_package_uuid(package_uuid):
+    raise NotImplementedError('TODO')
+    return sample_id
+
+def sub_id_from_sam_id(sample_id):
+    raise NotImplementedError('TODO')
+    return subject_id
+
+
+def rows_from_package_uuid(package_uuid):
+    raise NotImplementedError('TODO')
+    return rows
+
+def map_addresses(table_header, package_addresses):
+    raise NotImplementedError('TODO')
+    return defined_columns
+
+
+def extract_reva_ft_tabular(dataset_uuid, package_uuid, package_addresses, sample_id=None):
+    # worst case derivtive files might need a manual assertion linking to sample
+    sample_id = sample_id_from_package_uuid(package_uuid)  # look a the file hierarchy and find the sample
+    subject_id = sub_id_from_sam_id(sample_id)
+    rows = rows_from_package_uuid(package_uuid)
+    instances = []
+    values = []
+    defined_columns = map_addresses(rows[0], package_addresses)
+    for row in rows[1:]:
+        subthing_id = row[1]  # change to "fascicle"
+        # might need another factor when coming from microct virtual sections if it is not in the spreadsheet
+        formal_id = sample_id + subthing_id
+        instances.append({'dataset': dataset_uuid,
+                          'id_formal': formal_id,
+                          'type': 'below',
+                          'desc_inst': 'fascicle-cross-section',
+                          'id_sub': subject_id,
+                          'id_sam': sample_id,
+                          })
+        for column_name, column_index in defined_columns:
+
+    # TODO return the make functions that match those produced by extract_fun in ingest
+    return (updated_transitive, values_objects, values_dataset_object,
+            make_values_instances, make_values_parents,
+            make_void, make_vocd, make_voqd,
+            make_values_cat, make_values_quant,
+            )
+
+
+def make_descriptors_etc_reva_ft_tabular():
+    # the things we need to insert as part of the specification of the schema for the files we are ingesting
+
+    # aspect
+    need_aspects = [
+        'area',
+        'diameter',
+    ]
+
+    # unit
+
+    # quantitative descriptors
+    need_qd = [
+        'fascicle cross section diameter um',
+        'fascicle cross section diameter um min',
+        'fascicle cross section diameter um max',
+        # TODO more as needed
+
+    ]
+
+    q = Queries(session)
+    i = InternalIds(q)
+
+    # TODO properly query to find existing or add new quantitative descriptors
+    # OR put them in inserts.sql
+
+    # addresses
+    column_name_qd_mapping = [
+    #('fascicle'),  # covered in the values_inst
+    ('area', i.area),
+    ('longest_diameter', i.fcsdumax),
+    ('shortest_diameter', i.fcsdumin),
+    ('eff_diam', i.fcsdu),
+    ('c_estimate_nav', None),
+    ('c_estimate_nf', None),
+    ('nfibers_w_c_estimate_nav', None),
+    ('nfibers_w_c_estimate_nf', None),
+    ('nfibers_all', None),
+    ('n_a_alpha', None),
+    ('n_a_beta', None),
+    ('n_a_gamma', None),
+    ('n_a_delta', None),
+    ('n_b', None),
+    ('n_unmyel_nf', None),
+    ('n_nav', None),
+    ('n_chat', None),
+    ('n_myelinated', None),
+    ('area_a_alpha', None),
+    ('area_a_beta', None),
+    ('area_a_gamma', None),
+    ('area_a_delta', None),
+    ('area_b', None),
+    ('area_unmyel_nf', None),
+    ('area_nav', None),
+    ('area_chat', None),
+    ('area_myelinated', None),
+    ('chat_available', None),
+    ('nav_available', None),
+    ('x_pix', None),
+    ('y_pix', None),
+    ('x_um', None),
+    ('y_um', None),
+    ('x_cent', None),
+    ('y_cent', None),
+    ('rho', None),
+    ('rho_pix', None),
+    ('phi', None),
+    ('epi_dist', None),
+    ('epi_dist_inv', None),
+    ('nerve_based_area', None),
+    ('nerve_based_perimeter', None),
+    ('nerve_based_eff_diam', None),
+    ('perinerium_vertices', None),
+    ('perinerium_vertices_px', None),
+    ('nerve_based_shortest_diameter', None),
+    ('hull_contrs', None),
+    ('hull_contr_areas', None),
+    ]
+    addresses = [('tabular-header', name) for name, qd in column_name_qd_mapping if qd is not None]
+    # TODO do the inserts
+
 
 
 def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
