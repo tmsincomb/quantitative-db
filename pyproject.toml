@@ -13,6 +13,7 @@ dependencies = [
     "orthauth ~= 0.0.18",
     "cython",
     "psycopg2-binary",
+    "sparcur",
 ]
 name = "quantdb"
 version = "0.1.0"

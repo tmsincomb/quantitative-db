@@ -5,6 +5,7 @@ from collections import defaultdict
 
 import requests
 from sparcur import objects as sparcur_objects  # register pathmeta type
+
 # FIXME sparcur dependencies, or keep ingest separate
 from sparcur.utils import fromJson
 from sqlalchemy import create_engine
