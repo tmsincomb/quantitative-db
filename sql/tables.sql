@@ -1030,6 +1030,42 @@ $$ language plpgsql;
 
 -------- instances
 
+CREATE OR REPLACE FUNCTION get_child_inst(id_instance_start integer) RETURNS TABLE (
+child integer
+) AS $$
+-- single transitive children list
+BEGIN
+RETURN QUERY
+WITH RECURSIVE tree(id) AS (
+SELECT ip0.id FROM instance_parent AS ip0 WHERE ip0.parent = id_instance_start
+UNION ALL
+SELECT ip.id
+FROM instance_parent AS ip
+JOIN tree AS t ON ip.parent = t.id
+)
+SELECT * FROM tree;
+END;
+$$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION get_child_closed_inst(id_instance_start integer) RETURNS TABLE (
+child integer
+) AS $$
+-- single transitive children list
+BEGIN
+RETURN QUERY
+WITH RECURSIVE tree(id) AS (
+SELECT ip0.id FROM instance_parent AS ip0 WHERE ip0.parent = id_instance_start
+UNION ALL
+SELECT ip.id
+FROM instance_parent AS ip
+JOIN tree AS t ON ip.parent = t.id
+)
+SELECT * FROM tree
+UNION
+SELECT id_instance_start;
+END;
+$$ language plpgsql;
+
 CREATE OR REPLACE FUNCTION get_parent_inst(id_instance_start integer) RETURNS TABLE (
 parent integer
 ) AS $$
