@@ -35,6 +35,7 @@ url_sql_where = (  # TODO arity spec here
     ('desc-inst', 'desc_inst', 'idin.label = any(:desc_inst)', 'both'),
     ('dataset', 'dataset', 'im.dataset = :dataset', 'both'),
     ('inst', 'inst', 'im.id_formal = any(:inst)', 'both'),
+    ('inst-parent', 'inst_parent', 'icin.id_formal = any(:inst_parent)', 'both'),
     ('subject', 'subject', 'im.id_sub = any(:subject)', 'both'),
     ('sample', 'sample', 'im.id_sam = any(:sample)', 'both'),
 
@@ -195,6 +196,7 @@ def main_query(endpoint, kwargs):
     class kw:  # keywords
         prov = gkw('prov')
         source_only = gkw('source-only')
+        parent_inst = gkw('inst-parent')
         desc_inst = gkw('desc-inst')
         desc_cat = gkw('desc-cat')
         value_cat = gkw('value-cat')
@@ -207,8 +209,8 @@ def main_query(endpoint, kwargs):
 JOIN descriptors_inst AS idstart ON idstart.id = {join_to}.desc_inst
 JOIN descriptors_inst AS id
 CROSS JOIN LATERAL get_parent_closed_desc_inst(idstart.id) AS idp ON idp.parent = id.id
-LEFT OUTER JOIN class_parent AS ip ON ip.id = id.id
-LEFT OUTER JOIN descriptors_inst AS idpar ON idpar.id = ip.parent
+LEFT OUTER JOIN class_parent AS clp ON clp.id = id.id
+LEFT OUTER JOIN descriptors_inst AS idpar ON idpar.id = clp.parent
 """
 
     q_par_aspect = """
@@ -296,6 +298,11 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
     where_cat = f'WHERE {_where_cat}' if _where_cat else ''
     where_quant = f'WHERE {_where_quant}' if _where_quant else ''
 
+    q_inst_parent = '\n'.join((
+        'JOIN values_inst AS icin',
+        'CROSS JOIN LATERAL get_child_closed_inst(icin.id) AS ic ON im.id = ic.child',
+    )) if kw.parent_inst else ''
+
     # FIXME even trying to be smart here about which joins to pull just papers over the underlying perf issue
     # shaves about 140ms off but the underlying issue remains
     q_cat = '\n'.join((
@@ -308,6 +315,7 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
          'JOIN descriptors_inst AS id ON cv.desc_inst = id.id'
          ) if sn.desc_inst or kw.desc_inst else '',  # FIXME handle parents case
         'JOIN values_inst AS im ON cv.instance = im.id',
+        q_inst_parent,
         '\n'.join((
             'JOIN descriptors_cat AS cd ON cv.desc_cat = cd.id',
             'LEFT OUTER JOIN descriptors_inst AS cdid ON cd.domain = cdid.id  -- XXX TODO mismach',
@@ -337,6 +345,7 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
          'JOIN descriptors_inst AS id ON qv.desc_inst = id.id'
          ) if sn.desc_inst or kw.desc_inst else '',  # FIXME handle parents case
         'JOIN values_inst AS im ON qv.instance = im.id',
+        q_inst_parent,
         'JOIN descriptors_quant AS qd ON qv.desc_quant = qd.id' if (
             sn.desc_quant or kw.desc_quant) else '',
         '\n'.join((
@@ -480,6 +489,7 @@ args_default = {
     # value-inst
     'dataset': None,
     'inst': [],
+    'inst-parent': [],
     'subject': [],
     'sample': [],
     'include-equivalent': False,
@@ -662,8 +672,8 @@ def make_app(db=None, name='quantdb-api-server', dev=False):
 
                     """
 FROM descriptors_inst AS id
-LEFT OUTER JOIN class_parent AS ip ON ip.id = id.id
-LEFT OUTER JOIN descriptors_inst AS idpar ON idpar.id = ip.parent
+LEFT OUTER JOIN class_parent AS clp ON clp.id = id.id
+LEFT OUTER JOIN descriptors_inst AS idpar ON idpar.id = clp.parent
 """), {}
 
         return default_flow('desc/inst', 'desc-inst', main_query, to_json, alt_query_fun=query)

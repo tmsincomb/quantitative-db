@@ -21,6 +21,8 @@ def test():
         f'{base}values/inst?dataset={dataset_uuid}&union-cat-quant=true',
         f'{base}values/inst?dataset={dataset_uuid}&aspect=distance&aspect=time',
         f'{base}values/inst?dataset={dataset_uuid}&aspect=distance&value-quant-min=0.5',
+        f'{base}values/inst?dataset={dataset_uuid}&inst-parent=sub-f001',
+        f'{base}values/inst?dataset={dataset_uuid}&inst-parent=sam-r-seg-c1&inst-parent=sam-l-seg-c1',
         f'{base}values/inst?desc-inst=nerve-volume',
 
         f'{base}objects?dataset={dataset_uuid}',
@@ -103,6 +105,10 @@ def test():
         f'{base}aspects?include-unused=true',
         f'{base}units?include-unused=true',
         # TODO maybe shapes here as well?
+
+        f'{base}terms?inst-parent=sam-r-seg-c1&inst-parent=sam-l-seg-c1',
+        f'{base}aspects?inst-parent=sam-r-seg-c1&inst-parent=sam-l-seg-c1',
+        f'{base}units?inst-parent=sam-r-seg-c1&inst-parent=sam-l-seg-c1',
 
     )
     #log.setLevel(9)
