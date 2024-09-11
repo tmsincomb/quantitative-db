@@ -43,7 +43,10 @@ class getName:
         if isinstance(value, dict):
             value = hash(
                 frozenset(
-                    (k, self.valueCheck(v) if isinstance(v, list) or isinstance(v, dict) else v)
+                    (
+                        k,
+                        (self.valueCheck(v) if isinstance(v, list) or isinstance(v, dict) else v),
+                    )
                     for k, v in value.items()
                 )
             )
@@ -95,7 +98,13 @@ def makeParamsValues(*value_sets, constants=tuple(), types=tuple(), row_types=tu
         # proto_params doesn't need to be a dict
         # values will be reduced when we create params as a dict
         if row_types:
-            proto_params = [(tuple(getname(value, type=t) for value, t in zip(row, row_types)), row) for row in values]
+            proto_params = [
+                (
+                    tuple(getname(value, type=t) for value, t in zip(row, row_types)),
+                    row,
+                )
+                for row in values
+            ]
         else:
             proto_params = [(tuple(getname(value) for value in row), row) for row in values]
 
@@ -186,7 +195,10 @@ def pps(path_structure):
     if len(path_structure) == 6:
         # FIXME utter hack
         top, subject, sam_1, segment, modality, file = path_structure
-        p1 = sam_1, subject  # child, parent to match db convention wasDerivedFrom
+        p1 = (
+            sam_1,
+            subject,
+        )  # child, parent to match db convention wasDerivedFrom
         p2 = segment, sam_1
         return {
             "parents": (p1, p2),
@@ -232,7 +244,11 @@ class Queries:
     def desc_inst_from_label(self, label):
         # FIXME multi etc.
         res = [
-            i for i, in self.session.execute(sql_text("select * from desc_inst_from_label(:label)"), dict(label=label))
+            i
+            for i, in self.session.execute(
+                sql_text("select * from desc_inst_from_label(:label)"),
+                dict(label=label),
+            )
         ]
         if res:
             return res[0]
@@ -240,7 +256,11 @@ class Queries:
     def desc_quant_from_label(self, label):
         # FIXME multi etc.
         res = [
-            i for i, in self.session.execute(sql_text("select * from desc_quant_from_label(:label)"), dict(label=label))
+            i
+            for i, in self.session.execute(
+                sql_text("select * from desc_quant_from_label(:label)"),
+                dict(label=label),
+            )
         ]
         if res:
             return res[0]
@@ -259,28 +279,39 @@ class Queries:
 
     def cterm_from_label(self, label):
         # FIXME multi etc.
-        res = [i for i, in self.session.execute(sql_text("select * from cterm_from_label(:label)"), dict(label=label))]
+        res = [
+            i
+            for i, in self.session.execute(
+                sql_text("select * from cterm_from_label(:label)"),
+                dict(label=label),
+            )
+        ]
         if res:
             return res[0]
 
     def insts_from_dataset_ids(self, dataset, ids):
         return list(
             self.session.execute(
-                sql_text("select * from insts_from_dataset_ids(:dataset, :ids)"), dict(dataset=dataset, ids=ids)
+                sql_text("select * from insts_from_dataset_ids(:dataset, :ids)"),
+                dict(dataset=dataset, ids=ids),
             )
         )
 
 
 class InternalIds:
-    def __init__(self, queries):
+    def set_desc_quant_from_label(self, label: str, desctriptor: str):
+        self.__setattr__(label, desctriptor)
+
+    def __init__(self, queries) -> None:
+
         q = queries
         self._q = queries
-    
-        self.addr_suid = q.address_from_fadd_type_fadd('tabular-header', 'id_sub')
-        self.addr_said = q.address_from_fadd_type_fadd('tabular-header', 'id_sam')
-        self.addr_spec = q.address_from_fadd_type_fadd('tabular-header', 'species')
-        self.addr_saty = q.address_from_fadd_type_fadd('tabular-header', 'sample_type')
-        self.addr_faid = q.address_from_fadd_type_fadd('tabular-header', 'fascicle')  # for REVA ft
+
+        self.addr_suid = q.address_from_fadd_type_fadd("tabular-header", "id_sub")
+        self.addr_said = q.address_from_fadd_type_fadd("tabular-header", "id_sam")
+        self.addr_spec = q.address_from_fadd_type_fadd("tabular-header", "species")
+        self.addr_saty = q.address_from_fadd_type_fadd("tabular-header", "sample_type")
+        self.addr_faid = q.address_from_fadd_type_fadd("tabular-header", "fascicle")  # for REVA ft
 
         self.addr_tmod = q.address_from_fadd_type_fadd("tabular-header", "modality")
         # addr_trai = address_from_fadd_type_fadd('tabular-header', 'raw_anat_index')
@@ -292,28 +323,35 @@ class InternalIds:
         # addr_jpnai = address_from_fadd_type_fadd('json-path-with-types', '#/#int/norm_anat_index')
 
         self.addr_jpdrp = q.address_from_fadd_type_fadd(
-            "json-path-with-types", "#/path-metadata/data/#int/dataset_relative_path"
+            "json-path-with-types",
+            "#/path-metadata/data/#int/dataset_relative_path",
         )
 
         # XXX these are more accurate if opaque
         self.addr_jpmod = q.address_from_fadd_type_fadd(
-            "json-path-with-types", "#/path-metadata/data/#int/dataset_relative_path#derive-modality"
+            "json-path-with-types",
+            "#/path-metadata/data/#int/dataset_relative_path#derive-modality",
         )
         # addr_jprai = address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-raw-anat-index')
         self.addr_jpnai = q.address_from_fadd_type_fadd(
-            "json-path-with-types", "#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1"
+            "json-path-with-types",
+            "#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1",
         )
         self.addr_jpnain = q.address_from_fadd_type_fadd(
-            "json-path-with-types", "#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1-min"
+            "json-path-with-types",
+            "#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1-min",
         )
         self.addr_jpnaix = q.address_from_fadd_type_fadd(
-            "json-path-with-types", "#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1-max"
+            "json-path-with-types",
+            "#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1-max",
         )
         self.addr_jpsuid = q.address_from_fadd_type_fadd(
-            "json-path-with-types", "#/path-metadata/data/#int/dataset_relative_path#derive-subject-id"
+            "json-path-with-types",
+            "#/path-metadata/data/#int/dataset_relative_path#derive-subject-id",
         )
         self.addr_jpsaid = q.address_from_fadd_type_fadd(
-            "json-path-with-types", "#/path-metadata/data/#int/dataset_relative_path#derive-sample-id"
+            "json-path-with-types",
+            "#/path-metadata/data/#int/dataset_relative_path#derive-sample-id",
         )
 
         self.addr_jpspec = q.address_from_fadd_type_fadd("json-path-with-types", "#/local/tom-made-it-up/species")
@@ -354,13 +392,23 @@ class InternalIds:
             "microct": self.ct_mod,
         }
 
+        # Fascicles
+        # F
+
 
 class Inserts:
     # TODO
     pass
 
 
-def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_args=None):
+def ingest(
+    dataset_uuid,
+    extract_fun,
+    session,
+    commit=False,
+    dev=False,
+    values_args: list | None = None,
+):
     """generic ingest workflow
     this_dataset_updated_uuid might not be needed in future,
     add a kwarg to control it maybe?
@@ -425,10 +473,16 @@ def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_a
     )
 
     vt, params = makeParamsValues(values_objects)
-    session.execute(sql_text(f"INSERT INTO objects (id, id_type, id_file) VALUES {vt}{ocdn}"), params)
+    session.execute(
+        sql_text(f"INSERT INTO objects (id, id_type, id_file) VALUES {vt}{ocdn}"),
+        params,
+    )
 
     vt, params = makeParamsValues(values_dataset_object)
-    session.execute(sql_text(f"INSERT INTO dataset_object (dataset, object) VALUES {vt}{ocdn}"), params)
+    session.execute(
+        sql_text(f"INSERT INTO dataset_object (dataset, object) VALUES {vt}{ocdn}"),
+        params,
+    )
 
     vt, params = makeParamsValues(values_instances)
     session.execute(
@@ -448,14 +502,21 @@ def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_a
 
     vt, params = makeParamsValues(void)
     session.execute(
-        sql_text(f"INSERT INTO obj_desc_inst (object, desc_inst, addr_field, addr_desc_inst) VALUES {vt}{ocdn}"), params
+        sql_text(f"INSERT INTO obj_desc_inst (object, desc_inst, addr_field, addr_desc_inst) VALUES {vt}{ocdn}"),
+        params,
     )
 
     vt, params = makeParamsValues(vocd)
-    session.execute(sql_text(f"INSERT INTO obj_desc_cat (object, desc_cat, addr_field) VALUES {vt}{ocdn}"), params)
+    session.execute(
+        sql_text(f"INSERT INTO obj_desc_cat (object, desc_cat, addr_field) VALUES {vt}{ocdn}"),
+        params,
+    )
 
     vt, params = makeParamsValues(voqd)
-    session.execute(sql_text(f"INSERT INTO obj_desc_quant (object, desc_quant, addr_field) VALUES {vt}{ocdn}"), params)
+    session.execute(
+        sql_text(f"INSERT INTO obj_desc_quant (object, desc_quant, addr_field) VALUES {vt}{ocdn}"),
+        params,
+    )
 
     vt, params = makeParamsValues(values_cv)
     session.execute(
@@ -484,24 +545,27 @@ def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_a
 
 
 def sample_id_from_package_uuid(package_uuid):
-    raise NotImplementedError('TODO')
+    raise NotImplementedError("TODO")
     return sample_id
 
+
 def sub_id_from_sam_id(sample_id):
-    raise NotImplementedError('TODO')
+    raise NotImplementedError("TODO")
     return subject_id
 
 
 def rows_from_package_uuid(package_uuid):
-    raise NotImplementedError('TODO')
+    raise NotImplementedError("TODO")
     return rows
 
+
 def map_addresses(table_header, package_addresses):
-    raise NotImplementedError('TODO')
+    raise NotImplementedError("TODO")
     return defined_columns
 
 
 def extract_reva_ft_tabular(dataset_uuid, package_uuid, package_addresses, sample_id=None):
+    # TODO: Troy
     # worst case derivtive files might need a manual assertion linking to sample
     sample_id = sample_id_from_package_uuid(package_uuid)  # look a the file hierarchy and find the sample
     subject_id = sub_id_from_sam_id(sample_id)
@@ -513,21 +577,31 @@ def extract_reva_ft_tabular(dataset_uuid, package_uuid, package_addresses, sampl
         subthing_id = row[1]  # change to "fascicle"
         # might need another factor when coming from microct virtual sections if it is not in the spreadsheet
         formal_id = sample_id + subthing_id
-        instances.append({'dataset': dataset_uuid,
-                          'id_formal': formal_id,
-                          'type': 'below',
-                          'desc_inst': 'fascicle-cross-section',
-                          'id_sub': subject_id,
-                          'id_sam': sample_id,
-                          })
-        for column_name, column_index in defined_columns:
+        instances.append(
+            {
+                "dataset": dataset_uuid,
+                "id_formal": formal_id,
+                "type": "below",
+                "desc_inst": "fascicle-cross-section",
+                "id_sub": subject_id,
+                "id_sam": sample_id,
+            }
+        )
+        # for column_name, column_index in defined_columns:
 
     # TODO return the make functions that match those produced by extract_fun in ingest
-    return (updated_transitive, values_objects, values_dataset_object,
-            make_values_instances, make_values_parents,
-            make_void, make_vocd, make_voqd,
-            make_values_cat, make_values_quant,
-            )
+    return (
+        updated_transitive,
+        values_objects,
+        values_dataset_object,
+        make_values_instances,
+        make_values_parents,
+        make_void,
+        make_vocd,
+        make_voqd,
+        make_values_cat,
+        make_values_quant,
+    )
 
 
 def make_descriptors_etc_reva_ft_tabular():
@@ -535,82 +609,138 @@ def make_descriptors_etc_reva_ft_tabular():
 
     # aspect
     need_aspects = [
-        'area',
-        'diameter',
+        "area",
+        "diameter",
     ]
 
     # unit
+    units = [
+        "mm",
+        "cm",
+        "m",
+    ]
 
     # quantitative descriptors
     need_qd = [
-        'fascicle cross section diameter um',
-        'fascicle cross section diameter um min',
-        'fascicle cross section diameter um max',
-        # TODO more as needed
-
+        "fascicle cross section diameter um",
+        "fascicle cross section diameter um min",
+        "fascicle cross section diameter um max",
+        # TODO: add more here
     ]
 
     q = Queries(session)
     i = InternalIds(q)
 
     # TODO properly query to find existing or add new quantitative descriptors
+    # query descriptors?
+
     # OR put them in inserts.sql
+    # insert descripters?
 
     # addresses
     column_name_qd_mapping = [
-    #('fascicle'),  # covered in the values_inst
-    ('area', i.area),
-    ('longest_diameter', i.fcsdumax),
-    ('shortest_diameter', i.fcsdumin),
-    ('eff_diam', i.fcsdu),
-    ('c_estimate_nav', None),
-    ('c_estimate_nf', None),
-    ('nfibers_w_c_estimate_nav', None),
-    ('nfibers_w_c_estimate_nf', None),
-    ('nfibers_all', None),
-    ('n_a_alpha', None),
-    ('n_a_beta', None),
-    ('n_a_gamma', None),
-    ('n_a_delta', None),
-    ('n_b', None),
-    ('n_unmyel_nf', None),
-    ('n_nav', None),
-    ('n_chat', None),
-    ('n_myelinated', None),
-    ('area_a_alpha', None),
-    ('area_a_beta', None),
-    ('area_a_gamma', None),
-    ('area_a_delta', None),
-    ('area_b', None),
-    ('area_unmyel_nf', None),
-    ('area_nav', None),
-    ('area_chat', None),
-    ('area_myelinated', None),
-    ('chat_available', None),
-    ('nav_available', None),
-    ('x_pix', None),
-    ('y_pix', None),
-    ('x_um', None),
-    ('y_um', None),
-    ('x_cent', None),
-    ('y_cent', None),
-    ('rho', None),
-    ('rho_pix', None),
-    ('phi', None),
-    ('epi_dist', None),
-    ('epi_dist_inv', None),
-    ('nerve_based_area', None),
-    ('nerve_based_perimeter', None),
-    ('nerve_based_eff_diam', None),
-    ('perinerium_vertices', None),
-    ('perinerium_vertices_px', None),
-    ('nerve_based_shortest_diameter', None),
-    ('hull_contrs', None),
-    ('hull_contr_areas', None),
+        # ('fascicle'),  # covered in the values_inst
+        ("area", i.area),
+        (
+            "longest_diameter",
+            i.longest_diameter,
+        ),  # TODO: fascicle cross section diameter unit max
+        (
+            "shortest_diameter",
+            i.shortest_diameter,
+        ),  # fascicle cross section diameter unit min
+        ("eff_diam", i.fcsdu),  # TODO: effective diameter
+        (
+            "c_estimate_nav",
+            i.c_estimate_nav,
+        ),  # TODO: c estimate nerve area volume
+        ("c_estimate_nf", i.c_estimate_nf),  # TODO: c estimate nerve fascicle
+        (
+            "nfibers_w_c_estimate_nav",
+            i.nfibers_w_c_estimate_nav,
+        ),  # TODO: number of fibers with c estimate nerve area volume
+        (
+            "nfibers_w_c_estimate_nf",
+            i.nfibers_w_c_estimate_nf,
+        ),  # TODO: number of fibers with c estimate nerve fascicle
+        ("nfibers_all", i.nfibers_all),  # number of fibers all
+        ("n_a_alpha", i.n_a_alpha),  # TODO: TODO: number of fibers alpha
+        ("n_a_beta", i.n_a_beta),  # TODO: BUG: number of fibers beta
+        ("n_a_gamma", i.n_a_gamma),  # TODO: BUG: number of fibers gamma
+        ("n_a_delta", i.n_a_delta),  # TODO: BUG: number of fibers delta
+        ("n_b", i.n_b),  # TODO: number of fibers b
+        (
+            "n_unmyel_nf",
+            i.n_unmyel_nf,
+        ),  # TODO: number of unmyelinated neral filimant
+        ("n_nav", i.n_nav),  # TODO: number of nerve axon volume
+        ("n_chat", i.n_chat),  # TODO: number cholen acetal transferase
+        (
+            "n_myelinated",
+            i.n_myelinated,
+        ),  # TODO: number of myelinated nerve fibers
+        ("area_a_alpha", i.area_a_alpha),  # TODO: area of fibers alpha
+        ("area_a_beta", i.area_a_beta),  # TODO: area of fibers beta
+        ("area_a_gamma", i.area_a_gamma),  # TODO: area of fibers gamma
+        ("area_a_delta", i.area_a_delta),  # TODO: area of fibers delta
+        ("area_b", i.area_b),  # TODO: area of fibers b
+        (
+            "area_unmyel_nf",
+            i.area_unmyel_nf,
+        ),  # TODO: area of unmyelinated nerve fibers
+        ("area_nav", i.area_nav),  # TODO: area of nerve axon volume
+        ("area_chat", i.area_chat),  # TODO: TODO: area of chat
+        (
+            "area_myelinated",
+            i.area_myelinated,
+        ),  # TODO: area of myelinated nerve fibers
+        ("chat_available", i.chat_available),  # TODO: chat available
+        ("nav_available", i.nav_available),  # TODO: nerve axon volume available
+        ("x_pix", i.x_pix),  # TODO: x pixel; microns
+        ("y_pix", i.y_pix),  # TODO: y pixel
+        ("x_um", i.x_um),  # TODO: x um
+        ("y_um", i.y_um),  # TODO: y um
+        ("x_cent", i.x_cent),  # TODO: x center
+        ("y_cent", i.y_cent),  # TODO: y center
+        ("rho", i.rho),  # TODO: rho; microns
+        ("rho_pix", i.rho_pix),  # TODO: rho pixel
+        ("phi", i.phi),  # TODO: phi
+        ("epi_dist", i.epi_dist),  # TODO: epineurium distance
+        ("epi_dist_inv", i.epi_dist_inv),  # TODO: epineurium distance inverse
+        ("nerve_based_area", i.nerve_based_area),  # TODO: nerve based area
+        (
+            "nerve_based_perimeter",
+            i.nerve_based_perimeter,
+        ),  # TODO: nerve based perimeter
+        (
+            "nerve_based_eff_diam",
+            i.nerve_based_eff_diam,
+        ),  # TODO: nerve based effective diameter
+        (
+            "perinerium_vertices",
+            i.perinerium_vertices,
+        ),  # TODO: perinerium vertices
+        (
+            "perinerium_vertices_px",
+            i.perinerium_vertices_px,
+        ),  # TODO: perinerium vertices pixel
+        (
+            "nerve_based_shortest_diameter",
+            i.nerve_based_shortest_diameter,
+        ),  # TODO: nerve based shortest diameter
+        ("hull_contrs", i.hull_contrs),  # TODO: hull contours
+        ("hull_contr_areas", i.hull_contr_areas),  # TODO: hull contour areas
     ]
-    addresses = [('tabular-header', name) for name, qd in column_name_qd_mapping if qd is not None]
-    # TODO do the inserts
-
+    addresses = [("tabular-header", name) for name, qd in column_name_qd_mapping if qd is not None]
+    # TODO do the inserts: does not exist yet
+    ingest(
+        dataset_uuid=dataset_uuid,
+        extract_fun=extract_reva_ft,
+        session=session,  # type: ignore
+        # source_local=source_local,
+        commit=commit,
+        dev=dev,
+    )
 
 
 def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
@@ -723,7 +853,12 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
     }
     parents = sorted(set((e["dataset"],) + p for e in exts for p in e["parents"]))
     sam_other = {
-        p[:2]: {"type": "sample", "desc_inst": "nerve", "id_sub": p[-1], "id_sam": p[1]}
+        p[:2]: {
+            "type": "sample",
+            "desc_inst": "nerve",
+            "id_sub": p[-1],
+            "id_sam": p[1],
+        }
         for p in parents
         if p[:2] not in segments
     }
@@ -765,9 +900,24 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
     # XXX the external source is part of the issue I think
     def make_void(this_dataset_updated_uuid, i):
         void = [  # FIXME this is rather annoying because you have to list all expected types in advance, but I guess that is what we want
-            (this_dataset_updated_uuid, i.id_human, i.addr_jpsuid, i.addr_jpspec),
-            (this_dataset_updated_uuid, i.id_nerve, i.addr_jpsaid, i.addr_jpsaty),
-            (this_dataset_updated_uuid, i.id_nerve_volume, i.addr_jpsaid, i.addr_jpsaty),
+            (
+                this_dataset_updated_uuid,
+                i.id_human,
+                i.addr_jpsuid,
+                i.addr_jpspec,
+            ),
+            (
+                this_dataset_updated_uuid,
+                i.id_nerve,
+                i.addr_jpsaid,
+                i.addr_jpsaty,
+            ),
+            (
+                this_dataset_updated_uuid,
+                i.id_nerve_volume,
+                i.addr_jpsaid,
+                i.addr_jpsaty,
+            ),
             # FIXME what about manifests? those link metadata as an extra hop ... everything meta related needs to come from combined object metadata ???
             # that would certainly make more sense than the nonsense that is going on here, it would simplify the referencing for all the topdown
             # information that we have but it sort of obscures sources, however this _is_ contextual info ... sigh
@@ -793,7 +943,11 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
             # figuring out how to turn that around is going to take a bit of thinking
             (this_dataset_updated_uuid, i.cd_mod, i.addr_jpmod),
         ] + [
-            (o, i.cd_bot, i.addr_const_null)  # XXX FIXME this is the only way I can think to do this right now ?
+            (
+                o,
+                i.cd_bot,
+                i.addr_const_null,
+            )  # XXX FIXME this is the only way I can think to do this right now ?
             for o, b in objects.items()
             if b["id_type"] == "package"
         ]
@@ -878,7 +1032,30 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
     # this is where things get annoying with needing selects on instance measured
 
 
-def ingest_reva_ft_all(session, source_local=False, do_insert=True, batch=False, commit=False, dev=False):
+def ingest_reva_ft_all(
+    session: Session,  # type: ignore
+    source_local: bool = False,
+    do_insert: bool = True,
+    batch: bool = False,
+    commit: bool = False,
+    dev: bool = False,
+) -> None:
+    """
+    Ingest all REVA datasets
+
+    Parameters
+    ----------
+    session : Session
+        connection to DB using engine env
+    do_insert : bool, optional
+        insert the data, by default True
+    batch : bool, optional
+        batch the inserts, by default False
+    commit : bool, optional
+       commit the transaction, by default False
+    dev : bool, optional
+        dev mode, by default False
+    """
     dataset_uuids = (
         "aa43eda8-b29a-4c25-9840-ecbd57598afc",  # f001
         # the rest have uuid1 issues :/ all in the undefined folder it seems, might be able to fix with a reupload
@@ -891,7 +1068,14 @@ def ingest_reva_ft_all(session, source_local=False, do_insert=True, batch=False,
     batched = []
     for dataset_uuid in dataset_uuids:
         if do_insert and not batch:
-            ingest(dataset_uuid, extract_reva_ft, session, source_local=source_local, commit=commit, dev=dev)
+            ingest(
+                dataset_uuid=dataset_uuid,
+                extract_fun=extract_reva_ft,
+                session=session,  # type: ignore
+                # source_local=source_local,
+                commit=commit,
+                dev=dev,
+            )
         else:
             # FIXME make it possible to stage everything and then batch the inserts
             values_args = extract_reva_ft(dataset_uuid, source_local=source_local)
@@ -904,23 +1088,57 @@ def ingest_reva_ft_all(session, source_local=False, do_insert=True, batch=False,
 
 
 def main(source_local=False, commit=False, echo=True):
+    """Run generic REVA ingest
+
+    WARNING: will be changes to dynamic source other than REVA in future.
+
+    Parameters
+    ----------
+    source_local : bool, optional
+        nothing yet, by default False
+    commit : bool, optional
+        dry run if false; real ingest if true, by default False
+    echo : bool, optional
+        TODO: not clear look at alchemy docs, by default True
+
+    Raises
+    ------
+    e
+        _description_
+    """
     from quantdb.config import auth
 
+    # pull in the db connection info
     dbkwargs = {k: auth.get(f"db-{k}") for k in ("user", "host", "port", "database")}  # TODO integrate with cli options
+    # custom user variable needed
     dbkwargs["dbuser"] = dbkwargs.pop("user")
+    # create connection env with DB
     engine = create_engine(dbUri(**dbkwargs))
+    # bool: echo me
     engine.echo = echo
+    # use connection env as unique session
     session = Session(engine)
 
+    # try to ingest reva facular tubular all
     try:
-        ingest_reva_ft_all(session, source_local=source_local, do_insert=True, batch=True, commit=commit, dev=True)
+        ingest_reva_ft_all(
+            session=session,  # type: ignore
+            # source_local=source_local=source_local,
+            do_insert=True,
+            batch=True,
+            commit=commit,
+            dev=True,
+        )
+    # failed: undue DB request, close connection, and remove connection env.
     except Exception as e:
         session.rollback()
         session.close()
         engine.dispose()
         raise e
 
+    # rm alloc memory in GIL for connection
     session.close()
+    # rm alloc memory in GIL for connection env
     engine.dispose()
 
 
