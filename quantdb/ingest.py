@@ -45,7 +45,11 @@ class getName:
                 frozenset(
                     (
                         k,
-                        (self.valueCheck(v) if isinstance(v, list) or isinstance(v, dict) else v),
+                        (
+                            self.valueCheck(v)
+                            if isinstance(v, list) or isinstance(v, dict)
+                            else v
+                        ),
                     )
                     for k, v in value.items()
                 )
@@ -78,11 +82,15 @@ class getName:
 
 
 # from interlex.core import makeParamsValues
-def makeParamsValues(*value_sets, constants=tuple(), types=tuple(), row_types=tuple()):
+def makeParamsValues(
+    *value_sets, constants=tuple(), types=tuple(), row_types=tuple()
+):
     # TODO variable sized records and
     # common value names
     if constants and not all(":" in c for c in constants):
-        raise ValueError(f"All constants must pass variables in via params {constants}")
+        raise ValueError(
+            f"All constants must pass variables in via params {constants}"
+        )
 
     getname = getName()
 
@@ -100,16 +108,24 @@ def makeParamsValues(*value_sets, constants=tuple(), types=tuple(), row_types=tu
         if row_types:
             proto_params = [
                 (
-                    tuple(getname(value, type=t) for value, t in zip(row, row_types)),
+                    tuple(
+                        getname(value, type=t)
+                        for value, t in zip(row, row_types)
+                    ),
                     row,
                 )
                 for row in values
             ]
         else:
-            proto_params = [(tuple(getname(value) for value in row), row) for row in values]
+            proto_params = [
+                (tuple(getname(value) for value in row), row) for row in values
+            ]
 
         values_template = ", ".join(
-            "(" + ", ".join(constants + tuple(":" + name for name in names)) + ")" for names, _ in proto_params
+            "("
+            + ", ".join(constants + tuple(":" + name for name in names))
+            + ")"
+            for names, _ in proto_params
         )
         yield values_template
         if row_types:
@@ -185,7 +201,9 @@ def anat_index(sample):
             # return int(f'{sam_ind}000')
             return sam_ind, 0, 0, 0
 
-    rest = int(seg_id[len(prefix) :])  # FIXME this convention is not always followed
+    rest = int(
+        seg_id[len(prefix) :]
+    )  # FIXME this convention is not always followed
     comps = sam_ind, seg_ind, rest, 0
     # return int(f'{sam_ind}{seg_ind}{rest:0>2d}')
     return comps
@@ -234,7 +252,9 @@ class Queries:
         res = [
             i
             for i, in self.session.execute(
-                sql_text("select * from address_from_fadd_type_fadd(:fadd_type, :fadd)"),
+                sql_text(
+                    "select * from address_from_fadd_type_fadd(:fadd_type, :fadd)"
+                ),
                 dict(fadd_type=fadd_type, fadd=fadd),
             )
         ]
@@ -270,7 +290,9 @@ class Queries:
         res = [
             i
             for i, in self.session.execute(
-                sql_text("select * from desc_cat_from_label_domain_label(:label, :domain_label)"),
+                sql_text(
+                    "select * from desc_cat_from_label_domain_label(:label, :domain_label)"
+                ),
                 dict(label=label, domain_label=domain_label),
             )
         ]
@@ -292,7 +314,9 @@ class Queries:
     def insts_from_dataset_ids(self, dataset, ids):
         return list(
             self.session.execute(
-                sql_text("select * from insts_from_dataset_ids(:dataset, :ids)"),
+                sql_text(
+                    "select * from insts_from_dataset_ids(:dataset, :ids)"
+                ),
                 dict(dataset=dataset, ids=ids),
             )
         )
@@ -307,13 +331,25 @@ class InternalIds:
         q = queries
         self._q = queries
 
-        self.addr_suid = q.address_from_fadd_type_fadd("tabular-header", "id_sub")
-        self.addr_said = q.address_from_fadd_type_fadd("tabular-header", "id_sam")
-        self.addr_spec = q.address_from_fadd_type_fadd("tabular-header", "species")
-        self.addr_saty = q.address_from_fadd_type_fadd("tabular-header", "sample_type")
-        self.addr_faid = q.address_from_fadd_type_fadd("tabular-header", "fascicle")  # for REVA ft
+        self.addr_suid = q.address_from_fadd_type_fadd(
+            "tabular-header", "id_sub"
+        )
+        self.addr_said = q.address_from_fadd_type_fadd(
+            "tabular-header", "id_sam"
+        )
+        self.addr_spec = q.address_from_fadd_type_fadd(
+            "tabular-header", "species"
+        )
+        self.addr_saty = q.address_from_fadd_type_fadd(
+            "tabular-header", "sample_type"
+        )
+        self.addr_faid = q.address_from_fadd_type_fadd(
+            "tabular-header", "fascicle"
+        )  # for REVA ft
 
-        self.addr_tmod = q.address_from_fadd_type_fadd("tabular-header", "modality")
+        self.addr_tmod = q.address_from_fadd_type_fadd(
+            "tabular-header", "modality"
+        )
         # addr_trai = address_from_fadd_type_fadd('tabular-header', 'raw_anat_index')
         # addr_tnai = address_from_fadd_type_fadd('tabular-header', 'norm_anat_index')
         # addr_context = address_from_fadd_type_fadd('context', '#/path-metadata/{index of match remote_id}/dataset_relative_path')  # XXX this doesn't do what we want, I think what we really would want in these contexts are objects_internal that reference the file system state for a given updated snapshot, that is the real "object" that corresponds to the path-metadata.json that we are working from
@@ -354,8 +390,12 @@ class InternalIds:
             "#/path-metadata/data/#int/dataset_relative_path#derive-sample-id",
         )
 
-        self.addr_jpspec = q.address_from_fadd_type_fadd("json-path-with-types", "#/local/tom-made-it-up/species")
-        self.addr_jpsaty = q.address_from_fadd_type_fadd("json-path-with-types", "#/local/tom-made-it-up/sample_type")
+        self.addr_jpspec = q.address_from_fadd_type_fadd(
+            "json-path-with-types", "#/local/tom-made-it-up/species"
+        )
+        self.addr_jpsaty = q.address_from_fadd_type_fadd(
+            "json-path-with-types", "#/local/tom-made-it-up/sample_type"
+        )
 
         # future version when we actually have the metadata files
         # addr_jpmod = address_from_fadd_type_fadd('json-path-with-types', '#/curation-export/manifest/#int/modality')
@@ -367,11 +407,19 @@ class InternalIds:
         self.addr_const_null = q.address_from_fadd_type_fadd("constant", None)
 
         # qd_rai = desc_quant_from_label('reva ft sample anatomical location distance index raw')
-        self.qd_nai = q.desc_quant_from_label("reva ft sample anatomical location distance index normalized v1")
-        self.qd_nain = q.desc_quant_from_label("reva ft sample anatomical location distance index normalized v1 min")
-        self.qd_naix = q.desc_quant_from_label("reva ft sample anatomical location distance index normalized v1 max")
+        self.qd_nai = q.desc_quant_from_label(
+            "reva ft sample anatomical location distance index normalized v1"
+        )
+        self.qd_nain = q.desc_quant_from_label(
+            "reva ft sample anatomical location distance index normalized v1 min"
+        )
+        self.qd_naix = q.desc_quant_from_label(
+            "reva ft sample anatomical location distance index normalized v1 max"
+        )
 
-        self.cd_mod = q.desc_cat_from_label_domain_label("hasDataAboutItModality", None)
+        self.cd_mod = q.desc_cat_from_label_domain_label(
+            "hasDataAboutItModality", None
+        )
         self.cd_bot = q.desc_cat_from_label_domain_label(
             "bottom", None
         )  # we just need something we can reference that points to null so we can have a refernce to all the objects
@@ -441,7 +489,9 @@ def ingest(
     values_instances = make_values_instances(i)
 
     res0 = session.execute(
-        sql_text("INSERT INTO objects (id, id_type) VALUES (:id, :id_type) ON CONFLICT DO NOTHING"),
+        sql_text(
+            "INSERT INTO objects (id, id_type) VALUES (:id, :id_type) ON CONFLICT DO NOTHING"
+        ),
         dict(id=dataset_uuid, id_type="dataset"),
     )
 
@@ -474,47 +524,63 @@ def ingest(
 
     vt, params = makeParamsValues(values_objects)
     session.execute(
-        sql_text(f"INSERT INTO objects (id, id_type, id_file) VALUES {vt}{ocdn}"),
+        sql_text(
+            f"INSERT INTO objects (id, id_type, id_file) VALUES {vt}{ocdn}"
+        ),
         params,
     )
 
     vt, params = makeParamsValues(values_dataset_object)
     session.execute(
-        sql_text(f"INSERT INTO dataset_object (dataset, object) VALUES {vt}{ocdn}"),
+        sql_text(
+            f"INSERT INTO dataset_object (dataset, object) VALUES {vt}{ocdn}"
+        ),
         params,
     )
 
     vt, params = makeParamsValues(values_instances)
     session.execute(
-        sql_text(f"INSERT INTO values_inst (dataset, id_formal, type, desc_inst, id_sub, id_sam) VALUES {vt}{ocdn}"),
+        sql_text(
+            f"INSERT INTO values_inst (dataset, id_formal, type, desc_inst, id_sub, id_sam) VALUES {vt}{ocdn}"
+        ),
         params,
     )
 
     # inserts that depend on instances having already been inserted
-    ilt = q.insts_from_dataset_ids(dataset_uuid, [f for d, f, *rest in values_instances])
+    ilt = q.insts_from_dataset_ids(
+        dataset_uuid, [f for d, f, *rest in values_instances]
+    )
     luinst = {(str(dataset), id_formal): id for id, dataset, id_formal in ilt}
     values_parents = make_values_parents(luinst)
     values_cv = make_values_cat(this_dataset_updated_uuid, i, luinst)
     values_qv = make_values_quant(this_dataset_updated_uuid, i, luinst)
 
     vt, params = makeParamsValues(values_parents)
-    session.execute(sql_text(f"INSERT INTO instance_parent VALUES {vt}{ocdn}"), params)
+    session.execute(
+        sql_text(f"INSERT INTO instance_parent VALUES {vt}{ocdn}"), params
+    )
 
     vt, params = makeParamsValues(void)
     session.execute(
-        sql_text(f"INSERT INTO obj_desc_inst (object, desc_inst, addr_field, addr_desc_inst) VALUES {vt}{ocdn}"),
+        sql_text(
+            f"INSERT INTO obj_desc_inst (object, desc_inst, addr_field, addr_desc_inst) VALUES {vt}{ocdn}"
+        ),
         params,
     )
 
     vt, params = makeParamsValues(vocd)
     session.execute(
-        sql_text(f"INSERT INTO obj_desc_cat (object, desc_cat, addr_field) VALUES {vt}{ocdn}"),
+        sql_text(
+            f"INSERT INTO obj_desc_cat (object, desc_cat, addr_field) VALUES {vt}{ocdn}"
+        ),
         params,
     )
 
     vt, params = makeParamsValues(voqd)
     session.execute(
-        sql_text(f"INSERT INTO obj_desc_quant (object, desc_quant, addr_field) VALUES {vt}{ocdn}"),
+        sql_text(
+            f"INSERT INTO obj_desc_quant (object, desc_quant, addr_field) VALUES {vt}{ocdn}"
+        ),
         params,
     )
 
@@ -564,10 +630,14 @@ def map_addresses(table_header, package_addresses):
     return defined_columns
 
 
-def extract_reva_ft_tabular(dataset_uuid, package_uuid, package_addresses, sample_id=None):
+def extract_reva_ft_tabular(
+    dataset_uuid: str, package_uuid: str, package_addresses: str, sample_id=None
+):
     # TODO: Troy
     # worst case derivtive files might need a manual assertion linking to sample
-    sample_id = sample_id_from_package_uuid(package_uuid)  # look a the file hierarchy and find the sample
+    sample_id = sample_id_from_package_uuid(
+        package_uuid
+    )  # look a the file hierarchy and find the sample
     subject_id = sub_id_from_sam_id(sample_id)
     rows = rows_from_package_uuid(package_uuid)
     instances = []
@@ -590,18 +660,18 @@ def extract_reva_ft_tabular(dataset_uuid, package_uuid, package_addresses, sampl
         # for column_name, column_index in defined_columns:
 
     # TODO return the make functions that match those produced by extract_fun in ingest
-    return (
-        updated_transitive,
-        values_objects,
-        values_dataset_object,
-        make_values_instances,
-        make_values_parents,
-        make_void,
-        make_vocd,
-        make_voqd,
-        make_values_cat,
-        make_values_quant,
-    )
+    # return (
+    #     updated_transitive,
+    #     values_objects,
+    #     values_dataset_object,
+    #     make_values_instances,
+    #     make_values_parents,
+    #     make_void,
+    #     make_vocd,
+    #     make_voqd,
+    #     make_values_cat,
+    #     make_values_quant,
+    # )
 
 
 def make_descriptors_etc_reva_ft_tabular():
@@ -615,9 +685,8 @@ def make_descriptors_etc_reva_ft_tabular():
 
     # unit
     units = [
-        "mm",
-        "cm",
-        "m",
+        "um",
+        "pixel",
     ]
 
     # quantitative descriptors
@@ -731,19 +800,15 @@ def make_descriptors_etc_reva_ft_tabular():
         ("hull_contrs", i.hull_contrs),  # TODO: hull contours
         ("hull_contr_areas", i.hull_contr_areas),  # TODO: hull contour areas
     ]
-    addresses = [("tabular-header", name) for name, qd in column_name_qd_mapping if qd is not None]
-    # TODO do the inserts: does not exist yet
-    ingest(
-        dataset_uuid=dataset_uuid,
-        extract_fun=extract_reva_ft,
-        session=session,  # type: ignore
-        # source_local=source_local,
-        commit=commit,
-        dev=dev,
-    )
+    addresses = [
+        ("tabular-header", name)
+        for name, qd in column_name_qd_mapping
+        if qd is not None
+    ]
+    # TODO do the inserts
 
 
-def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
+def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):"
     if source_local:
         with open(
             pathlib.Path(
@@ -754,7 +819,9 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
             blob = json.load(f)
 
     else:
-        resp = requests.get(f"https://cassava.ucsd.edu/sparc/datasets/{dataset_uuid}/LATEST/path-metadata.json")
+        resp = requests.get(
+            f"https://cassava.ucsd.edu/sparc/datasets/{dataset_uuid}/LATEST/path-metadata.json"
+        )
 
         try:
             blob = resp.json()
@@ -767,9 +834,15 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
 
     ir = fromJson(blob)
 
-    updated_transitive = max([i["timestamp_updated"] for i in ir["data"][1:]])  # 1: to skip the dataset object itself
+    updated_transitive = max(
+        [i["timestamp_updated"] for i in ir["data"][1:]]
+    )  # 1: to skip the dataset object itself
 
-    jpx = [r for r in ir["data"] if "mimetype" in r and r["mimetype"] == "image/jpx"]
+    jpx = [
+        r
+        for r in ir["data"]
+        if "mimetype" in r and r["mimetype"] == "image/jpx"
+    ]
 
     exts = [ext(j) for j in jpx]
     # hrm = sorted(exts, key=lambda j: j['raw_anat_index'])
@@ -779,7 +852,12 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
 
     # normalize the index by mapping distinct values to the integers
     nondist = sorted([e["raw_anat_index_v1"] for e in exts])
-    lin_distinct = {v: i for i, v in enumerate(sorted(set([e["raw_anat_index_v1"] for e in exts])))}
+    lin_distinct = {
+        v: i
+        for i, v in enumerate(
+            sorted(set([e["raw_anat_index_v1"] for e in exts]))
+        )
+    }
     max_distinct = len(lin_distinct)
     mdp1 = max_distinct + 0.1  # to simplify adding overlap
 
@@ -820,7 +898,9 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
         seaborn.scatterplot(x=x[:end], y=nyn[:end])
         seaborn.scatterplot(x=x[:end], y=nyx[:end])
 
-    datasets = {i.uuid: {"id_type": i.type} for e in exts if (i := e["dataset"])}
+    datasets = {
+        i.uuid: {"id_type": i.type} for e in exts if (i := e["dataset"])
+    }
 
     packages = {
         i.uuid: {
@@ -832,7 +912,13 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
     }
 
     objects = {**datasets, **packages}
-    dataset_object = list(set((d.uuid, o.uuid) for e in exts if (d := e["dataset"]) and (o := e["object"])))
+    dataset_object = list(
+        set(
+            (d.uuid, o.uuid)
+            for e in exts
+            if (d := e["dataset"]) and (o := e["object"])
+        )
+    )
 
     subjects = {
         k: {
@@ -849,9 +935,13 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
             "id_sub": k[-1],
             "id_sam": k[1],
         }
-        for k in sorted(set((e["dataset"], e["sample"], e["subject"]) for e in exts))
+        for k in sorted(
+            set((e["dataset"], e["sample"], e["subject"]) for e in exts)
+        )
     }
-    parents = sorted(set((e["dataset"],) + p for e in exts for p in e["parents"]))
+    parents = sorted(
+        set((e["dataset"],) + p for e in exts for p in e["parents"])
+    )
     sam_other = {
         p[:2]: {
             "type": "sample",
@@ -889,7 +979,10 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
 
     def make_values_parents(luinst):
         """need the lookup for instances"""
-        values_parents = [(luinst[d.uuid, child], luinst[d.uuid, parent]) for d, child, parent in parents]
+        values_parents = [
+            (luinst[d.uuid, child], luinst[d.uuid, parent])
+            for d, child, parent in parents
+        ]
         return values_parents
 
     # XXX REMINDER an object descriptor pair can be associated with an arbitrary number of measured instances
@@ -1078,13 +1171,17 @@ def ingest_reva_ft_all(
             )
         else:
             # FIXME make it possible to stage everything and then batch the inserts
-            values_args = extract_reva_ft(dataset_uuid, source_local=source_local)
+            values_args = extract_reva_ft(
+                dataset_uuid, source_local=source_local
+            )
             if batch:
                 batched.append((dataset_uuid, values_args))
 
     if do_insert and batch:
         for duuid, vargs in batched:
-            ingest(duuid, None, session, commit=commit, dev=dev, values_args=vargs)
+            ingest(
+                duuid, None, session, commit=commit, dev=dev, values_args=vargs
+            )
 
 
 def main(source_local=False, commit=False, echo=True):
@@ -1109,7 +1206,9 @@ def main(source_local=False, commit=False, echo=True):
     from quantdb.config import auth
 
     # pull in the db connection info
-    dbkwargs = {k: auth.get(f"db-{k}") for k in ("user", "host", "port", "database")}  # TODO integrate with cli options
+    dbkwargs = {
+        k: auth.get(f"db-{k}") for k in ("user", "host", "port", "database")
+    }  # TODO integrate with cli options
     # custom user variable needed
     dbkwargs["dbuser"] = dbkwargs.pop("user")
     # create connection env with DB
