@@ -5,7 +5,6 @@ from collections import defaultdict
 
 import requests
 from sparcur import objects as sparcur_objects  # register pathmeta type
-
 # FIXME sparcur dependencies, or keep ingest separate
 from sparcur.utils import fromJson
 from sqlalchemy import create_engine
@@ -808,7 +807,7 @@ def make_descriptors_etc_reva_ft_tabular():
     # TODO do the inserts
 
 
-def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):"
+def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
     if source_local:
         with open(
             pathlib.Path(

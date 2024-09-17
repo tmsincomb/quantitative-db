@@ -1,0 +1,19 @@
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+
+from quantdb.config import auth
+from quantdb.utils import dbUri
+
+
+def get_session() -> Session:
+    # pull in the db connection info
+    dbkwargs = {k: auth.get(f"db-{k}") for k in ("user", "host", "port", "database")}  # TODO integrate with cli options
+    # custom user variable needed
+    dbkwargs["dbuser"] = dbkwargs.pop("user")
+    # create connection env with DB
+    engine = create_engine(dbUri(**dbkwargs))  # type: ignore
+    # bool: echo me
+    engine.echo = True
+    # use connection env as unique session
+    session = Session(engine)
+    return session

@@ -20,7 +20,6 @@ from flask import Flask, request
 from sqlalchemy import text
 from sqlalchemy.orm import Session  # type: ignore
 from sqlalchemy.sql import text as sql_text
-from sqlalchemy import text
 
 from quantdb import exceptions as exc
 from quantdb.config import Settings, auth
@@ -129,11 +128,7 @@ def get_where(kwargs):
                 _where_cat.append(w)
             elif t == "quant":
                 # do not include value-quant if value-quant-margin is provided
-                if (
-                    u == "value-quant"
-                    and "value-quant-margin" in kwargs
-                    and kwargs["value-quant-margin"]
-                ):
+                if u == "value-quant" and "value-quant-margin" in kwargs and kwargs["value-quant-margin"]:
                     continue
                 else:
                     _where_quant.append(w)
@@ -207,9 +202,7 @@ def main_query(endpoint, kwargs):
             ),
         ),
         "desc/inst": ("id.iri, " "id.label, " "idpar.label as subclassof "),
-        "desc/cat": (
-            "cd.label, " "cdid.label AS domain, " "cd.range, " "cd.description "
-        ),
+        "desc/cat": ("cd.label, " "cdid.label AS domain, " "cd.range, " "cd.description "),
         "desc/quant": (
             "qd.label, "
             "id.label AS domain, "
@@ -360,26 +353,12 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
         )
         else ""
     )
-    ep_select_cat, ep_select_quant = (
-        ep_select if isinstance(ep_select, tuple) else (ep_select, ep_select)
-    )
+    ep_select_cat, ep_select_quant = ep_select if isinstance(ep_select, tuple) else (ep_select, ep_select)
     select_cat = f"SELECT {maybe_distinct}{ep_select_cat}" + (
-        (
-            s_prov_objs
-            + s_prov_i
-            + ((",\n" + s_prov_c) if endpoint != "values/inst" else "")
-        )
-        if kw.prov
-        else ""
+        (s_prov_objs + s_prov_i + ((",\n" + s_prov_c) if endpoint != "values/inst" else "")) if kw.prov else ""
     )
     select_quant = f"SELECT {maybe_distinct}{ep_select_quant}" + (
-        (
-            s_prov_objs
-            + s_prov_i
-            + ((",\n" + s_prov_q) if endpoint != "values/inst" else "")
-        )
-        if kw.prov
-        else ""
+        (s_prov_objs + s_prov_i + ((",\n" + s_prov_q) if endpoint != "values/inst" else "")) if kw.prov else ""
     )
     _where_cat, _where_quant, params = get_where(kwargs)
     where_cat = f"WHERE {_where_cat}" if _where_cat else ""
@@ -472,11 +451,7 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
                 else ""
             ),  # FIXME handle parents case
             "JOIN values_inst AS im ON qv.instance = im.id",
-            (
-                "JOIN descriptors_quant AS qd ON qv.desc_quant = qd.id"
-                if (sn.desc_quant or kw.desc_quant)
-                else ""
-            ),
+            ("JOIN descriptors_quant AS qd ON qv.desc_quant = qd.id" if (sn.desc_quant or kw.desc_quant) else ""),
             (
                 "\n".join(
                     (
@@ -487,20 +462,10 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
                 )
                 if kw.aspect
                 else (
-                    (
-                        q_par_aspect
-                        if sn.parent_aspect
-                        else "JOIN aspects AS a ON qd.aspect = a.id"
-                    )
-                    if sn.aspect
-                    else ""
+                    (q_par_aspect if sn.parent_aspect else "JOIN aspects AS a ON qd.aspect = a.id") if sn.aspect else ""
                 )
             ),  # FIXME handle parents case
-            (
-                "LEFT OUTER JOIN units AS u ON qd.unit = u.id"
-                if sn.unit or kw.unit
-                else ""
-            ),
+            ("LEFT OUTER JOIN units AS u ON qd.unit = u.id" if sn.unit or kw.unit else ""),
             (
                 (
                     (
@@ -535,11 +500,7 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
     ):  # FIXME TODO make it possible to cross query terms, units, aspects
         query = sw_quant
     else:
-        operator = (
-            "UNION"
-            if "union-cat-quant" in kwargs and kwargs["union-cat-quant"]
-            else "INTERSECT"
-        )
+        operator = "UNION" if "union-cat-quant" in kwargs and kwargs["union-cat-quant"] else "INTERSECT"
         query = f"{sw_cat}\n{operator}\n{sw_quant}"
 
     log.log(9, "\n" + query)
@@ -555,11 +516,7 @@ def to_json(record_type, res, prov=False):
                     {k: v for k, v in r._asdict().items() if k != "id"}
                     # do not leak internal ids because the might change and are not meaningful
                     if r.id_type == "quantdb"
-                    else {
-                        k: v
-                        for k, v in r._asdict().items()
-                        if k != "updated_transitive"
-                    }
+                    else {k: v for k, v in r._asdict().items() if k != "updated_transitive"}
                 )
                 for r in rows
             ]
@@ -592,11 +549,7 @@ def to_json(record_type, res, prov=False):
                 else:
                     raise NotImplementedError(f"wat {r.type}")
 
-                return {
-                    type_fields(k): v
-                    for k, v in r._asdict().items()
-                    if k not in rem
-                }
+                return {type_fields(k): v for k, v in r._asdict().items() if k not in rem}
 
             result = [prow(r) for r in rows]
         else:
@@ -617,28 +570,20 @@ def to_json(record_type, res, prov=False):
                 return {
                     k.split("_", 1 + usc)[-1]: v
                     for k in list(d)
-                    if k.startswith(prefix + "_")
-                    and (v := d.pop(k)) is not None
+                    if k.startswith(prefix + "_") and (v := d.pop(k)) is not None
                 }
 
             for r in result:
                 provs = pop_prefix(r, "prov")
-                if (
-                    "source_id_type" in provs
-                    and provs["source_id_type"] == "quantdb"
-                ):
+                if "source_id_type" in provs and provs["source_id_type"] == "quantdb":
                     provs.pop("source_id", None)  # don't leak internal ids
                 else:
-                    provs.pop(
-                        "source_updated_transitive", None
-                    )  # always None in this case
+                    provs.pop("source_updated_transitive", None)  # always None in this case
 
                 for prefix in ("desc_inst", "inst", "value", "value", "source"):
                     d = pop_prefix(provs, prefix)
                     if d:
-                        d["type"] = (
-                            "address" if prefix != "source" else "object"
-                        )
+                        d["type"] = "address" if prefix != "source" else "object"
                         provs[prefix] = d
 
                 provs["type"] = "prov"
@@ -694,7 +639,7 @@ args_default = {
     "value-quant-margin": None,
     "value-quant-min": None,
     "value-quant-max": None,
-    "limit": 100,
+    "limit": 500,
     #'operator': 'INTERSECT',  # XXX ...
     "union-cat-quant": False,  # by default we intersect but sometimes you want the union instead e.g. if object is passed
     "source-only": False,
@@ -715,9 +660,7 @@ args_default = {
 app = FastAPI()
 
 
-def getArgs(
-    request: Request, endpoint: str, dev: bool = False
-) -> Dict[str, Any]:
+def getArgs(request: Request, endpoint: str, dev: bool = False) -> Dict[str, Any]:
     default = copy.deepcopy(args_default)
 
     # TODO: temporary fix to allow flask and fastapi to work together
@@ -733,10 +676,7 @@ def getArgs(
     if endpoint != "objects":
         default.pop("source-only")
 
-    if not (
-        endpoint.startswith("desc/")
-        or endpoint in ("terms", "units", "aspects")
-    ):
+    if not (endpoint.startswith("desc/") or endpoint in ("terms", "units", "aspects")):
         default.pop("include-unused")
     else:
         # prevent filtering on the thing we are trying to query
@@ -754,18 +694,9 @@ def getArgs(
     if not endpoint.startswith("values/"):
         default.pop("prov")
     elif endpoint == "values/cat":
-        [
-            default.pop(k)
-            for k in list(default)
-            if k.startswith("value-quant")
-            or k in ("unit", "aspect", "agg-type")
-        ]
+        [default.pop(k) for k in list(default) if k.startswith("value-quant") or k in ("unit", "aspect", "agg-type")]
     elif endpoint == "values/quant":
-        [
-            default.pop(k)
-            for k in list(default)
-            if k in ("desc-cat", "value-cat", "value-cat-open")
-        ]
+        [default.pop(k) for k in list(default) if k in ("desc-cat", "value-cat", "value-cat-open")]
 
     extras = set(args) - set(default)
     if extras:
@@ -789,9 +720,7 @@ def getArgs(
             else:
                 v = args.getlist(k)
                 if k in ("object",):
-                    v = [
-                        uuid.UUID(_) for _ in v
-                    ]  # caste to uuid to simplify sqlalchemy type mapping
+                    v = [uuid.UUID(_) for _ in v]  # caste to uuid to simplify sqlalchemy type mapping
         else:
             return d
 
@@ -816,18 +745,14 @@ def getArgs(
 
 def make_app(db=None, name="quantdb-api-server", dev=False):
     app = Flask(name)
-    app.config["SQLALCHEMY_DATABASE_URI"] = (
-        get_settings().SQLALCHEMY_DATABASE_URI
-    )
+    app.config["SQLALCHEMY_DATABASE_URI"] = get_settings().SQLALCHEMY_DATABASE_URI
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     db.init_app(app)
     session = db.session
 
     bp = "/api/1/"
 
-    def default_flow(
-        endpoint, record_type, query_fun, json_fun, alt_query_fun=None
-    ):
+    def default_flow(endpoint, record_type, query_fun, json_fun, alt_query_fun=None):
         try:
             kwargs = getArgs(request, endpoint, dev=dev)
         except exc.UnknownArg as e:
@@ -862,9 +787,7 @@ def make_app(db=None, name="quantdb-api-server", dev=False):
             raise e
 
         try:
-            out = json_fun(
-                record_type, res, prov=("prov" in kwargs and kwargs["prov"])
-            )
+            out = json_fun(record_type, res, prov=("prov" in kwargs and kwargs["prov"]))
             resp = (
                 json.dumps(wrap_out(endpoint, kwargs, out), cls=JEncode),
                 200,
@@ -906,9 +829,7 @@ LEFT OUTER JOIN descriptors_inst AS idpar ON idpar.id = ip.parent
                 {},
             )
 
-        return default_flow(
-            "desc/inst", "desc-inst", main_query, to_json, alt_query_fun=query
-        )
+        return default_flow("desc/inst", "desc-inst", main_query, to_json, alt_query_fun=query)
 
     @app.route(f"{bp}/desc/cat")
     @app.route(f"{bp}/descriptors/cat")
@@ -975,22 +896,16 @@ LEFT OUTER JOIN descriptors_inst AS idpar ON idpar.id = ip.parent
     @app.route(f"{bp}/controlled-terms")
     def route_1_cterms():
         def query(endpoint, kwargs):
-            return (
-                "select " "ct.iri, " "ct.label " "from controlled_terms as ct"
-            ), {}
+            return ("select " "ct.iri, " "ct.label " "from controlled_terms as ct"), {}
 
-        return default_flow(
-            "terms", "term", main_query, to_json, alt_query_fun=query
-        )
+        return default_flow("terms", "term", main_query, to_json, alt_query_fun=query)
 
     @app.route(f"{bp}/units")
     def route_1_units():
         def query(endpoint, kwargs):
             return ("select " "u.iri, " "u.label " "from units as u"), {}
 
-        return default_flow(
-            "units", "unit", main_query, to_json, alt_query_fun=query
-        )
+        return default_flow("units", "unit", main_query, to_json, alt_query_fun=query)
 
     @app.route(f"{bp}/aspects")
     def route_1_aspects():
@@ -1010,9 +925,7 @@ LEFT OUTER JOIN aspects AS aspar ON aspar.id = ap.parent
                 {},
             )
 
-        return default_flow(
-            "aspects", "aspect", main_query, to_json, alt_query_fun=query
-        )
+        return default_flow("aspects", "aspect", main_query, to_json, alt_query_fun=query)
 
     return app
 
@@ -1060,9 +973,7 @@ def default_flow_fastapi(
         raise e
 
     try:
-        out = json_fun(
-            record_type, res, prov=("prov" in kwargs and kwargs["prov"])
-        )
+        out = json_fun(record_type, res, prov=("prov" in kwargs and kwargs["prov"]))
         resp = (
             json.dumps(wrap_out(endpoint, kwargs, out), cls=JEncode),
             200,
@@ -1085,6 +996,22 @@ def get_test(
     return "testing-api"
 
 
+# @fastapi_app.get(
+#     "/objects",
+#     status_code=200,
+# )
+# def get_objects(
+#     request: Request,
+#     session: Session = Depends(get_mysql_db),  # type: ignore
+# ) -> Any:
+#     """objects with derived values that match all criteria"""
+#     resp, status_code, header = default_flow_fastapi(
+#         request, session, "objects", "object", main_query, to_json
+#     )
+#     result = json.loads(resp)  # fastapi does not like json strings
+#     return result
+
+
 @fastapi_app.get(
     "/objects",
     status_code=200,
@@ -1093,12 +1020,14 @@ def get_objects(
     request: Request,
     session: Session = Depends(get_mysql_db),  # type: ignore
 ) -> Any:
-    """objects with derived values that match all criteria"""
-    resp, status_code, header = default_flow_fastapi(
-        request, session, "objects", "object", main_query, to_json
+    query = text(
+        """
+SELECT * FROM objects
+"""
     )
-    result = json.loads(resp)  # fastapi does not like json strings
-    return result
+    result = session.execute(query)
+    data = result.mappings().all()
+    return data
 
 
 @fastapi_app.get(
@@ -1184,6 +1113,61 @@ def get_descriptors_quant(
     query = text(
         """
 SELECT * FROM descriptors_quant
+"""
+    )
+    result = session.execute(query)
+    data = result.mappings().all()
+    return data
+
+
+@fastapi_app.get(
+    "/descriptors/inst",
+    status_code=200,
+)
+def get_descriptors_inst(
+    request: Request,
+    session: Session = Depends(get_mysql_db),  # type: ignore
+) -> Any:
+    query = text(
+        """
+SELECT * FROM descriptors_inst
+"""
+    )
+    result = session.execute(query)
+    data = result.mappings().all()
+    return data
+
+
+@fastapi_app.get(
+    "/aspects",
+    status_code=200,
+)
+def get_aspects(
+    request: Request,
+    session: Session = Depends(get_mysql_db),  # type: ignore
+) -> Any:
+    query = text(
+        """
+SELECT * FROM aspects
+"""
+    )
+    result = session.execute(query)
+    data = result.mappings().all()
+    return data
+
+
+@fastapi_app.get(
+    "/table/{name}/",
+    status_code=200,
+)
+def get_aspects(
+    name: str,
+    request: Request,
+    session: Session = Depends(get_mysql_db),  # type: ignore
+) -> Any:
+    query = text(
+        f"""
+SELECT * FROM {name}
 """
     )
     result = session.execute(query)
