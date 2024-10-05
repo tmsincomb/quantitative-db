@@ -2,8 +2,11 @@ import typing
 from dataclasses import asdict, dataclass
 from typing import Any, AnyStr, ClassVar, Dict, Protocol
 
-from sqlalchemy.orm import Session
+from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy.orm import Session, declarative_base
 from sqlalchemy.sql import text
+
+Base = declarative_base()
 
 
 class UUID(str):
@@ -17,8 +20,9 @@ class Dataclass(Protocol):
 @dataclass
 class Unit:
     __table__ = "units"
-    label: str
-    iri: str
+    id = Column(Integer, primary_key=True)
+    label = Column(String, nullable=True)
+    iri = Column(String)
 
 
 @dataclass
@@ -54,6 +58,21 @@ class ValuesQuant:
     instance: int | None = None
     orig_value: str | None = None
     orig_units: str | None = None
+
+
+@dataclass
+class DescriptorInst:
+    __table__ = "descriptors_inst"
+    label: str
+    description: str | None = None
+    iri: str | None = None
+
+
+class ObjDescQuant:
+    __table__ = "obj_desc_quant"
+    object: UUID
+    desc_inst: int
+    desc_quant: int
 
 
 class Ingest:

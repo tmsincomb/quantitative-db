@@ -10,6 +10,7 @@ def get_session() -> Session:
     dbkwargs = {k: auth.get(f"db-{k}") for k in ("user", "host", "port", "database")}  # TODO integrate with cli options
     # custom user variable needed
     dbkwargs["dbuser"] = dbkwargs.pop("user")
+    dbkwargs["dbuser"] = "quantdb-test-admin"
     # create connection env with DB
     engine = create_engine(dbUri(**dbkwargs))  # type: ignore
     # bool: echo me
