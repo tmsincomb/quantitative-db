@@ -124,8 +124,8 @@ def makeParamsValues(*value_sets, constants=tuple(), types=tuple(), row_types=tu
 """
 l left
 r right
-c cardiac not left or right but a branch on its own
-a abdominal
+c cardiac not left or right but a branch on its own FIXME might be for central for esophageal
+a anterior
 p posterior
 
 c cervical
@@ -135,9 +135,9 @@ a abdominal
 sam_ordering = {
     'l': 0,  # left
     'r': 0,  # right
-    'c': 0,  # cardiac safe to keep at zero since the c index usually come after t
-    'a': 1,  # anterior abdominal
-    'p': 1,  # posterior abdominal
+    'c': 0,  # cardiac safe to keep at zero since the c index usually come after t FIXME means central so it is where both sides merge so have to redo the ordering which will force a v2
+    'a': 1,  # anterior
+    'p': 1,  # posterior
 }
 seg_ordering = {
     'c': 0,  # cervical
