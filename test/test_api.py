@@ -128,3 +128,26 @@ def test():
     #print(q)
     breakpoint()
 
+
+def test_demo_load():
+    db = SQLAlchemy()
+    app = make_app(db=db, dev=True)
+    client = app.test_client()
+    runner = app.test_cli_runner()
+
+    dataset_uuid = 'aa43eda8-b29a-4c25-9840-ecbd57598afc'
+    base = 'http://localhost:8989/api/1/'
+    urls = (
+        f'{base}values/cat-quant?desc-inst=fascicle-cross-section',
+    )
+
+    resps = []
+    for url in urls:
+        log.debug(url)
+        resp = client.get(url)
+        resp.ok = resp.status_code < 400
+        resp.url = resp.request.url
+        resp.content = resp.data
+        resps.append(json.loads(resp.data.decode()))
+
+    breakpoint()
