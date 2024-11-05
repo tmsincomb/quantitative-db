@@ -135,9 +135,9 @@ a abdominal
 sam_ordering = {
     'l': 0,  # left
     'r': 0,  # right
-    'c': 0,  # cardiac safe to keep at zero since the c index usually come after t FIXME means central so it is where both sides merge so have to redo the ordering which will force a v2
-    'a': 1,  # anterior
-    'p': 1,  # posterior
+    'c': 1,  # central +cardiac safe to keep at zero since the c index usually come after t+ FIXME means central so it is where both sides merge so have to redo the ordering which will force a v2
+    'a': 2,  # anterior
+    'p': 2,  # posterior
 }
 seg_ordering = {
     'c': 0,  # cervical
@@ -183,18 +183,26 @@ def pps(path_structure):
     if len(path_structure) == 6:
         # FIXME utter hack
         top, subject, sam_1, segment, modality, file = path_structure
-        p1 = sam_1, subject  # child, parent to match db convention wasDerivedFrom
-        p2 = segment, sam_1
-        return {
-            'parents': (p1, p2),
-            'subject': subject,
-            'sample': segment,
-            'modality': modality,
-            # note that because we do not convert to a single value we cannot include raw_anat_index in the qdb but that's ok
-            'raw_anat_index_v1': anat_index(segment),
-        }
+    elif len(path_structure) == 5:
+        top, subject, sam_1, segment, file = path_structure
+        modality = None  # FIXME from metadata sample id
+        if file.endswith('.jpx') and ('9um' in file or '36um' in file):
+            modality = 'microct'
+        else:
+            raise NotImplementedError(path_structure)
     else:
         raise NotImplementedError(path_structure)
+
+    p1 = sam_1, subject  # child, parent to match db convention wasDerivedFrom
+    p2 = segment, sam_1
+    return {
+        'parents': (p1, p2),
+        'subject': subject,
+        'sample': segment,
+        'modality': modality,
+        # note that because we do not convert to a single value we cannot include raw_anat_index in the qdb but that's ok
+        'raw_anat_index_v2': anat_index(segment),
+    }
 
 
 def ext(j):
@@ -277,9 +285,12 @@ class InternalIds:
         # XXX these are more accurate if opaque
         self.addr_jpmod = q.address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-modality')
         #addr_jprai = address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-raw-anat-index')
-        self.addr_jpnai = q.address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1')
-        self.addr_jpnain = q.address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1-min')
-        self.addr_jpnaix = q.address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1-max')
+        self.addr_jpnai1 = q.address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1')
+        self.addr_jpnain1 = q.address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1-min')
+        self.addr_jpnaix1 = q.address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1-max')
+        self.addr_jpnai = q.address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v2')
+        self.addr_jpnain = q.address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v2-min')
+        self.addr_jpnaix = q.address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v2-max')
         self.addr_jpsuid = q.address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-subject-id')
         self.addr_jpsaid = q.address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-sample-id')
 
@@ -296,12 +307,17 @@ class InternalIds:
         self.addr_const_null = q.address_from_fadd_type_fadd('constant', None)
 
         #qd_rai = desc_quant_from_label('reva ft sample anatomical location distance index raw')
-        self.qd_nai = q.desc_quant_from_label('reva ft sample anatomical location distance index normalized v1')
-        self.qd_nain = q.desc_quant_from_label('reva ft sample anatomical location distance index normalized v1 min')
-        self.qd_naix = q.desc_quant_from_label('reva ft sample anatomical location distance index normalized v1 max')
+        self.qd_nai1 = q.desc_quant_from_label('reva ft sample anatomical location distance index normalized v1')
+        self.qd_nain1 = q.desc_quant_from_label('reva ft sample anatomical location distance index normalized v1 min')
+        self.qd_naix1 = q.desc_quant_from_label('reva ft sample anatomical location distance index normalized v1 max')
+
+        self.qd_nai = q.desc_quant_from_label('reva ft sample anatomical location distance index normalized v2')
+        self.qd_nain = q.desc_quant_from_label('reva ft sample anatomical location distance index normalized v2 min')
+        self.qd_naix = q.desc_quant_from_label('reva ft sample anatomical location distance index normalized v2 max')
 
         self.cd_mod = q.desc_cat_from_label_domain_label('hasDataAboutItModality', None)
-        self.cd_bot = q.desc_cat_from_label_domain_label('bottom', None)  # we just need something we can reference that points to null so we can have a refernce to all the objects
+        self.cd_obj = q.desc_cat_from_label_domain_label('hasAssociatedObject', None)
+        self.cd_bot = q.desc_cat_from_label_domain_label('bottom', None)  # we just need something we can reference that points to null so we can have a refernce to all the objects, XXX but it can't actually be bottom because bottom by definition relates no entities
 
         self.id_human = q.desc_inst_from_label('human')
         self.id_nerve = q.desc_inst_from_label('nerve')
@@ -436,8 +452,6 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
 
     jpx = [r for r in ir['data'] if 'mimetype' in r and r['mimetype'] == 'image/jpx']
 
-
-
     exts = [ext(j) for j in jpx]
     #hrm = sorted(exts, key=lambda j: j['raw_anat_index'])
     #max_rai  = max([e['raw_anat_index'] for e in exts])
@@ -445,33 +459,43 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
     #log_max_rai = math.log10(max_rai)
 
     # normalize the index by mapping distinct values to the integers
-    nondist = sorted([e['raw_anat_index_v1'] for e in exts])
-    lin_distinct = {v:i for i, v in enumerate(sorted(set([e['raw_anat_index_v1'] for e in exts])))}
+    nondist = sorted([e['raw_anat_index_v2'] for e in exts])
+    lin_distinct = {v:i for i, v in enumerate(sorted(set([e['raw_anat_index_v2'] for e in exts])))}
     max_distinct = len(lin_distinct)
     mdp1 = max_distinct + 0.1  # to simplify adding overlap
 
     dd = defaultdict(list)
     for e in exts:
         #e['norm_anat_index'] = math.log10(e['raw_anat_index']) / log_max_rai
-        pos = lin_distinct[e['raw_anat_index_v1']]
-        e['norm_anat_index_v1'] =  (pos + 0.55) / mdp1
-        e['norm_anat_index_v1_min'] =  pos / mdp1
-        e['norm_anat_index_v1_max'] =  (pos + 1.1) / mdp1  # ensure there is overlap between section for purposes of testing
+        pos = lin_distinct[e['raw_anat_index_v2']]
+        e['norm_anat_index_v2'] =  (pos + 0.55) / mdp1
+        e['norm_anat_index_v2_min'] =  pos / mdp1
+        e['norm_anat_index_v2_max'] =  (pos + 1.1) / mdp1  # ensure there is overlap between section for purposes of testing
         # TODO norm_anat_index_min
         # TODO norm_anat_index_max
         dd[e['dataset'], e['sample']].append(e)
     inst_obj_index = dict(dd)
 
-    max_nai = max([e['norm_anat_index_v1'] for e in exts])
-    min_nain = min([e['norm_anat_index_v1_min'] for e in exts])
-    max_naix = max([e['norm_anat_index_v1_max'] for e in exts])
+    max_nai = max([e['norm_anat_index_v2'] for e in exts])
+    min_nain = min([e['norm_anat_index_v2_min'] for e in exts])
+    max_naix = max([e['norm_anat_index_v2_max'] for e in exts])
 
     if visualize:
+        mexts = []
+        done = set()
+        for e in exts:
+            if e['sample'] not in done:
+                mexts.append(e)
+                done.add(e['sample'])
+
+        _exts = exts
+        exts = mexts
         x = list(range(len(exts)))
         #ry = sorted([e['raw_anat_index'] for e in exts])
-        ny = sorted([e['norm_anat_index_v1'] for e in exts])
-        nyn = sorted([e['norm_anat_index_v1_min'] for e in exts])
-        nyx = sorted([e['norm_anat_index_v1_max'] for e in exts])
+        idy = [b for a, b in sorted([(e['norm_anat_index_v2'], e['sample']) for e in exts])]
+        ny = sorted([e['norm_anat_index_v2'] for e in exts])
+        nyn = sorted([e['norm_anat_index_v2_min'] for e in exts])
+        nyx = sorted([e['norm_anat_index_v2_max'] for e in exts])
         nnx = list(zip(nyn, nyx))
         import pylab as plt
         import seaborn
@@ -480,9 +504,19 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
         plt.figure()
         #end = 10
         end = len(x)
-        seaborn.scatterplot(x=x[:end], y=ny[:end])
-        seaborn.scatterplot(x=x[:end], y=nyn[:end])
-        seaborn.scatterplot(x=x[:end], y=nyx[:end])
+        seaborn.scatterplot(x=x[:end], y=ny[:end], label='inst')
+        seaborn.scatterplot(x=x[:end], y=nyn[:end], label='min')
+        seaborn.scatterplot(x=x[:end], y=nyx[:end], label='max')
+        _sid = blob['data'][0]['basename'].split('-')[-1].strip()
+        #if _sid == 'f003':
+        #breakpoint()
+        plt.title(f'norm-anat-index-v2 for {_sid}')
+        plt.xlabel('nth sample')
+        plt.ylabel('normalized anatomical index v2')
+        plt.legend(loc='upper left')
+        #plt.savefig(f'ft-norm-anat-index-v2-{dataset_uuid[:4]}.png')
+        plt.savefig(f'ft-norm-anat-index-v2-{_sid}.png')
+        exts = _exts
 
     datasets = {i.uuid: {'id_type': i.type}
                 for e in exts
@@ -570,7 +604,7 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
             # FIXME this reveals that there are cases where we may not have void for a single file or that the id comes from context and is not embedded
             # figuring out how to turn that around is going to take a bit of thinking
             (this_dataset_updated_uuid, i.cd_mod, i.addr_jpmod),
-        ] + [(o, i.cd_bot, i.addr_const_null)  # XXX FIXME this is the only way I can think to do this right now ?
+        ] + [(o, i.cd_obj, i.addr_const_null)  # XXX FIXME this is the only way I can think to do this right now ?
              for o, b in objects.items() if b['id_type'] == 'package']
 
         return vocd
@@ -606,7 +640,7 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
              i.ct_hack,
              e['object'].uuid,
              i.id_nerve_volume,
-             i.cd_bot,  # if we mess this up the fk ok obj_desc_cat will catch it :)
+             i.cd_obj,  # if we mess this up the fk ok obj_desc_cat will catch it :)
              luinst[e['dataset'].uuid, e['sample']],  # get us the instance
             )
             for e in exts
@@ -627,9 +661,9 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
             for e in exts
             for k, qd in (
                     #('raw_anat_index', qd_rai),  # XXX this is a bad place to store object -> field -> qd mappings also risks mismatch on address
-                    ('norm_anat_index_v1', i.qd_nai),
-                    ('norm_anat_index_v1_min', i.qd_nain),
-                    ('norm_anat_index_v1_max', i.qd_naix),
+                    ('norm_anat_index_v2', i.qd_nai),
+                    ('norm_anat_index_v2_min', i.qd_nain),
+                    ('norm_anat_index_v2_max', i.qd_naix),
             )
         ]
         return values_qv
