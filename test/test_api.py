@@ -135,7 +135,8 @@ def test_demo_load():
     client = app.test_client()
     runner = app.test_cli_runner()
 
-    dataset_uuid = 'aa43eda8-b29a-4c25-9840-ecbd57598afc'
+    dataset_uuid = '55c5b69c-a5b8-4881-a105-e4048af26fa5'
+    package_uuid = '20720c2e-83fb-4454-bef1-1ce6a97fa748'
     base = 'http://localhost:8989/api/1/'
     urls = (
         f'{base}values/cat-quant?desc-inst=fascicle-cross-section',
