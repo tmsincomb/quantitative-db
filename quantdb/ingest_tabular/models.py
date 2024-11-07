@@ -104,48 +104,64 @@ class Addresses(Base):
         uselist=True,
         foreign_keys="[ObjDescInst.addr_desc_inst]",
         back_populates="addresses",
+        viewonly=True,
+        cascade="all, delete-orphan",
     )
     obj_desc_inst_: Mapped[List["ObjDescInst"]] = relationship(
         "ObjDescInst",
         uselist=True,
         foreign_keys="[ObjDescInst.addr_field]",
-        back_populates="addresses_",
+        back_populates="addresses_field",
+        viewonly=True,
+        cascade="all, delete-orphan",
     )
     obj_desc_cat: Mapped[List["ObjDescCat"]] = relationship(
         "ObjDescCat",
         uselist=True,
         foreign_keys="[ObjDescCat.addr_desc_inst]",
         back_populates="addresses",
+        viewonly=True,
+        cascade="all, delete-orphan",
     )
     obj_desc_cat_: Mapped[List["ObjDescCat"]] = relationship(
         "ObjDescCat",
         uselist=True,
         foreign_keys="[ObjDescCat.addr_field]",
         back_populates="addresses_",
+        viewonly=True,
+        cascade="all, delete-orphan",
     )
     obj_desc_quant: Mapped[List["ObjDescQuant"]] = relationship(
         "ObjDescQuant",
         uselist=True,
         foreign_keys="[ObjDescQuant.addr_aspect]",
-        back_populates="addresses",
+        back_populates="addresses_aspect",
+        viewonly=True,
+        cascade="all, delete-orphan",
     )
     obj_desc_quant_: Mapped[List["ObjDescQuant"]] = relationship(
         "ObjDescQuant",
         uselist=True,
         foreign_keys="[ObjDescQuant.addr_desc_inst]",
-        back_populates="addresses_",
+        back_populates="addresses",
+        viewonly=True,
+        cascade="all, delete-orphan",
     )
     obj_desc_quant1: Mapped[List["ObjDescQuant"]] = relationship(
         "ObjDescQuant",
         uselist=True,
         foreign_keys="[ObjDescQuant.addr_field]",
-        back_populates="addresses1",
+        back_populates="addresses_field",
+        viewonly=True,
+        cascade="all, delete-orphan",
     )
     obj_desc_quant2: Mapped[List["ObjDescQuant"]] = relationship(
         "ObjDescQuant",
         uselist=True,
         foreign_keys="[ObjDescQuant.addr_unit]",
-        back_populates="addresses2",
+        back_populates="addresses_unit",
+        viewonly=True,
+        cascade="all, delete-orphan",
     )
 
 
@@ -210,6 +226,7 @@ class Aspects(Base):
         uselist=True,
         back_populates="aspects",
         viewonly=True,
+        cascade="all, delete-orphan",
     )
 
 
@@ -312,18 +329,35 @@ class DescriptorsInst(Base):
         uselist=True,
         back_populates="descriptors_inst",
         viewonly=True,
+        cascade="all, delete-orphan",
     )
     obj_desc_inst: Mapped[List["ObjDescInst"]] = relationship(
-        "ObjDescInst", uselist=True, back_populates="descriptors_inst"
+        "ObjDescInst",
+        uselist=True,
+        back_populates="descriptors_inst",
+        viewonly=True,
+        cascade="all, delete-orphan",
     )
     values_inst: Mapped[List["ValuesInst"]] = relationship(
-        "ValuesInst", uselist=True, back_populates="descriptors_inst"
+        "ValuesInst",
+        uselist=True,
+        back_populates="descriptors_inst",
+        viewonly=True,
+        cascade="all, delete-orphan",
     )
     values_cat: Mapped[List["ValuesCat"]] = relationship(
-        "ValuesCat", uselist=True, back_populates="descriptors_inst"
+        "ValuesCat",
+        uselist=True,
+        back_populates="descriptors_inst",
+        viewonly=True,
+        cascade="all, delete-orphan",
     )
     values_quant: Mapped[List["ValuesQuant"]] = relationship(
-        "ValuesQuant", uselist=True, back_populates="descriptors_inst"
+        "ValuesQuant",
+        uselist=True,
+        back_populates="descriptors_inst",
+        viewonly=True,
+        cascade="all, delete-orphan",
     )
 
 
@@ -825,20 +859,31 @@ class ObjDescInst(Base):
         foreign_keys=[addr_desc_inst],
         back_populates="obj_desc_inst",
     )
-    addresses_: Mapped["Addresses"] = relationship(
+    addresses_field: Mapped["Addresses"] = relationship(
         "Addresses", foreign_keys=[addr_field], back_populates="obj_desc_inst_"
     )
     descriptors_inst: Mapped["DescriptorsInst"] = relationship(
         "DescriptorsInst", back_populates="obj_desc_inst"
     )
     objects: Mapped["Objects"] = relationship(
-        "Objects", back_populates="obj_desc_inst"
+        "Objects",
+        back_populates="obj_desc_inst",
+        viewonly=True,
+        cascade="all, delete-orphan",
     )
     values_cat: Mapped[List["ValuesCat"]] = relationship(
-        "ValuesCat", uselist=True, back_populates="obj_desc_inst"
+        "ValuesCat",
+        uselist=True,
+        back_populates="obj_desc_inst",
+        viewonly=True,
+        cascade="all, delete-orphan",
     )
     values_quant: Mapped[List["ValuesQuant"]] = relationship(
-        "ValuesQuant", uselist=True, back_populates="obj_desc_inst"
+        "ValuesQuant",
+        uselist=True,
+        back_populates="obj_desc_inst",
+        viewonly=True,
+        cascade="all, delete-orphan",
     )
 
 
@@ -971,6 +1016,8 @@ class ValuesInst(Base):
     objects: Mapped[Optional["Objects"]] = relationship(
         "Objects",
         back_populates="values_inst",
+        viewonly=True,
+        cascade="all, delete-orphan",
     )
     descriptors_inst: Mapped[Optional["DescriptorsInst"]] = relationship(
         "DescriptorsInst", back_populates="values_inst"
@@ -1140,27 +1187,34 @@ class ObjDescQuant(Base):
     expect = mapped_column(Integer)
 
     addresses: Mapped[Optional["Addresses"]] = relationship(
-        "Addresses", foreign_keys=[addr_aspect], back_populates="obj_desc_quant"
-    )
-    addresses_: Mapped[Optional["Addresses"]] = relationship(
         "Addresses",
         foreign_keys=[addr_desc_inst],
         back_populates="obj_desc_quant_",
     )
-    addresses1: Mapped["Addresses"] = relationship(
+    addresses_aspect: Mapped[Optional["Addresses"]] = relationship(
+        "Addresses", foreign_keys=[addr_aspect], back_populates="obj_desc_quant"
+    )
+    addresses_field: Mapped["Addresses"] = relationship(
         "Addresses", foreign_keys=[addr_field], back_populates="obj_desc_quant1"
     )
-    addresses2: Mapped[Optional["Addresses"]] = relationship(
+    addresses_unit: Mapped[Optional["Addresses"]] = relationship(
         "Addresses", foreign_keys=[addr_unit], back_populates="obj_desc_quant2"
     )
     descriptors_quant: Mapped["DescriptorsQuant"] = relationship(
         "DescriptorsQuant", back_populates="obj_desc_quant"
     )
     objects: Mapped["Objects"] = relationship(
-        "Objects", back_populates="obj_desc_quant"
+        "Objects",
+        back_populates="obj_desc_quant",
+        viewonly=True,
+        cascade="all, delete-orphan",
     )
     values_quant: Mapped[List["ValuesQuant"]] = relationship(
-        "ValuesQuant", uselist=True, back_populates="obj_desc_quant"
+        "ValuesQuant",
+        uselist=True,
+        back_populates="obj_desc_quant",
+        viewonly=True,
+        cascade="all, delete-orphan",
     )
 
 
@@ -1303,7 +1357,7 @@ class ValuesQuant(Base):
     desc_inst = mapped_column(Integer, nullable=False)
     desc_quant = mapped_column(Integer, nullable=False)
     value_blob = mapped_column(JSONB, nullable=False)
-    instance = mapped_column(Integer, ForeignKey("values_inst.id"))
+    instance = mapped_column(Integer)
     orig_value = mapped_column(String)
     orig_units = mapped_column(String)
 
@@ -1317,13 +1371,22 @@ class ValuesQuant(Base):
         "ValuesInst", back_populates="values_quant"
     )
     obj_desc_inst: Mapped["ObjDescInst"] = relationship(
-        "ObjDescInst", back_populates="values_quant"
+        "ObjDescInst",
+        back_populates="values_quant",
+        viewonly=True,
+        cascade="all, delete-orphan",
     )
     obj_desc_quant: Mapped["ObjDescQuant"] = relationship(
-        "ObjDescQuant", back_populates="values_quant"
+        "ObjDescQuant",
+        back_populates="values_quant",
+        viewonly=True,
+        cascade="all, delete-orphan",
     )
     objects: Mapped["Objects"] = relationship(
-        "Objects", back_populates="values_quant"
+        "Objects",
+        back_populates="values_quant",
+        viewonly=True,
+        cascade="all, delete-orphan",
     )
 
     @staticmethod
