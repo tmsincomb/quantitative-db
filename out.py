@@ -1,12 +1,10 @@
 from typing import List, Optional
-import uuid
 
 from sqlalchemy import (
     CheckConstraint,
     Column,
     DateTime,
     Enum,
-    ForeignKey,
     ForeignKeyConstraint,
     Identity,
     Index,
@@ -21,42 +19,14 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import (
-    Mapped,
-    declarative_base,
-    foreign,
-    mapped_column,
-    relationship,
-    validates,
-)
+from sqlalchemy.orm import Mapped, declarative_base, mapped_column, relationship
 from sqlalchemy.orm.base import Mapped
-from sqlalchemy import event
 
 Base = declarative_base()
 metadata = Base.metadata
 
 
 class Addresses(Base):
-    """Addresses of data
-
-    Parameters
-    ----------
-    id : int
-        Unique identifier for the address.
-    addr_type : str, optional
-        Type of address.
-    value_type : str, optional
-        Type of value.
-    addr_field : str, optional
-        Address field.
-    curator_note : str, optional
-        Curator note.
-
-    Example
-    -------
-    #/path-metadata/data/#int/dataset_relative_path
-    """
-
     __tablename__ = "addresses"
     __table_args__ = (
         PrimaryKeyConstraint("id", name="addresses_pkey"),
@@ -150,25 +120,6 @@ class Addresses(Base):
 
 
 class Aspects(Base):
-    """Aspects of data
-
-    Parameters
-    ----------
-    id : int
-        Unique identifier for the aspect.
-    label : str
-        Label of the aspect.
-    iri : str
-        IRI of the aspect.
-    description : str, optional
-        Description of the aspect.
-
-    Example
-    -------
-    label: "distance"
-    iri: "http://uri.interlex.org/tgbugs/uris/readable/aspect/distance"
-    """
-
     __tablename__ = "aspects"
     __table_args__ = (
         PrimaryKeyConstraint("id", name="aspects_pkey"),
@@ -191,41 +142,26 @@ class Aspects(Base):
     iri = mapped_column(Text, nullable=False)
     description = mapped_column(Text)
 
-    # aspects: Mapped["Aspects"] = relationship(
-    #     "Aspects",
-    #     secondary="aspect_parent",
-    #     primaryjoin=lambda: Aspects.id == t_aspect_parent.c.id,
-    #     secondaryjoin=lambda: Aspects.id == t_aspect_parent.c.parent,
-    #     back_populates="aspects_",
-    # )
-    # aspects_: Mapped["Aspects"] = relationship(
-    #     "Aspects",
-    #     secondary="aspect_parent",
-    #     primaryjoin=lambda: Aspects.id == t_aspect_parent.c.parent,
-    #     secondaryjoin=lambda: Aspects.id == t_aspect_parent.c.id,
-    #     back_populates="aspects",
-    # )
-    descriptors_quant: Mapped[List["DescriptorsQuant"]] = relationship(
-        "DescriptorsQuant",
-        uselist=True,
+    aspects: Mapped["Aspects"] = relationship(
+        "Aspects",
+        secondary="aspect_parent",
+        primaryjoin=lambda: Aspects.id == t_aspect_parent.c.id,
+        secondaryjoin=lambda: Aspects.id == t_aspect_parent.c.parent,
+        back_populates="aspects_",
+    )
+    aspects_: Mapped["Aspects"] = relationship(
+        "Aspects",
+        secondary="aspect_parent",
+        primaryjoin=lambda: Aspects.id == t_aspect_parent.c.parent,
+        secondaryjoin=lambda: Aspects.id == t_aspect_parent.c.id,
         back_populates="aspects",
-        viewonly=True,
+    )
+    descriptors_quant: Mapped[List["DescriptorsQuant"]] = relationship(
+        "DescriptorsQuant", uselist=True, back_populates="aspects"
     )
 
 
 class ControlledTerms(Base):
-    """Controlled terms
-
-    Parameters
-    ----------
-    id : int
-        Unique identifier for the controlled term.
-    label : str
-        Label of the controlled term.
-    iri : str
-        IRI of the controlled term.
-    """
-
     __tablename__ = "controlled_terms"
     __table_args__ = (
         PrimaryKeyConstraint("id", name="controlled_terms_pkey"),
@@ -253,21 +189,6 @@ class ControlledTerms(Base):
 
 
 class DescriptorsInst(Base):
-    """Descriptors Instance
-
-    Parameters
-    ----------
-    id : int
-        Unique identifier for the descriptor.
-    label : str
-        Label of the descriptor.
-    iri : str
-        IRI of the descriptor.
-    description : str, optional
-        Description of the descriptor.
-
-    """
-
     __tablename__ = "descriptors_inst"
     __table_args__ = (
         PrimaryKeyConstraint("id", name="descriptors_inst_pkey"),
@@ -290,28 +211,25 @@ class DescriptorsInst(Base):
     iri = mapped_column(Text, nullable=False)
     description = mapped_column(Text)
 
-    # descriptors_inst: Mapped["DescriptorsInst"] = relationship(
-    #     "DescriptorsInst",
-    #     secondary="class_parent",
-    #     primaryjoin=lambda: DescriptorsInst.id == t_class_parent.c.id,
-    #     secondaryjoin=lambda: DescriptorsInst.id == t_class_parent.c.parent,
-    #     back_populates="descriptors_inst_",
-    # )
-    # descriptors_inst_: Mapped["DescriptorsInst"] = relationship(
-    #     "DescriptorsInst",
-    #     secondary="class_parent",
-    #     primaryjoin=lambda: DescriptorsInst.id == t_class_parent.c.parent,
-    #     secondaryjoin=lambda: DescriptorsInst.id == t_class_parent.c.id,
-    #     back_populates="descriptors_inst",
-    # )
+    descriptors_inst: Mapped["DescriptorsInst"] = relationship(
+        "DescriptorsInst",
+        secondary="class_parent",
+        primaryjoin=lambda: DescriptorsInst.id == t_class_parent.c.id,
+        secondaryjoin=lambda: DescriptorsInst.id == t_class_parent.c.parent,
+        back_populates="descriptors_inst_",
+    )
+    descriptors_inst_: Mapped["DescriptorsInst"] = relationship(
+        "DescriptorsInst",
+        secondary="class_parent",
+        primaryjoin=lambda: DescriptorsInst.id == t_class_parent.c.parent,
+        secondaryjoin=lambda: DescriptorsInst.id == t_class_parent.c.id,
+        back_populates="descriptors_inst",
+    )
     descriptors_cat: Mapped[List["DescriptorsCat"]] = relationship(
         "DescriptorsCat", uselist=True, back_populates="descriptors_inst"
     )
     descriptors_quant: Mapped[List["DescriptorsQuant"]] = relationship(
-        "DescriptorsQuant",
-        uselist=True,
-        back_populates="descriptors_inst",
-        viewonly=True,
+        "DescriptorsQuant", uselist=True, back_populates="descriptors_inst"
     )
     obj_desc_inst: Mapped[List["ObjDescInst"]] = relationship(
         "ObjDescInst", uselist=True, back_populates="descriptors_inst"
@@ -328,64 +246,21 @@ class DescriptorsInst(Base):
 
 
 class Objects(Base):
-    """
-    Represents an object in the database with various relationships and constraints.
-
-    Attributes
-    ----------
-    id : Uuid
-        Unique identifier for the object.
-    id_type : Enum
-        Type of the remote ID, can be one of 'organization', 'dataset', 'collection', 'package', or 'quantdb'.
-    id_file : Integer
-        Identifier for the file associated with the object.
-    id_internal : Uuid
-        Internal identifier for the object.
-
-    Relationships
-    -------------
-    objects : Mapped["Objects"]
-        Relationship to other objects through the 'dataset_object' table.
-    objects_ : Mapped["Objects"]
-        Reverse relationship to other objects through the 'dataset_object' table.
-    obj_desc_inst : Mapped[List["ObjDescInst"]]
-        Relationship to object description instances.
-    values_inst : Mapped[List["ValuesInst"]]
-        Relationship to value instances.
-    obj_desc_cat : Mapped[List["ObjDescCat"]]
-        Relationship to object description categories.
-    obj_desc_quant : Mapped[List["ObjDescQuant"]]
-        Relationship to object description quantities.
-    values_cat : Mapped[List["ValuesCat"]]
-        Relationship to value categories.
-    values_quant : Mapped[List["ValuesQuant"]]
-        Relationship to value quantities.
-
-    Constraints
-    -----------
-    __table_args__ : tuple
-        Contains various constraints and indexes for the table:
-        - CheckConstraint to ensure 'id_file' is not NULL if 'id_type' is 'package'.
-        - CheckConstraint to ensure 'id_internal' is not NULL and 'id' equals 'id_internal' if 'id_type' is 'quantdb'.
-        - PrimaryKeyConstraint on 'id'.
-        - Index on 'id_internal'.
-    """
-
     __tablename__ = "objects"
     __table_args__ = (
-        # CheckConstraint(
-        #     "id_type <> 'package'::remote_id_type OR id_file IS NOT NULL",
-        #     name="constraint_objects_remote_id_type_id_package",
-        # ),
-        # CheckConstraint(
-        #     "id_type <> 'quantdb'::remote_id_type OR id_internal IS NOT NULL AND id = id_internal",
-        #     name="constraint_objects_remote_id_type_id_internal",
-        # ),
-        # ForeignKeyConstraint(
-        #     ["id_internal"],
-        #     ["objects_internal.id"],
-        #     name="objects_id_internal_fkey",
-        # ),
+        CheckConstraint(
+            "id_type <> 'package'::remote_id_type OR id_file IS NOT NULL",
+            name="constraint_objects_remote_id_type_id_package",
+        ),
+        CheckConstraint(
+            "id_type <> 'quantdb'::remote_id_type OR id_internal IS NOT NULL AND id = id_internal",
+            name="constraint_objects_remote_id_type_id_internal",
+        ),
+        ForeignKeyConstraint(
+            ["id_internal"],
+            ["objects_internal.id"],
+            name="objects_id_internal_fkey",
+        ),
         PrimaryKeyConstraint("id", name="objects_pkey"),
         Index("idx_objects_id_internal", "id_internal"),
     )
@@ -402,158 +277,89 @@ class Objects(Base):
         ),
         nullable=False,
     )
-    id_file = mapped_column(Integer, nullable=True)
-    id_internal = mapped_column(Uuid, nullable=True)
+    id_file = mapped_column(Integer)
+    id_internal = mapped_column(Uuid)
 
-    # objects_internal: Mapped[Optional["ObjectsInternal"]] = relationship(
-    #     "ObjectsInternal", foreign_keys=[id_internal], back_populates="objects"
-    # )
-    # objects: Mapped["Objects"] = relationship(
-    #     "Objects",
-    #     secondary="dataset_object",
-    #     primaryjoin=lambda: Objects.id == t_dataset_object.c.dataset,
-    #     secondaryjoin=lambda: Objects.id == t_dataset_object.c.object,
-    #     back_populates="objects_",
-    # )
-    # objects_: Mapped["Objects"] = relationship(
-    #     "Objects",
-    #     secondary="dataset_object",
-    #     primaryjoin=lambda: Objects.id == t_dataset_object.c.object,
-    #     secondaryjoin=lambda: Objects.id == t_dataset_object.c.dataset,
-    #     back_populates="objects",
-    # )
-    # objects_internal_: Mapped[List["ObjectsInternal"]] = relationship(
-    #     "ObjectsInternal",
-    #     uselist=True,
-    #     foreign_keys="[ObjectsInternal.dataset]",
-    #     back_populates="objects_",
-    # )
+    objects_internal: Mapped[Optional["ObjectsInternal"]] = relationship(
+        "ObjectsInternal", foreign_keys=[id_internal], back_populates="objects"
+    )
+    objects: Mapped["Objects"] = relationship(
+        "Objects",
+        secondary="dataset_object",
+        primaryjoin=lambda: Objects.id == t_dataset_object.c.dataset,
+        secondaryjoin=lambda: Objects.id == t_dataset_object.c.object,
+        back_populates="objects_",
+    )
+    objects_: Mapped["Objects"] = relationship(
+        "Objects",
+        secondary="dataset_object",
+        primaryjoin=lambda: Objects.id == t_dataset_object.c.object,
+        secondaryjoin=lambda: Objects.id == t_dataset_object.c.dataset,
+        back_populates="objects",
+    )
+    objects_internal_: Mapped[List["ObjectsInternal"]] = relationship(
+        "ObjectsInternal",
+        uselist=True,
+        foreign_keys="[ObjectsInternal.dataset]",
+        back_populates="objects_",
+    )
     obj_desc_inst: Mapped[List["ObjDescInst"]] = relationship(
-        "ObjDescInst",
-        uselist=True,
-        back_populates="objects",
-        viewonly=True,
-        cascade="all, delete-orphan",
-    )
-    obj_desc_cat: Mapped[List["ObjDescCat"]] = relationship(
-        "ObjDescCat",
-        uselist=True,
-        back_populates="objects",
-        viewonly=True,
-        cascade="all, delete-orphan",
-    )
-    obj_desc_quant: Mapped[List["ObjDescQuant"]] = relationship(
-        "ObjDescQuant",
-        uselist=True,
-        back_populates="objects",
-        viewonly=True,
-        cascade="all, delete-orphan",
+        "ObjDescInst", uselist=True, back_populates="objects"
     )
     values_inst: Mapped[List["ValuesInst"]] = relationship(
-        "ValuesInst",
-        uselist=True,
-        back_populates="objects",
-        viewonly=True,
-        cascade="all, delete-orphan",
+        "ValuesInst", uselist=True, back_populates="objects"
+    )
+    obj_desc_cat: Mapped[List["ObjDescCat"]] = relationship(
+        "ObjDescCat", uselist=True, back_populates="objects"
+    )
+    obj_desc_quant: Mapped[List["ObjDescQuant"]] = relationship(
+        "ObjDescQuant", uselist=True, back_populates="objects"
     )
     values_cat: Mapped[List["ValuesCat"]] = relationship(
-        "ValuesCat",
-        uselist=True,
-        back_populates="objects",
-        viewonly=True,
-        cascade="all, delete-orphan",
+        "ValuesCat", uselist=True, back_populates="objects"
     )
     values_quant: Mapped[List["ValuesQuant"]] = relationship(
-        "ValuesQuant",
-        uselist=True,
-        back_populates="objects",
-        viewonly=True,
-        cascade="all, delete-orphan",
+        "ValuesQuant", uselist=True, back_populates="objects"
     )
 
-    def __repr__(self):
-        return f"<Objects(id={self.id}, id_type={self.id_type})>"
 
-    @staticmethod
-    def preprocess_id(id_value: str) -> str:
-        """
-        Preprocess the id to remove 'N:dataset:' if it exists.
+class ObjectsInternal(Base):
+    __tablename__ = "objects_internal"
+    __table_args__ = (
+        CheckConstraint(
+            "type <> 'path-metadata'::oi_type OR updated_transitive IS NOT NULL AND dataset IS NOT NULL",
+            name="constraint_objects_internal_type_updated_transitive",
+        ),
+        ForeignKeyConstraint(
+            ["dataset"], ["objects.id"], name="constraint_oi_dataset_fk"
+        ),
+        PrimaryKeyConstraint("id", name="objects_internal_pkey"),
+        UniqueConstraint(
+            "dataset",
+            "updated_transitive",
+            name="objects_internal_dataset_updated_transitive_key",
+        ),
+    )
 
-        Parameters
-        ----------
-        id_value : str
-            The original id value.
+    id = mapped_column(Uuid, server_default=text("gen_random_uuid()"))
+    type = mapped_column(
+        Enum("path-metadata", "other", name="oi_type"),
+        server_default=text("'other'::oi_type"),
+    )
+    dataset = mapped_column(Uuid)
+    updated_transitive = mapped_column(DateTime)
+    label = mapped_column(Text)
+    curator_note = mapped_column(Text)
 
-        Returns
-        -------
-        str
-            The preprocessed id value.
-        """
-        if isinstance(id_value, str):
-            if id_value.startswith("N:dataset:"):
-                return id_value.replace("N:dataset:", "")
-        # if isinstance(id_value, str):
-        #     id_value = uuid.UUID(id_value)
-        return id_value
-
-    @validates("id")
-    def validate_id(self, key: str, id_value: str) -> str:
-        """
-        Validate and preprocess the id before storing it.
-
-        Parameters
-        ----------
-        key : str
-            The key being validated.
-        id_value : str
-            The original id value.
-
-        Returns
-        -------
-        str
-            The preprocessed id value.
-        """
-        return self.preprocess_id(id_value)
-
-
-# class ObjectsInternal(Base):
-#     __tablename__ = "objects_internal"
-#     __table_args__ = (
-#         CheckConstraint(
-#             "type <> 'path-metadata'::oi_type OR updated_transitive IS NOT NULL AND dataset IS NOT NULL",
-#             name="constraint_objects_internal_type_updated_transitive",
-#         ),
-#         ForeignKeyConstraint(
-#             ["dataset"], ["objects.id"], name="constraint_oi_dataset_fk"
-#         ),
-#         PrimaryKeyConstraint("id", name="objects_internal_pkey"),
-#         UniqueConstraint(
-#             "dataset",
-#             "updated_transitive",
-#             name="objects_internal_dataset_updated_transitive_key",
-#         ),
-#     )
-
-#     id = mapped_column(Uuid, server_default=text("gen_random_uuid()"))
-#     type = mapped_column(
-#         Enum("path-metadata", "other", name="oi_type"),
-#         server_default=text("'other'::oi_type"),
-#     )
-#     dataset = mapped_column(Uuid)
-#     updated_transitive = mapped_column(DateTime)
-#     label = mapped_column(Text)
-#     curator_note = mapped_column(Text)
-
-# BUG: cycles!
-# objects: Mapped[List["Objects"]] = relationship(
-#     "Objects",
-#     uselist=True,
-#     foreign_keys="[Objects.id_internal]",
-#     back_populates="objects_internal",
-# )
-# objects_: Mapped[Optional["Objects"]] = relationship(
-#     "Objects", foreign_keys=[dataset], back_populates="objects_internal_"
-# )
+    objects: Mapped[List["Objects"]] = relationship(
+        "Objects",
+        uselist=True,
+        foreign_keys="[Objects.id_internal]",
+        back_populates="objects_internal",
+    )
+    objects_: Mapped[Optional["Objects"]] = relationship(
+        "Objects", foreign_keys=[dataset], back_populates="objects_internal_"
+    )
 
 
 class Units(Base):
@@ -574,7 +380,6 @@ class Units(Base):
             cycle=False,
             cache=1,
         ),
-        primary_key=True,
     )
     label = mapped_column(Text, nullable=False)
     iri = mapped_column(Text, nullable=False)
@@ -673,42 +478,6 @@ class DescriptorsCat(Base):
 
 
 class DescriptorsQuant(Base):
-    """
-    DescriptorsQuant model representing quantitative descriptors.
-    Attributes
-    ----------
-    id : int
-        Primary key of the descriptor.
-    shape : str
-        Shape of the descriptor, default is 'scalar'.
-    label : str
-        Label of the descriptor.
-    aggregation_type : str
-        Type of aggregation, default is 'instance'.
-    unit : int
-        Foreign key referencing the unit.
-    aspect : int
-        Foreign key referencing the aspect.
-    domain : int
-        Foreign key referencing the domain.
-    description : str
-        Description of the descriptor.
-    curator_note : str
-        Notes from the curator.
-    Relationships
-    -------------
-    aspects : Optional[Aspects]
-        Relationship to the Aspects model.
-    descriptors_inst : Optional[DescriptorsInst]
-        Relationship to the DescriptorsInst model.
-    units : Optional[Units]
-        Relationship to the Units model.
-    obj_desc_quant : List[ObjDescQuant]
-        Relationship to the ObjDescQuant model.
-    values_quant : List[ValuesQuant]
-        Relationship to the ValuesQuant model.
-    """
-
     __tablename__ = "descriptors_quant"
     __table_args__ = (
         ForeignKeyConstraint(
@@ -768,7 +537,7 @@ class DescriptorsQuant(Base):
         server_default=text("'instance'::quant_agg_type"),
     )
     unit = mapped_column(Integer)
-    aspect = mapped_column(Integer, ForeignKey("aspects.id"))
+    aspect = mapped_column(Integer)
     domain = mapped_column(Integer)
     description = mapped_column(Text)
     curator_note = mapped_column(Text)
@@ -843,64 +612,6 @@ class ObjDescInst(Base):
 
 
 class ValuesInst(Base):
-    """
-    Represents an instance of values in the database.
-
-    Attributes
-    ----------
-    id : int
-        The primary key of the values instance.
-    type : str
-        The type of the instance, which can be 'subject', 'sample', or 'below'.
-    id_sub : str
-        The subject identifier.
-    desc_inst : int
-        The descriptor instance identifier.
-    dataset : UUID
-        The dataset identifier.
-    id_formal : str
-        The formal identifier.
-    local_identifier : str
-        The local identifier.
-    id_sam : str
-        The sample identifier.
-    objects : Optional[Objects]
-        The related objects.
-    descriptors_inst : Optional[DescriptorsInst]
-        The related descriptor instances.
-    values_inst : ValuesInst
-        The related values instances through the 'equiv_inst' table.
-    values_inst_ : ValuesInst
-        The related values instances through the 'equiv_inst' table.
-    values_inst1 : ValuesInst
-        The related values instances through the 'instance_parent' table.
-    values_inst2 : ValuesInst
-        The related values instances through the 'instance_parent' table.
-    values_cat : List[ValuesCat]
-        The related categorical values.
-    values_quant : List[ValuesQuant]
-        The related quantitative values.
-
-    Relationships
-    -------------
-    objects : relationship
-        Relationship to the Objects table.
-    descriptors_inst : relationship
-        Relationship to the DescriptorsInst table.
-    values_inst : relationship
-        Self-referential relationship through the 'equiv_inst' table (left to right).
-    values_inst_ : relationship
-        Self-referential relationship through the 'equiv_inst' table (right to left).
-    values_inst1 : relationship
-        Self-referential relationship through the 'instance_parent' table (id to parent).
-    values_inst2 : relationship
-        Self-referential relationship through the 'instance_parent' table (parent to id).
-    values_cat : relationship
-        Relationship to the ValuesCat table.
-    values_quant : relationship
-        Relationship to the ValuesQuant table.
-    """
-
     __tablename__ = "values_inst"
     __table_args__ = (
         CheckConstraint(
@@ -963,55 +674,50 @@ class ValuesInst(Base):
     )
     id_sub = mapped_column(Text, nullable=False)
     desc_inst = mapped_column(Integer)
-    dataset = mapped_column(Uuid, ForeignKey("objects.id"))
+    dataset = mapped_column(Uuid)
     id_formal = mapped_column(Text)
     local_identifier = mapped_column(Text)
     id_sam = mapped_column(Text)
 
     objects: Mapped[Optional["Objects"]] = relationship(
-        "Objects",
-        back_populates="values_inst",
+        "Objects", back_populates="values_inst"
     )
     descriptors_inst: Mapped[Optional["DescriptorsInst"]] = relationship(
         "DescriptorsInst", back_populates="values_inst"
     )
-    # values_inst: Mapped["ValuesInst"] = relationship(
-    #     "ValuesInst",
-    #     secondary="equiv_inst",
-    #     primaryjoin=lambda: ValuesInst.id == t_equiv_inst.c.left_thing,
-    #     secondaryjoin=lambda: ValuesInst.id == t_equiv_inst.c.right_thing,
-    #     back_populates="values_inst_",
-    # )
-    # values_inst_: Mapped["ValuesInst"] = relationship(
-    #     "ValuesInst",
-    #     secondary="equiv_inst",
-    #     primaryjoin=lambda: ValuesInst.id == t_equiv_inst.c.right_thing,
-    #     secondaryjoin=lambda: ValuesInst.id == t_equiv_inst.c.left_thing,
-    #     back_populates="values_inst",
-    # )
-    # values_inst1: Mapped["ValuesInst"] = relationship(
-    #     "ValuesInst",
-    #     secondary="instance_parent",
-    #     primaryjoin=lambda: ValuesInst.id == t_instance_parent.c.id,
-    #     secondaryjoin=lambda: ValuesInst.id == t_instance_parent.c.parent,
-    #     back_populates="values_inst2",
-    # )
-    # values_inst2: Mapped["ValuesInst"] = relationship(
-    #     "ValuesInst",
-    #     secondary="instance_parent",
-    #     primaryjoin=lambda: ValuesInst.id == t_instance_parent.c.parent,
-    #     secondaryjoin=lambda: ValuesInst.id == t_instance_parent.c.id,
-    #     back_populates="values_inst1",
-    # )
+    values_inst: Mapped["ValuesInst"] = relationship(
+        "ValuesInst",
+        secondary="equiv_inst",
+        primaryjoin=lambda: ValuesInst.id == t_equiv_inst.c.left_thing,
+        secondaryjoin=lambda: ValuesInst.id == t_equiv_inst.c.right_thing,
+        back_populates="values_inst_",
+    )
+    values_inst_: Mapped["ValuesInst"] = relationship(
+        "ValuesInst",
+        secondary="equiv_inst",
+        primaryjoin=lambda: ValuesInst.id == t_equiv_inst.c.right_thing,
+        secondaryjoin=lambda: ValuesInst.id == t_equiv_inst.c.left_thing,
+        back_populates="values_inst",
+    )
+    values_inst1: Mapped["ValuesInst"] = relationship(
+        "ValuesInst",
+        secondary="instance_parent",
+        primaryjoin=lambda: ValuesInst.id == t_instance_parent.c.id,
+        secondaryjoin=lambda: ValuesInst.id == t_instance_parent.c.parent,
+        back_populates="values_inst2",
+    )
+    values_inst2: Mapped["ValuesInst"] = relationship(
+        "ValuesInst",
+        secondary="instance_parent",
+        primaryjoin=lambda: ValuesInst.id == t_instance_parent.c.parent,
+        secondaryjoin=lambda: ValuesInst.id == t_instance_parent.c.id,
+        back_populates="values_inst1",
+    )
     values_cat: Mapped[List["ValuesCat"]] = relationship(
         "ValuesCat", uselist=True, back_populates="values_inst"
     )
     values_quant: Mapped[List["ValuesQuant"]] = relationship(
-        "ValuesQuant",
-        uselist=True,
-        back_populates="values_inst",
-        viewonly=True,
-        cascade="all, delete-orphan",
+        "ValuesQuant", uselist=True, back_populates="values_inst"
     )
 
 
@@ -1299,11 +1005,11 @@ class ValuesQuant(Base):
         ),
     )
     value = mapped_column(Numeric, nullable=False)
-    object = mapped_column(Uuid, ForeignKey("objects.id"), nullable=False)
+    object = mapped_column(Uuid, nullable=False)
     desc_inst = mapped_column(Integer, nullable=False)
     desc_quant = mapped_column(Integer, nullable=False)
     value_blob = mapped_column(JSONB, nullable=False)
-    instance = mapped_column(Integer, ForeignKey("values_inst.id"))
+    instance = mapped_column(Integer)
     orig_value = mapped_column(String)
     orig_units = mapped_column(String)
 
@@ -1325,107 +1031,3 @@ class ValuesQuant(Base):
     objects: Mapped["Objects"] = relationship(
         "Objects", back_populates="values_quant"
     )
-
-    @staticmethod
-    def update_desc_inst(
-        target: "ValuesQuant", value, oldvalue, initiator
-    ) -> None:
-        """
-        Automatically update desc_inst when descriptors_inst parent is updated.
-        """
-        if target.descriptors_inst:
-            target.desc_inst = target.descriptors_inst.id
-
-    @staticmethod
-    def register_listeners() -> None:
-        """
-        Register event listeners for the ValuesQuant model.
-        """
-        event.listen(
-            ValuesQuant.descriptors_inst, "set", ValuesQuant.update_desc_inst
-        )
-
-
-# @event.listens_for(ValuesQuant.descriptors_inst, "set")
-# def set_desc_inst_from_descriptor(target, value, oldvalue, initiator):
-#     print(target, value, oldvalue, initiator)
-#     if value is not None:
-#         target.desc_inst = value.id
-
-
-def update_all_children(target, value, oldvalue, initiator):
-    # Loop through all relationships of the target (parent) object
-    for relationship_prop in target.__mapper__.relationships:
-        related_objects = getattr(target, relationship_prop.key)
-
-        # If there are related objects, update their attributes
-        if related_objects is not None:
-            # Handle single and multiple relationships
-            related_objects = (
-                related_objects
-                if isinstance(related_objects, list)
-                else [related_objects]
-            )
-            for related_obj in related_objects:
-                # Update attributes on related objects as needed
-                # For demonstration, we'll update an attribute based on parent_value
-                if hasattr(related_obj, "child_value"):
-                    related_obj.child_value = (
-                        f"Updated from parent_value: {value}"
-                    )
-                if hasattr(related_obj, "other_child_value"):
-                    related_obj.other_child_value = (
-                        f"Updated from parent_value: {value}"
-                    )
-
-
-# # Attach the listener to all attributes on the Parent model
-# for column in ValuesQuant.__table__.columns:
-#     event.listen(getattr(ValuesQuant, column.name), "set", update_all_children)
-
-
-# @event.listens_for(ValuesQuant.descriptors_inst, "set")
-# def update_desc_inst(target, value, oldvalue, initiator):
-#     if value is not None:
-#         target.desc_inst = value.id
-
-
-# Helper function to find the foreign key field associated with a relationship
-def get_foreign_key_field(model, relationship_key):
-    """Get the local foreign key field name for a given relationship key in the model."""
-    for constraint in model.__table__.constraints:
-        if isinstance(constraint, ForeignKeyConstraint):
-            for element in constraint.elements:
-                # Match the local column to the relationship key
-                if element.column.table.name == relationship_key:
-                    return element.parent.name
-    return None
-
-
-# General listener function for updating foreign keys dynamically
-def update_foreign_key(target, value, oldvalue, initiator):
-    if value is not None:
-        # Use the initiator key to find the appropriate foreign key field
-        relationship_key = (
-            initiator.key
-        )  # Use initiator.key to get the relationship name
-        foreign_key_field = get_foreign_key_field(
-            target.__class__, relationship_key
-        )
-
-        # Set the foreign key field if it exists on the target
-        if foreign_key_field and hasattr(target, foreign_key_field):
-            setattr(target, foreign_key_field, value.id)
-
-
-# Function to attach the listener to all relationships in a given model
-def add_dynamic_listeners(base):
-    for cls in base.__subclasses__():
-        for relationship_prop in cls.__mapper__.relationships:
-            event.listen(
-                getattr(cls, relationship_prop.key), "set", update_foreign_key
-            )
-
-
-# Attach listeners to all models in the Base
-add_dynamic_listeners(Base)
