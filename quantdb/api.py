@@ -564,6 +564,13 @@ def getArgs(request, endpoint, dev=False):
     elif endpoint == 'values/quant':
         [default.pop(k) for k in list(default) if k in ('desc-cat', 'value-cat', 'value-cat-open')]
 
+    if (endpoint == 'values/inst') or (endpoint == 'objects'):
+        # prevent getting no results if only cat or quant
+        # FIXME not quite sure how this interacts when other query parameters are provided
+        # but I'm pretty sure union cat-quant=false is actually only desired when query
+        # parameters that apply to both cat and quant are provided in the same query ...
+        default['union-cat-quant'] = True
+
     extras = set(request.args) - set(default)
     if extras:
         # FIXME raise this as a 401, TODO need error types for this
@@ -576,11 +583,30 @@ def getArgs(request, endpoint, dev=False):
             if k in ('dataset', 'include-equivalent', 'union-cat-quant', 'include-unused', 'agg-type') or k.startswith('value-quant'):
                 v = request.args[k]
                 if k in ('dataset',):
-                    v = uuid.UUID(v)
+                    if not v:
+                        raise exc.ArgMissingValue(f'parameter {k}= missing a value')
+                    else:
+                        try:
+                            v = uuid.UUID(v)
+                        except ValueError as e:
+                            raise exc.BadValue(f'malformed value {k}={v}') from e
             else:
                 v = request.args.getlist(k)
                 if k in ('object',):
-                    v = [uuid.UUID(_) for _ in v]  # caste to uuid to simplify sqlalchemy type mapping
+                    # caste to uuid to simplify sqlalchemy type mapping
+                    _v = []
+                    for _o in v:
+                        if not _o:
+                            raise exc.ArgMissingValue(f'parameter {k}= missing a value')
+                        else:
+                            try:
+                                u = uuid.UUID(_o)
+                            except ValueError as e:
+                                raise exc.BadValue(f'malformed value {k}={_o}') from e
+
+                            v.append(u)
+
+                    v = _v
         else:
             return d
 
@@ -618,7 +644,7 @@ def make_app(db=None, name='quantdb-api-server', dev=False):
     def default_flow(endpoint, record_type, query_fun, json_fun, alt_query_fun=None):
         try:
             kwargs = getArgs(request, endpoint, dev=dev)
-        except exc.UnknownArg as e:
+        except (exc.UnknownArg, exc.ArgMissingValue, exc.BadValue) as e:
             return json.dumps({'error': e.args[0], 'http_response_status': 422}), 422
         except Exception as e:
             breakpoint()
