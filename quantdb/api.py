@@ -604,7 +604,7 @@ def getArgs(request, endpoint, dev=False):
                             except ValueError as e:
                                 raise exc.BadValue(f'malformed value {k}={_o}') from e
 
-                            v.append(u)
+                            _v.append(u)
 
                     v = _v
         else:
