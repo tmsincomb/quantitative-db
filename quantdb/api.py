@@ -45,24 +45,40 @@ class JEncode(json.JSONEncoder):
 
 url_sql_where = (  # TODO arity spec here
     # dupes overwrite params but that is ok, this way we get the correct table alias for both cases
-    ('object', 'object', 'cv.object = any(:object)', 'cat'),  # XXX should not use this outside values/ unless we left outer due to intersect ?
-    ('object', 'object', 'qv.object = any(:object)', 'quant'),  # XXX should not use this outside values/ unless we left outer due to intersect ?
-
-    ('desc-inst', 'desc_inst', 'idin.label = any(:desc_inst)', 'both'),
-    ('dataset', 'dataset', 'im.dataset = :dataset', 'both'),
-    ('inst', 'inst', 'im.id_formal = any(:inst)', 'both'),
-    ('inst-parent', 'inst_parent', 'icin.id_formal = any(:inst_parent)', 'both'),
-    ('subject', 'subject', 'im.id_sub = any(:subject)', 'both'),
-    ('sample', 'sample', 'im.id_sam = any(:sample)', 'both'),
-
-    ('desc-cat', 'desc_cat', 'cd.label = any(:desc_cat)', 'cat'),
-
-    ('value-cat', 'value_cat', 'ct.label = any(:value_cat)', 'cat'),
-    ('value-cat-open', 'value_cat_open', 'cv.value_open = any(:value_cat_open)', 'cat'),
-
-    ('unit', 'unit', 'u.label = any(:unit)', 'quant'),
-    ('aspect', 'aspect', 'ain.label = any(:aspect)', 'quant'),
-    ('agg-type', 'agg_type', 'qd.aggregation_type = :agg_type', 'quant'),
+    (
+        "object",
+        "object",
+        "cv.object = any(:object)",
+        "cat",
+    ),  # XXX should not use this outside values/ unless we left outer due to intersect ?
+    (
+        "object",
+        "object",
+        "qv.object = any(:object)",
+        "quant",
+    ),  # XXX should not use this outside values/ unless we left outer due to intersect ?
+    ("desc-inst", "desc_inst", "idin.label = any(:desc_inst)", "both"),
+    ("dataset", "dataset", "im.dataset = :dataset", "both"),
+    ("inst", "inst", "im.id_formal = any(:inst)", "both"),
+    (
+        "inst-parent",
+        "inst_parent",
+        "icin.id_formal = any(:inst_parent)",
+        "both",
+    ),
+    ("subject", "subject", "im.id_sub = any(:subject)", "both"),
+    ("sample", "sample", "im.id_sam = any(:sample)", "both"),
+    ("desc-cat", "desc_cat", "cd.label = any(:desc_cat)", "cat"),
+    ("value-cat", "value_cat", "ct.label = any(:value_cat)", "cat"),
+    (
+        "value-cat-open",
+        "value_cat_open",
+        "cv.value_open = any(:value_cat_open)",
+        "cat",
+    ),
+    ("unit", "unit", "u.label = any(:unit)", "quant"),
+    ("aspect", "aspect", "ain.label = any(:aspect)", "quant"),
+    ("agg-type", "agg_type", "qd.aggregation_type = :agg_type", "quant"),
     # TODO shape
     ("value-quant", "value_quant", "qv.value = :value_quant", "quant"),
     (
@@ -118,7 +134,11 @@ def get_where(kwargs):
                 _where_cat.append(w)
             elif t == "quant":
                 # do not include value-quant if value-quant-margin is provided
-                if u == "value-quant" and "value-quant-margin" in kwargs and kwargs["value-quant-margin"]:
+                if (
+                    u == "value-quant"
+                    and "value-quant-margin" in kwargs
+                    and kwargs["value-quant-margin"]
+                ):
                     continue
                 else:
                     _where_quant.append(w)
@@ -192,7 +212,9 @@ def main_query(endpoint, kwargs):
             ),
         ),
         "desc/inst": ("id.iri, " "id.label, " "idpar.label as subclassof "),
-        "desc/cat": ("cd.label, " "cdid.label AS domain, " "cd.range, " "cd.description "),
+        "desc/cat": (
+            "cd.label, " "cdid.label AS domain, " "cd.range, " "cd.description "
+        ),
         "desc/quant": (
             "qd.label, "
             "id.label AS domain, "
@@ -239,16 +261,16 @@ def main_query(endpoint, kwargs):
         parent_desc_inst = endpoint == "desc/inst"
 
     class kw:  # keywords
-        prov = gkw('prov')
-        source_only = gkw('source-only')
-        parent_inst = gkw('inst-parent')
-        desc_inst = gkw('desc-inst')
-        desc_cat = gkw('desc-cat')
-        value_cat = gkw('value-cat')
-        aspect = gkw('aspect')
-        unit = gkw('unit')
-        agg_type = gkw('agg-type')
-        desc_quant = (aspect or unit or agg_type)
+        prov = gkw("prov")
+        source_only = gkw("source-only")
+        parent_inst = gkw("inst-parent")
+        desc_inst = gkw("desc-inst")
+        desc_cat = gkw("desc-cat")
+        value_cat = gkw("value-cat")
+        aspect = gkw("aspect")
+        unit = gkw("unit")
+        agg_type = gkw("agg-type")
+        desc_quant = aspect or unit or agg_type
 
     q_par_desc_inst = """
 JOIN descriptors_inst AS idstart ON idstart.id = {join_to}.desc_inst
@@ -344,87 +366,181 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
         )
         else ""
     )
-    ep_select_cat, ep_select_quant = ep_select if isinstance(ep_select, tuple) else (ep_select, ep_select)
+    ep_select_cat, ep_select_quant = (
+        ep_select if isinstance(ep_select, tuple) else (ep_select, ep_select)
+    )
     select_cat = f"SELECT {maybe_distinct}{ep_select_cat}" + (
-        (s_prov_objs + s_prov_i + ((",\n" + s_prov_c) if endpoint != "values/inst" else "")) if kw.prov else ""
+        (
+            s_prov_objs
+            + s_prov_i
+            + ((",\n" + s_prov_c) if endpoint != "values/inst" else "")
+        )
+        if kw.prov
+        else ""
     )
     select_quant = f"SELECT {maybe_distinct}{ep_select_quant}" + (
-        (s_prov_objs + s_prov_i + ((",\n" + s_prov_q) if endpoint != "values/inst" else "")) if kw.prov else ""
+        (
+            s_prov_objs
+            + s_prov_i
+            + ((",\n" + s_prov_q) if endpoint != "values/inst" else "")
+        )
+        if kw.prov
+        else ""
     )
     _where_cat, _where_quant, params = get_where(kwargs)
-    where_cat = f'WHERE {_where_cat}' if _where_cat else ''
-    where_quant = f'WHERE {_where_quant}' if _where_quant else ''
+    where_cat = f"WHERE {_where_cat}" if _where_cat else ""
+    where_quant = f"WHERE {_where_quant}" if _where_quant else ""
 
-    q_inst_parent = '\n'.join((
-        'JOIN values_inst AS icin',
-        'CROSS JOIN LATERAL get_child_closed_inst(icin.id) AS ic ON im.id = ic.child',
-    )) if kw.parent_inst else ''
+    q_inst_parent = (
+        "\n".join(
+            (
+                "JOIN values_inst AS icin",
+                "CROSS JOIN LATERAL get_child_closed_inst(icin.id) AS ic ON im.id = ic.child",
+            )
+        )
+        if kw.parent_inst
+        else ""
+    )
 
     # FIXME even trying to be smart here about which joins to pull just papers over the underlying perf issue
     # shaves about 140ms off but the underlying issue remains
-    q_cat = '\n'.join((
-        'FROM values_cat AS cv',
-        '\n'.join((
-            'JOIN descriptors_inst AS idin',
-            'CROSS JOIN LATERAL get_child_closed_desc_inst(idin.id) AS idc ON cv.desc_inst = idc.child -- FIXME',
-        )) if kw.desc_inst else '',
-        (q_par_desc_inst.format(join_to='cv') if sn.parent_desc_inst else
-         'JOIN descriptors_inst AS id ON cv.desc_inst = id.id'
-         ) if sn.desc_inst or kw.desc_inst else '',  # FIXME handle parents case
-        'JOIN values_inst AS im ON cv.instance = im.id',
-        q_inst_parent,
-        '\n'.join((
-            'JOIN descriptors_cat AS cd ON cv.desc_cat = cd.id',
-            'LEFT OUTER JOIN descriptors_inst AS cdid ON cd.domain = cdid.id  -- XXX TODO mismach',
-        )) if sn.desc_cat or kw.desc_cat else '',
-        'LEFT OUTER JOIN controlled_terms AS ct ON cv.value_controlled = ct.id' if sn.value_cat or kw.value_cat else '',
-        (('\n'
-          'JOIN objects AS o ON cv.object = o.id\n'
-          'LEFT OUTER JOIN objects_internal AS oi\n'
-          'ON oi.id = o.id\n')
-         if kw.source_only else
-         ('\n'  # have to use LEFT OUTER because object might have only one of cat or quant
-          'LEFT OUTER JOIN values_quant AS qv ON qv.instance = im.id\n'
-          'JOIN objects AS o ON cv.object = o.id OR qv.object = o.id\n'
-          'LEFT OUTER JOIN objects_internal AS oi\n'
-          'ON oi.id = o.id\n')
-         ) if sn.objects or kw.prov else '',
-        (q_prov_i + q_prov_c) if kw.prov else '',
-    ))
+    q_cat = "\n".join(
+        (
+            "FROM values_cat AS cv",
+            (
+                "\n".join(
+                    (
+                        "JOIN descriptors_inst AS idin",
+                        "CROSS JOIN LATERAL get_child_closed_desc_inst(idin.id) AS idc ON cv.desc_inst = idc.child -- FIXME",
+                    )
+                )
+                if kw.desc_inst
+                else ""
+            ),
+            (
+                (
+                    q_par_desc_inst.format(join_to="cv")
+                    if sn.parent_desc_inst
+                    else "JOIN descriptors_inst AS id ON cv.desc_inst = id.id"
+                )
+                if sn.desc_inst or kw.desc_inst
+                else ""
+            ),  # FIXME handle parents case
+            "JOIN values_inst AS im ON cv.instance = im.id",
+            q_inst_parent,
+            (
+                "\n".join(
+                    (
+                        "JOIN descriptors_cat AS cd ON cv.desc_cat = cd.id",
+                        "LEFT OUTER JOIN descriptors_inst AS cdid ON cd.domain = cdid.id  -- XXX TODO mismach",
+                    )
+                )
+                if sn.desc_cat or kw.desc_cat
+                else ""
+            ),
+            (
+                "LEFT OUTER JOIN controlled_terms AS ct ON cv.value_controlled = ct.id"
+                if sn.value_cat or kw.value_cat
+                else ""
+            ),
+            (
+                (
+                    (
+                        "\n"
+                        "JOIN objects AS o ON cv.object = o.id\n"
+                        "LEFT OUTER JOIN objects_internal AS oi\n"
+                        "ON oi.id = o.id\n"
+                    )
+                    if kw.source_only
+                    else (
+                        "\n"  # have to use LEFT OUTER because object might have only one of cat or quant
+                        "LEFT OUTER JOIN values_quant AS qv ON qv.instance = im.id\n"
+                        "JOIN objects AS o ON cv.object = o.id OR qv.object = o.id\n"
+                        "LEFT OUTER JOIN objects_internal AS oi\n"
+                        "ON oi.id = o.id\n"
+                    )
+                )
+                if sn.objects or kw.prov
+                else ""
+            ),
+            (q_prov_i + q_prov_c) if kw.prov else "",
+        )
+    )
 
-    q_quant = '\n'.join((
-        'FROM values_quant AS qv',
-        '\n'.join((
-            'JOIN descriptors_inst AS idin',
-            'CROSS JOIN LATERAL get_child_closed_desc_inst(idin.id) AS idc ON qv.desc_inst = idc.child -- FIXME',
-        )) if kw.desc_inst else '',
-        (q_par_desc_inst.format(join_to='qv') if sn.parent_desc_inst else
-         'JOIN descriptors_inst AS id ON qv.desc_inst = id.id'
-         ) if sn.desc_inst or kw.desc_inst else '',  # FIXME handle parents case
-        'JOIN values_inst AS im ON qv.instance = im.id',
-        q_inst_parent,
-        'JOIN descriptors_quant AS qd ON qv.desc_quant = qd.id' if (
-            sn.desc_quant or kw.desc_quant) else '',
-        '\n'.join((
-            'JOIN aspects AS ain',
-            'CROSS JOIN LATERAL get_child_closed_aspect(ain.id) AS ac ON qd.aspect = ac.child',
-            'JOIN aspects AS a ON ac.child = a.id',
-        )) if kw.aspect else (
-            (q_par_aspect if sn.parent_aspect else
-             'JOIN aspects AS a ON qd.aspect = a.id'
-             ) if sn.aspect else ''),  # FIXME handle parents case
-        'LEFT OUTER JOIN units AS u ON qd.unit = u.id' if sn.unit or kw.unit else '',
-        (('\n'
-          'JOIN objects AS o ON qv.object = o.id\n'
-          'LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id\n')
-         if kw.source_only else
-         ('\n'  # have to use LEFT OUTER because object might have only one of cat or quant
-          'LEFT OUTER JOIN values_cat AS cv ON cv.instance = im.id\n'
-          'JOIN objects AS o ON qv.object = o.id OR cv.object = o.id\n'
-          'LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id\n')
-         ) if sn.objects or kw.prov else '',
-        (q_prov_i + q_prov_q) if kw.prov else '',
-    ))
+    q_quant = "\n".join(
+        (
+            "FROM values_quant AS qv",
+            (
+                "\n".join(
+                    (
+                        "JOIN descriptors_inst AS idin",
+                        "CROSS JOIN LATERAL get_child_closed_desc_inst(idin.id) AS idc ON qv.desc_inst = idc.child -- FIXME",
+                    )
+                )
+                if kw.desc_inst
+                else ""
+            ),
+            (
+                (
+                    q_par_desc_inst.format(join_to="qv")
+                    if sn.parent_desc_inst
+                    else "JOIN descriptors_inst AS id ON qv.desc_inst = id.id"
+                )
+                if sn.desc_inst or kw.desc_inst
+                else ""
+            ),  # FIXME handle parents case
+            "JOIN values_inst AS im ON qv.instance = im.id",
+            q_inst_parent,
+            (
+                "JOIN descriptors_quant AS qd ON qv.desc_quant = qd.id"
+                if (sn.desc_quant or kw.desc_quant)
+                else ""
+            ),
+            (
+                "\n".join(
+                    (
+                        "JOIN aspects AS ain",
+                        "CROSS JOIN LATERAL get_child_closed_aspect(ain.id) AS ac ON qd.aspect = ac.child",
+                        "JOIN aspects AS a ON ac.child = a.id",
+                    )
+                )
+                if kw.aspect
+                else (
+                    (
+                        q_par_aspect
+                        if sn.parent_aspect
+                        else "JOIN aspects AS a ON qd.aspect = a.id"
+                    )
+                    if sn.aspect
+                    else ""
+                )
+            ),  # FIXME handle parents case
+            (
+                "LEFT OUTER JOIN units AS u ON qd.unit = u.id"
+                if sn.unit or kw.unit
+                else ""
+            ),
+            (
+                (
+                    (
+                        "\n"
+                        "JOIN objects AS o ON qv.object = o.id\n"
+                        "LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id\n"
+                    )
+                    if kw.source_only
+                    else (
+                        "\n"  # have to use LEFT OUTER because object might have only one of cat or quant
+                        "LEFT OUTER JOIN values_cat AS cv ON cv.instance = im.id\n"
+                        "JOIN objects AS o ON qv.object = o.id OR cv.object = o.id\n"
+                        "LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id\n"
+                    )
+                )
+                if sn.objects or kw.prov
+                else ""
+            ),
+            (q_prov_i + q_prov_q) if kw.prov else "",
+        )
+    )
 
     sw_cat = f"{select_cat}\n{q_cat}\n{where_cat}"  # XXX yes this can be malformed in some cases
     sw_quant = f"{select_quant}\n{q_quant}\n{where_quant}"  # XXX yes this can be malformed in some cases
@@ -438,7 +554,11 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
     ):  # FIXME TODO make it possible to cross query terms, units, aspects
         query = sw_quant
     else:
-        operator = "UNION" if "union-cat-quant" in kwargs and kwargs["union-cat-quant"] else "INTERSECT"
+        operator = (
+            "UNION"
+            if "union-cat-quant" in kwargs and kwargs["union-cat-quant"]
+            else "INTERSECT"
+        )
         query = f"{sw_cat}\n{operator}\n{sw_quant}"
 
     log.log(9, "\n" + query)
@@ -454,7 +574,11 @@ def to_json(record_type, res, prov=False):
                     {k: v for k, v in r._asdict().items() if k != "id"}
                     # do not leak internal ids because the might change and are not meaningful
                     if r.id_type == "quantdb"
-                    else {k: v for k, v in r._asdict().items() if k != "updated_transitive"}
+                    else {
+                        k: v
+                        for k, v in r._asdict().items()
+                        if k != "updated_transitive"
+                    }
                 )
                 for r in rows
             ]
@@ -487,7 +611,11 @@ def to_json(record_type, res, prov=False):
                 else:
                     raise NotImplementedError(f"wat {r.type}")
 
-                return {type_fields(k): v for k, v in r._asdict().items() if k not in rem}
+                return {
+                    type_fields(k): v
+                    for k, v in r._asdict().items()
+                    if k not in rem
+                }
 
             result = [prow(r) for r in rows]
         else:
@@ -508,20 +636,28 @@ def to_json(record_type, res, prov=False):
                 return {
                     k.split("_", 1 + usc)[-1]: v
                     for k in list(d)
-                    if k.startswith(prefix + "_") and (v := d.pop(k)) is not None
+                    if k.startswith(prefix + "_")
+                    and (v := d.pop(k)) is not None
                 }
 
             for r in result:
                 provs = pop_prefix(r, "prov")
-                if "source_id_type" in provs and provs["source_id_type"] == "quantdb":
+                if (
+                    "source_id_type" in provs
+                    and provs["source_id_type"] == "quantdb"
+                ):
                     provs.pop("source_id", None)  # don't leak internal ids
                 else:
-                    provs.pop("source_updated_transitive", None)  # always None in this case
+                    provs.pop(
+                        "source_updated_transitive", None
+                    )  # always None in this case
 
                 for prefix in ("desc_inst", "inst", "value", "value", "source"):
                     d = pop_prefix(provs, prefix)
                     if d:
-                        d["type"] = "address" if prefix != "source" else "object"
+                        d["type"] = (
+                            "address" if prefix != "source" else "object"
+                        )
                         provs[prefix] = d
 
                 provs["type"] = "prov"
@@ -558,13 +694,12 @@ args_default = {
     ## inst
     "desc-inst": [],  # aka class
     # value-inst
-    'dataset': None,
-    'inst': [],
-    'inst-parent': [],
-    'subject': [],
-    'sample': [],
-    'include-equivalent': False,
-
+    "dataset": None,
+    "inst": [],
+    "inst-parent": [],
+    "subject": [],
+    "sample": [],
+    "include-equivalent": False,
     ## cat
     "desc-cat": [],  # aka predicate
     "value-cat": [],
@@ -598,9 +733,14 @@ args_default = {
 
 
 app = FastAPI()
+from fastapi.middleware.wsgi import WSGIMiddleware
+
+app.mount("/quantdb", WSGIMiddleware(app))
 
 
-def getArgs(request: Request, endpoint: str, dev: bool = False) -> Dict[str, Any]:
+def getArgs(
+    request: Request, endpoint: str, dev: bool = False
+) -> Dict[str, Any]:
     default = copy.deepcopy(args_default)
 
     # TODO: temporary fix to allow flask and fastapi to work together
@@ -616,7 +756,10 @@ def getArgs(request: Request, endpoint: str, dev: bool = False) -> Dict[str, Any
     if endpoint != "objects":
         default.pop("source-only")
 
-    if not (endpoint.startswith("desc/") or endpoint in ("terms", "units", "aspects")):
+    if not (
+        endpoint.startswith("desc/")
+        or endpoint in ("terms", "units", "aspects")
+    ):
         default.pop("include-unused")
     else:
         # prevent filtering on the thing we are trying to query
@@ -634,16 +777,25 @@ def getArgs(request: Request, endpoint: str, dev: bool = False) -> Dict[str, Any
     if not endpoint.startswith("values/"):
         default.pop("prov")
     elif endpoint == "values/cat":
-        [default.pop(k) for k in list(default) if k.startswith("value-quant") or k in ("unit", "aspect", "agg-type")]
+        [
+            default.pop(k)
+            for k in list(default)
+            if k.startswith("value-quant")
+            or k in ("unit", "aspect", "agg-type")
+        ]
     elif endpoint == "values/quant":
-        [default.pop(k) for k in list(default) if k in ("desc-cat", "value-cat", "value-cat-open")]
+        [
+            default.pop(k)
+            for k in list(default)
+            if k in ("desc-cat", "value-cat", "value-cat-open")
+        ]
 
-    if (endpoint == 'values/inst') or (endpoint == 'objects'):
+    if (endpoint == "values/inst") or (endpoint == "objects"):
         # prevent getting no results if only cat or quant
         # FIXME not quite sure how this interacts when other query parameters are provided
         # but I'm pretty sure union cat-quant=false is actually only desired when query
         # parameters that apply to both cat and quant are provided in the same query ...
-        default['union-cat-quant'] = True
+        default["union-cat-quant"] = True
 
     extras = set(request.args) - set(default)
     if extras:
@@ -654,29 +806,43 @@ def getArgs(request: Request, endpoint: str, dev: bool = False) -> Dict[str, Any
     def convert(k, d):
         if k in args:
             # arity is determined here
-            if k in ('dataset', 'include-equivalent', 'union-cat-quant', 'include-unused', 'agg-type') or k.startswith('value-quant'):
+            if k in (
+                "dataset",
+                "include-equivalent",
+                "union-cat-quant",
+                "include-unused",
+                "agg-type",
+            ) or k.startswith("value-quant"):
                 v = request.args[k]
-                if k in ('dataset',):
+                if k in ("dataset",):
                     if not v:
-                        raise exc.ArgMissingValue(f'parameter {k}= missing a value')
+                        raise exc.ArgMissingValue(
+                            f"parameter {k}= missing a value"
+                        )
                     else:
                         try:
                             v = uuid.UUID(v)
                         except ValueError as e:
-                            raise exc.BadValue(f'malformed value {k}={v}') from e
+                            raise exc.BadValue(
+                                f"malformed value {k}={v}"
+                            ) from e
             else:
                 v = request.args.getlist(k)
-                if k in ('object',):
+                if k in ("object",):
                     # caste to uuid to simplify sqlalchemy type mapping
                     _v = []
                     for _o in v:
                         if not _o:
-                            raise exc.ArgMissingValue(f'parameter {k}= missing a value')
+                            raise exc.ArgMissingValue(
+                                f"parameter {k}= missing a value"
+                            )
                         else:
                             try:
                                 u = uuid.UUID(_o)
                             except ValueError as e:
-                                raise exc.BadValue(f'malformed value {k}={_o}') from e
+                                raise exc.BadValue(
+                                    f"malformed value {k}={_o}"
+                                ) from e
 
                             _v.append(u)
 
@@ -705,18 +871,25 @@ def getArgs(request: Request, endpoint: str, dev: bool = False) -> Dict[str, Any
 
 def make_app(db=None, name="quantdb-api-server", dev=False):
     app = Flask(name)
-    app.config["SQLALCHEMY_DATABASE_URI"] = get_settings().SQLALCHEMY_DATABASE_URI
+    app.config["SQLALCHEMY_DATABASE_URI"] = (
+        get_settings().SQLALCHEMY_DATABASE_URI
+    )
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     db.init_app(app)
     session = db.session
 
     bp = "/api/1/"
 
-    def default_flow(endpoint, record_type, query_fun, json_fun, alt_query_fun=None):
+    def default_flow(
+        endpoint, record_type, query_fun, json_fun, alt_query_fun=None
+    ):
         try:
             kwargs = getArgs(request, endpoint, dev=dev)
         except (exc.UnknownArg, exc.ArgMissingValue, exc.BadValue) as e:
-            return json.dumps({'error': e.args[0], 'http_response_status': 422}), 422
+            return (
+                json.dumps({"error": e.args[0], "http_response_status": 422}),
+                422,
+            )
         except Exception as e:
             breakpoint()
             raise e
@@ -744,7 +917,9 @@ def make_app(db=None, name="quantdb-api-server", dev=False):
             raise e
 
         try:
-            out = json_fun(record_type, res, prov=("prov" in kwargs and kwargs["prov"]))
+            out = json_fun(
+                record_type, res, prov=("prov" in kwargs and kwargs["prov"])
+            )
             resp = (
                 json.dumps(wrap_out(endpoint, kwargs, out), cls=JEncode),
                 200,
@@ -781,9 +956,14 @@ def make_app(db=None, name="quantdb-api-server", dev=False):
 FROM descriptors_inst AS id
 LEFT OUTER JOIN class_parent AS clp ON clp.id = id.id
 LEFT OUTER JOIN descriptors_inst AS idpar ON idpar.id = clp.parent
-"""), {}
+"""
+                ),
+                {},
+            )
 
-        return default_flow("desc/inst", "desc-inst", main_query, to_json, alt_query_fun=query)
+        return default_flow(
+            "desc/inst", "desc-inst", main_query, to_json, alt_query_fun=query
+        )
 
     @app.route(f"{bp}/desc/cat")
     @app.route(f"{bp}/descriptors/cat")
@@ -850,16 +1030,22 @@ LEFT OUTER JOIN descriptors_inst AS idpar ON idpar.id = clp.parent
     @app.route(f"{bp}/controlled-terms")
     def route_1_cterms():
         def query(endpoint, kwargs):
-            return ("select " "ct.iri, " "ct.label " "from controlled_terms as ct"), {}
+            return (
+                "select " "ct.iri, " "ct.label " "from controlled_terms as ct"
+            ), {}
 
-        return default_flow("terms", "term", main_query, to_json, alt_query_fun=query)
+        return default_flow(
+            "terms", "term", main_query, to_json, alt_query_fun=query
+        )
 
     @app.route(f"{bp}/units")
     def route_1_units():
         def query(endpoint, kwargs):
             return ("select " "u.iri, " "u.label " "from units as u"), {}
 
-        return default_flow("units", "unit", main_query, to_json, alt_query_fun=query)
+        return default_flow(
+            "units", "unit", main_query, to_json, alt_query_fun=query
+        )
 
     @app.route(f"{bp}/aspects")
     def route_1_aspects():
@@ -879,7 +1065,9 @@ LEFT OUTER JOIN aspects AS aspar ON aspar.id = ap.parent
                 {},
             )
 
-        return default_flow("aspects", "aspect", main_query, to_json, alt_query_fun=query)
+        return default_flow(
+            "aspects", "aspect", main_query, to_json, alt_query_fun=query
+        )
 
     return app
 
@@ -927,7 +1115,9 @@ def default_flow_fastapi(
         raise e
 
     try:
-        out = json_fun(record_type, res, prov=("prov" in kwargs and kwargs["prov"]))
+        out = json_fun(
+            record_type, res, prov=("prov" in kwargs and kwargs["prov"])
+        )
         resp = (
             json.dumps(wrap_out(endpoint, kwargs, out), cls=JEncode),
             200,
@@ -966,22 +1156,22 @@ def get_test(
 #     return result
 
 
-@fastapi_app.get(
-    "/objects",
-    status_code=200,
-)
-def get_objects(
-    request: Request,
-    session: Session = Depends(get_mysql_db),  # type: ignore
-) -> Any:
-    query = text(
-        """
-SELECT * FROM objects
-"""
-    )
-    result = session.execute(query)
-    data = result.mappings().all()
-    return data
+# @fastapi_app.get(
+#     "/objects",
+#     status_code=200,
+# )
+# def get_objects(
+#     request: Request,
+#     session: Session = Depends(get_mysql_db),  # type: ignore
+# ) -> Any:
+#     query = text(
+#         """
+# SELECT * FROM objects
+# """
+#     )
+#     result = session.execute(query)
+#     data = result.mappings().all()
+#     return data
 
 
 @fastapi_app.get(

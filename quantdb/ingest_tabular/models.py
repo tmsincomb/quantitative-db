@@ -443,20 +443,22 @@ class Objects(Base):
     # objects_internal: Mapped[Optional["ObjectsInternal"]] = relationship(
     #     "ObjectsInternal", foreign_keys=[id_internal], back_populates="objects"
     # )
-    # objects: Mapped["Objects"] = relationship(
-    #     "Objects",
-    #     secondary="dataset_object",
-    #     primaryjoin=lambda: Objects.id == t_dataset_object.c.dataset,
-    #     secondaryjoin=lambda: Objects.id == t_dataset_object.c.object,
-    #     back_populates="objects_",
-    # )
-    # objects_: Mapped["Objects"] = relationship(
-    #     "Objects",
-    #     secondary="dataset_object",
-    #     primaryjoin=lambda: Objects.id == t_dataset_object.c.object,
-    #     secondaryjoin=lambda: Objects.id == t_dataset_object.c.dataset,
-    #     back_populates="objects",
-    # )
+    objects: Mapped["Objects"] = relationship(
+        "Objects",
+        secondary="dataset_object",
+        primaryjoin=lambda: Objects.id == t_dataset_object.c.dataset,
+        secondaryjoin=lambda: Objects.id == t_dataset_object.c.object,
+        # back_populates="objects_",
+        # cascade="all, delete-orphan",
+    )
+    objects_: Mapped["Objects"] = relationship(
+        "Objects",
+        secondary="dataset_object",
+        primaryjoin=lambda: Objects.id == t_dataset_object.c.object,
+        secondaryjoin=lambda: Objects.id == t_dataset_object.c.dataset,
+        # back_populates="objects",
+        # cascade="all, delete-orphan",
+    )
     # objects_internal_: Mapped[List["ObjectsInternal"]] = relationship(
     #     "ObjectsInternal",
     #     uselist=True,
@@ -1040,7 +1042,11 @@ class ValuesInst(Base):
         cascade="all, delete-orphan",
     )
     descriptors_inst: Mapped[Optional["DescriptorsInst"]] = relationship(
-        "DescriptorsInst", back_populates="values_inst"
+        "DescriptorsInst",
+        back_populates="values_inst",
+        viewonly=True,
+        # cascade="all, delete-orphan",
+        # single_parent=True,
     )
     # values_inst: Mapped["ValuesInst"] = relationship(
     #     "ValuesInst",
