@@ -10,6 +10,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import bindparam
 # FIXME sparcur dependencies, or keep ingest separate
 from sparcur.utils import fromJson
+from sparcur.paths import Path
 from sparcur import objects as sparcur_objects  # register pathmeta type
 from quantdb.utils import log, dbUri, isoformat
 
@@ -205,15 +206,36 @@ def pps(path_structure):
     }
 
 
-def ext(j):
+def pps123(path_structure):
+    if len(path_structure) == 4:
+        dp, sub, sam, file = path_structure
+    else:
+        breakpoint()
+        raise NotImplementedError(path_structure)
+
+    subject = sub
+    sample = f'sam-{sub}_{sam}'
+    p1 = sample, subject
+    return {
+        'parents': (p1,),
+        'subject': subject,
+        'sample': sample,
+        }
+
+
+def ext_pmeta(j, _pps=pps):
     out = {}
     out['dataset'] = j['dataset_id']
     out['object'] = j['remote_id']
     out['file_id'] = j['file_id'] if 'file_id' in j else int(j['uri_api'].rsplit('/')[-1])  # XXX old pathmeta schema that didn't include file id
     ps = pathlib.Path(j['dataset_relative_path']).parts
     [p for p in ps if p.startswith('sub-') or p.startswith('sam-')]
-    out.update(pps(ps))
+    out.update(_pps(ps))
     return out
+
+
+def ext_pmeta123(j):
+    return ext_pmeta(j, _pps=pps123)
 
 
 class Queries:
@@ -322,10 +344,12 @@ class InternalIds:
         self.id_human = q.desc_inst_from_label('human')
         self.id_nerve = q.desc_inst_from_label('nerve')
         self.id_nerve_volume = q.desc_inst_from_label('nerve-volume')
+        self.id_nerve_cross_section = q.desc_inst_from_label('nerve-cross-section')
         self.luid = {
             'human': self.id_human,
             'nerve': self.id_nerve,
             'nerve-volume': self.id_nerve_volume,
+            'nerve-cross-section': self.id_nerve_cross_section,
         }
 
         self.ct_mod = q.cterm_from_label('microct')  # lol ct ct
@@ -341,7 +365,7 @@ class Inserts:
     pass
 
 
-def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_args=None):
+def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_args=None, **kwargs):
     """ generic ingest workflow
         this_dataset_updated_uuid might not be needed in future,
         add a kwarg to control it maybe?
@@ -355,7 +379,7 @@ def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_a
     (updated_transitive, values_objects, values_dataset_object,
      make_values_instances, make_values_parents,
      make_void, make_vocd, make_voqd, make_values_cat, make_values_quant
-     ) = extract_fun(dataset_uuid) if values_args is None else values_args
+     ) = extract_fun(dataset_uuid, **kwargs) if values_args is None else values_args
 
     q = Queries(session)
     i = InternalIds(q)
@@ -406,30 +430,34 @@ def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_a
     vt, params = makeParamsValues(void)
     session.execute(sql_text(f'INSERT INTO obj_desc_inst (object, desc_inst, addr_field, addr_desc_inst) VALUES {vt}{ocdn}'), params)
 
-    vt, params = makeParamsValues(vocd)
-    session.execute(sql_text(f'INSERT INTO obj_desc_cat (object, desc_cat, addr_field) VALUES {vt}{ocdn}'), params)
+    if vocd:
+        vt, params = makeParamsValues(vocd)
+        session.execute(sql_text(f'INSERT INTO obj_desc_cat (object, desc_cat, addr_field) VALUES {vt}{ocdn}'), params)
 
-    vt, params = makeParamsValues(voqd)
-    session.execute(sql_text(f'INSERT INTO obj_desc_quant (object, desc_quant, addr_field) VALUES {vt}{ocdn}'), params)
+    if voqd:
+        vt, params = makeParamsValues(voqd)
+        session.execute(sql_text(f'INSERT INTO obj_desc_quant (object, desc_quant, addr_field) VALUES {vt}{ocdn}'), params)
 
-    vt, params = makeParamsValues(values_cv)
-    session.execute(sql_text(f'INSERT INTO values_cat (value_open, value_controlled, object, desc_inst, desc_cat, instance) VALUES {vt}{ocdn}'), params)
+    if values_cv:
+        vt, params = makeParamsValues(values_cv)
+        session.execute(sql_text(f'INSERT INTO values_cat (value_open, value_controlled, object, desc_inst, desc_cat, instance) VALUES {vt}{ocdn}'), params)
 
-    vt, params, bindparams = makeParamsValues(
-        # FIXME LOL the types spec here is atrocious ... but it does work ...
-        # XXX and barring the unfortunate case, which we have now encountered  where
-        # now fixed in the local impl
-        values_qv, row_types=(None, None, None, None, None, JSONB))
+    if values_qv:
+        vt, params, bindparams = makeParamsValues(
+            # FIXME LOL the types spec here is atrocious ... but it does work ...
+            # XXX and barring the unfortunate case, which we have now encountered  where
+            # now fixed in the local impl
+            values_qv, row_types=(None, None, None, None, None, JSONB))
 
-    t = sql_text(f'INSERT INTO values_quant (value, object, desc_inst, desc_quant, instance, value_blob) VALUES {vt}{ocdn}')
-    tin = t.bindparams(*bindparams)
-    session.execute(tin, params)
+        t = sql_text(f'INSERT INTO values_quant (value, object, desc_inst, desc_quant, instance, value_blob) VALUES {vt}{ocdn}')
+        tin = t.bindparams(*bindparams)
+        session.execute(tin, params)
 
     if commit:
         session.commit()
 
 
-def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
+def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
     if source_local:
         with open(pathlib.Path(f'~/.local/share/sparcur/export/datasets/{dataset_uuid}/LATEST/path-metadata.json').expanduser(), 'rt') as f:
             blob = json.load(f)
@@ -452,7 +480,7 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
 
     jpx = [r for r in ir['data'] if 'mimetype' in r and r['mimetype'] == 'image/jpx']
 
-    exts = [ext(j) for j in jpx]
+    exts = [ext_pmeta(j) for j in jpx]
     #hrm = sorted(exts, key=lambda j: j['raw_anat_index'])
     #max_rai  = max([e['raw_anat_index'] for e in exts])
     #import math
@@ -673,7 +701,189 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
             make_void, make_vocd, make_voqd,
             make_values_cat, make_values_quant,
             )
+
     # this is where things get annoying with needing selects on instance measured
+
+
+def ext_values(exts):
+    datasets = {i.uuid: {'id_type': i.type}
+                for e in exts
+                if (i := e['dataset'])
+                }
+
+    packages = {i.uuid: {
+        'id_type': i.type,
+        'id_file': e['file_id'],
+    }
+            for e in exts
+                if (i := e['object'])
+                }
+
+    objects = {**datasets, **packages}
+    dataset_object = list(set((d.uuid, o.uuid) for e in exts
+                            if (d := e['dataset']) and (o := e['object'])
+                            ))
+
+    subjects = {k: {'type': 'subject',
+                    'desc_inst': 'human',  # FIXME hardcoded
+                    'id_sub': k[1],
+                    } for k in sorted(set((e['dataset'], e['subject']) for e in exts))}
+    parents = sorted(set((e['dataset'],) + p for e in exts for p in e['parents']))
+
+    samples = {k[:2]: {'type': 'sample',
+                        'desc_inst': 'nerve-cross-section',  # FIXME hardcoded
+                        'id_sub': k[-1],
+                        'id_sam': k[1],
+                        } for k in sorted(set((e['dataset'], e['sample'], e['subject']) for e in exts))}
+
+    instances = {**subjects, **samples}
+
+    values_objects = [
+        (i, o['id_type'], o['id_file'] if 'id_file' in o else None)
+        for i, o in objects.items()
+        if o['id_type'] != 'dataset'  # already did it above
+    ]
+    values_dataset_object = dataset_object
+
+    return instances, parents, objects, values_objects, values_dataset_object
+
+
+def extract_demo_jp2(dataset_uuid, source_local=False):
+    # this is a 1.2.3 dataset so a bit different
+
+    resp = requests.get(f'https://cassava.ucsd.edu/sparc/datasets/{dataset_uuid}/LATEST/path-metadata.json')
+
+    try:
+        blob = resp.json()
+    except Exception as e:
+        breakpoint()
+        raise e
+
+    for j in blob['data']:
+        j['type'] = 'pathmeta'
+
+    ir = fromJson(blob)
+
+    updated_transitive = max([i['timestamp_updated'] for i in ir['data'][1:]])  # 1: to skip the dataset object itself
+
+    jp2 = [r for r in ir['data'] if 'mimetype' in r and r['mimetype'] == 'image/jp2']
+
+    exts = [ext_pmeta123(j) for j in jp2]
+
+    instances, parents, objects, values_objects, values_dataset_object = ext_values(exts)
+
+    def make_values_instances(i):
+        values_instances = [
+            (d.uuid, f, inst['type'], i.luid[inst['desc_inst']],
+            inst['id_sub'] if 'id_sub' in inst else None,
+            inst['id_sam'] if 'id_sam' in inst else None,
+            )
+            for (d, f), inst in instances.items()]
+
+        return values_instances
+
+    def make_values_parents(luinst):
+        """ need the lookup for instances """
+        values_parents = [
+            (luinst[d.uuid, child], luinst[d.uuid, parent])
+            for d, child, parent in parents]
+        return values_parents
+
+    def make_void(this_dataset_updated_uuid, i):
+        # we don't derive anything from the dataset updated uuid so nothing goes here
+        void = [(o, i.id_nerve_cross_section, i.addr_const_null, None)
+                for o, b in objects.items() if b['id_type'] == 'package']
+        return void
+
+    def make_vocd(this_dataset_updated_uuid, i):
+        # we don't derive anything from the dataset updated uuid so nothing goes here
+        vocd = [(o, i.cd_obj, i.addr_const_null)
+                for o, b in objects.items() if b['id_type'] == 'package']
+        return vocd
+
+    def make_voqd(this_dataset_updated_uuid, i):
+        voqd = []  # no quant for this load right now
+        return voqd
+
+    def make_values_cat(this_dataset_updated_uuid, i, luinst):
+        # we don't derive anything from the dataset updated uuid so nothing goes here
+        values_cv = [
+            (None,
+             i.ct_hack,
+             e['object'].uuid,
+             i.id_nerve_cross_section,
+             i.cd_obj,  # if we mess this up the fk ok obj_desc_cat will catch it :)
+             luinst[e['dataset'].uuid, e['sample']],  # get us the instance
+             )
+            for e in exts
+        ]
+        return values_cv
+
+    def make_values_quant(this_dataset_updated_uuid, i, luinst):
+        values_qv = []
+        return values_qv
+
+    return (updated_transitive, values_objects, values_dataset_object,
+            make_values_instances, make_values_parents,
+            make_void, make_vocd, make_voqd,
+            make_values_cat, make_values_quant,
+            )
+
+
+import scipy
+import augpathlib as aug
+from sparcur.datasets import SamplesFilePath
+def extract_demo(dataset_uuid, source_local=True):
+    _dsp = ('/mnt/str/tom/sparc-datasets/55c5b69c-a5b8-4881-a105-e4048af26fa5/SPARC/'
+            'Quantified morphology of the human vagus nerve with anti-claudin-1/')
+    p = _dsp + 'derivative/CadaverVNMorphology_OutputMetrics.mat'
+    _p = aug.AugmentedPath(_dsp + 'samples.xlsx')
+    sp = SamplesFilePath(_p)
+    ap = Path(p)
+    obj_uuid = ap.cache.meta.id.split(':')[-1]
+    m = scipy.io.loadmat(p)
+    m.keys()
+    ks = 'NFasc', 'dFasc_um', 'dNerve_um', 'laterality', 'level', 'sex', 'sub_sam'
+    breakpoint()
+
+    subjects = None
+    samples = None
+    instances = None
+    parents = None
+
+    values_objects = None
+    values_dataset_object = None
+
+    def make_values_instances(i):
+        return values_instances
+    def make_values_parents(luinst):
+        return values_parents
+    def make_void(this_dataset_updated_uuid, i):
+        return void
+    def make_vocd(this_dataset_updated_uuid, i):
+        return vocd
+    def make_voqd(this_dataset_updated_uuid, i):
+        return voqd
+    def make_values_cat(this_dataset_updated_uuid, i, luinst):
+        return values_cv
+    def make_values_quant(this_dataset_updated_uuid, i, luinst):
+        return values_qv
+
+    return (updated_transitive, values_objects, values_dataset_object,
+            make_values_instances, make_values_parents,
+            make_void, make_vocd, make_voqd,
+            make_values_cat, make_values_quant,
+            )
+
+
+def ingest_demo(session, source_local=True, do_insert=True, commit=False, dev=False):
+    dataset_uuid = '55c5b69c-a5b8-4881-a105-e4048af26fa5'
+    ingest(dataset_uuid, extract_demo, session, commit=commit, dev=dev)
+
+
+def ingest_demo_jp2(session, source_local=True, do_insert=True, commit=False, dev=False):
+    dataset_uuid = '55c5b69c-a5b8-4881-a105-e4048af26fa5'
+    ingest(dataset_uuid, extract_demo_jp2, session, commit=commit, dev=dev)
 
 
 def ingest_reva_ft_all(session, source_local=False, do_insert=True, batch=False, commit=False, dev=False):
@@ -711,13 +921,32 @@ def main(source_local=False, commit=False, echo=True):
     engine.echo = echo
     session = Session(engine)
 
-    try:
-        ingest_reva_ft_all(session, source_local=source_local, do_insert=True, batch=True, commit=commit, dev=True)
-    except Exception as e:
-        session.rollback()
-        session.close()
-        engine.dispose()
-        raise e
+    if False:
+        try:
+            ingest_reva_ft_all(session, source_local=source_local, do_insert=True, batch=True, commit=commit, dev=True)
+        except Exception as e:
+            session.rollback()
+            session.close()
+            engine.dispose()
+            raise e
+
+    if True:
+        try:
+            ingest_demo_jp2(session, source_local=source_local, do_insert=True, commit=commit, dev=True)
+        except Exception as e:
+            session.rollback()
+            session.close()
+            engine.dispose()
+            raise e
+
+    if False:
+        try:
+            ingest_demo(session, source_local=source_local, do_insert=True, commit=commit, dev=True)
+        except Exception as e:
+            session.rollback()
+            session.close()
+            engine.dispose()
+            raise e
 
     session.close()
     engine.dispose()
