@@ -133,7 +133,9 @@ INSERT INTO descriptors_cat (label, domain, range) VALUES
 ('positiveStainType', NULL, 'controlled'), -- this is a more practical approach
 ('hasDataAboutItModality', NULL, 'controlled'),
 ('hasAnatomicalTag', NULL, 'controlled'),
-('bottom', NULL, 'controlled')
+('hasAssociatedObject', NULL, 'controlled'), -- hasObjectAboutIt isn't used here because that predicate expects the rdf object to be the pointer to the data object (uuid), there is surely a clearer way to do this, e.g. not bottom but maybe just hackProperty or something but we probably want it to be, what we would actually want is probably the 'top' object property, but we don't have that
+
+('bottom', NULL, 'controlled') -- XXX reminder: this one should never be used because it relates no individuals
 ;
 
 INSERT INTO aspects (iri, label) VALUES
@@ -150,6 +152,7 @@ INSERT INTO aspects (iri, label) VALUES
 -- have a version independent aspect that can be used to pull back all related aspects
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-via-reva-ft-sample-id-normalized', 'distance-via-reva-ft-sample-id-normalized'),
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-via-reva-ft-sample-id-normalized-v1', 'distance-via-reva-ft-sample-id-normalized-v1'),
+('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-via-reva-ft-sample-id-normalized-v2', 'distance-via-reva-ft-sample-id-normalized-v2'),
 
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/length', 'length'),
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/diameter', 'diameter'),
@@ -163,6 +166,7 @@ INSERT INTO aspect_parent (id, parent) VALUES
 --(aspect_from_label('distance-via-reva-ft-sample-id-raw'), aspect_from_label('distance')),
 (aspect_from_label('distance-via-reva-ft-sample-id-normalized'), aspect_from_label('distance')),
 (aspect_from_label('distance-via-reva-ft-sample-id-normalized-v1'), aspect_from_label('distance-via-reva-ft-sample-id-normalized')),
+(aspect_from_label('distance-via-reva-ft-sample-id-normalized-v2'), aspect_from_label('distance-via-reva-ft-sample-id-normalized')),
 (aspect_from_label('diameter'), aspect_from_label('length')),
 (aspect_from_label('diameter-orthogonal-to-anterior-posterior-axis'), aspect_from_label('diameter')),
 (aspect_from_label('length-parallel-to-anterior-posterior-axis'), aspect_from_label('length'))
@@ -260,6 +264,24 @@ aspect_from_label('distance-via-reva-ft-sample-id-normalized-v1'),
 unit_from_label('unitless'),
 'max'),
 
+('reva ft sample anatomical location distance index normalized v2',
+desc_inst_from_label('nerve-volume'),
+aspect_from_label('distance-via-reva-ft-sample-id-normalized-v2'),
+unit_from_label('unitless'),
+'instance'),  -- FIXME this isn't really instance, it is normalized across a whole population, which we might want to indicate here
+
+('reva ft sample anatomical location distance index normalized v2 min',
+desc_inst_from_label('nerve-volume'),
+aspect_from_label('distance-via-reva-ft-sample-id-normalized-v2'),
+unit_from_label('unitless'),
+'min'),
+
+('reva ft sample anatomical location distance index normalized v2 max',
+desc_inst_from_label('nerve-volume'),
+aspect_from_label('distance-via-reva-ft-sample-id-normalized-v2'),
+unit_from_label('unitless'),
+'max'),
+
 ('fascicle cross section diameter um',
 desc_inst_from_label('fascicle-cross-section'),
 aspect_from_label('diameter'),
@@ -323,6 +345,9 @@ INSERT INTO addresses (addr_type, addr_field) VALUES
 ('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1'),
 ('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1-min'),
 ('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1-max'),
+('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v2'),
+('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v2-min'),
+('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v2-max'),
 ('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-subject-id'),
 ('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-sample-id'),
 

@@ -35,6 +35,8 @@ def test():
         f"{base}values/inst?dataset={dataset_uuid}&union-cat-quant=true",
         f"{base}values/inst?dataset={dataset_uuid}&aspect=distance&aspect=time",
         f"{base}values/inst?dataset={dataset_uuid}&aspect=distance&value-quant-min=0.5",
+        f"{base}values/inst?dataset={dataset_uuid}&inst-parent=sub-f001",
+        f"{base}values/inst?dataset={dataset_uuid}&inst-parent=sam-r-seg-c1&inst-parent=sam-l-seg-c1",
         f"{base}values/inst?desc-inst=nerve-volume",
         f"{base}objects?dataset={dataset_uuid}",
         f"{base}objects?dataset={dataset_uuid}&aspect=distance",
@@ -99,6 +101,9 @@ def test():
         f"{base}aspects?include-unused=true",
         f"{base}units?include-unused=true",
         # TODO maybe shapes here as well?
+        f"{base}terms?inst-parent=sam-r-seg-c1&inst-parent=sam-l-seg-c1",
+        f"{base}aspects?inst-parent=sam-r-seg-c1&inst-parent=sam-l-seg-c1",
+        f"{base}units?inst-parent=sam-r-seg-c1&inst-parent=sam-l-seg-c1",
     )
     # log.setLevel(9)
     resps = []
@@ -198,3 +203,26 @@ def test_urls(url: str) -> None:
     data = resp.json()
     assert isinstance(data, dict)
     # pprint.pprint(data, width=120)
+
+
+def test_demo_load():
+    db = SQLAlchemy()
+    app = make_app(db=db, dev=True)
+    client = app.test_client()
+    runner = app.test_cli_runner()
+
+    dataset_uuid = "55c5b69c-a5b8-4881-a105-e4048af26fa5"
+    package_uuid = "20720c2e-83fb-4454-bef1-1ce6a97fa748"
+    base = "http://localhost:8989/api/1/"
+    urls = (f"{base}values/cat-quant?desc-inst=fascicle-cross-section",)
+
+    resps = []
+    for url in urls:
+        log.debug(url)
+        resp = client.get(url)
+        resp.ok = resp.status_code < 400
+        resp.url = resp.request.url
+        resp.content = resp.data
+        resps.append(json.loads(resp.data.decode()))
+
+    breakpoint()

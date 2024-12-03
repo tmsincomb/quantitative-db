@@ -5,15 +5,18 @@ from collections import defaultdict
 
 import requests
 from sparcur import objects as sparcur_objects  # register pathmeta type
+
 # FIXME sparcur dependencies, or keep ingest separate
 from sparcur.utils import fromJson
 from sqlalchemy import create_engine
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import bindparam
-from sqlalchemy.sql import text as sql_text
 
-from quantdb.utils import dbUri, isoformat, log
+# FIXME sparcur dependencies, or keep ingest separate
+from sparcur.utils import fromJson
+from sparcur import objects as sparcur_objects  # register pathmeta type
+from quantdb.utils import log, dbUri, isoformat
 
 ######### start database interaction section
 
@@ -151,8 +154,8 @@ def makeParamsValues(
 """
 l left
 r right
-c cardiac not left or right but a branch on its own
-a abdominal
+c cardiac not left or right but a branch on its own FIXME might be for central for esophageal
+a anterior
 p posterior
 
 c cervical
@@ -226,10 +229,20 @@ def pps(path_structure):
             "raw_anat_index_v1": anat_index(segment),
         }
     else:
+        breakpoint()
         raise NotImplementedError(path_structure)
 
+    subject = sub
+    sample = f"sam-{sub}_{sam}"
+    p1 = sample, subject
+    return {
+        "parents": (p1,),
+        "subject": subject,
+        "sample": sample,
+    }
 
-def ext(j):
+
+def ext_pmeta(j, _pps=pps):
     out = {}
     out["dataset"] = j["dataset_id"]
     out["object"] = j["remote_id"]
@@ -240,6 +253,10 @@ def ext(j):
     [p for p in ps if p.startswith("sub-") or p.startswith("sam-")]
     out.update(pps(ps))
     return out
+
+
+def ext_pmeta123(j):
+    return ext_pmeta(j, _pps=pps123)
 
 
 class Queries:
@@ -454,7 +471,7 @@ def ingest(
     session,
     commit=False,
     dev=False,
-    values_args: list | None = None,
+    values_args=None,
 ):
     """generic ingest workflow
     this_dataset_updated_uuid might not be needed in future,
@@ -807,7 +824,7 @@ def make_descriptors_etc_reva_ft_tabular():
     # TODO do the inserts
 
 
-def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
+def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
     if source_local:
         with open(
             pathlib.Path(
@@ -843,7 +860,7 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
         if "mimetype" in r and r["mimetype"] == "image/jpx"
     ]
 
-    exts = [ext(j) for j in jpx]
+    exts = [ext_pmeta(j) for j in jpx]
     # hrm = sorted(exts, key=lambda j: j['raw_anat_index'])
     # max_rai  = max([e['raw_anat_index'] for e in exts])
     # import math
@@ -879,11 +896,30 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
     max_naix = max([e["norm_anat_index_v1_max"] for e in exts])
 
     if visualize:
+        mexts = []
+        done = set()
+        for e in exts:
+            if e["sample"] not in done:
+                mexts.append(e)
+                done.add(e["sample"])
+
+        _exts = exts
+        exts = mexts
         x = list(range(len(exts)))
         # ry = sorted([e['raw_anat_index'] for e in exts])
         ny = sorted([e["norm_anat_index_v1"] for e in exts])
         nyn = sorted([e["norm_anat_index_v1_min"] for e in exts])
         nyx = sorted([e["norm_anat_index_v1_max"] for e in exts])
+        # ry = sorted([e['raw_anat_index'] for e in exts])
+        idy = [
+            b
+            for a, b in sorted(
+                [(e["norm_anat_index_v2"], e["sample"]) for e in exts]
+            )
+        ]
+        ny = sorted([e["norm_anat_index_v2"] for e in exts])
+        nyn = sorted([e["norm_anat_index_v2_min"] for e in exts])
+        nyx = sorted([e["norm_anat_index_v2_max"] for e in exts])
         nnx = list(zip(nyn, nyx))
         import pylab as plt
         import seaborn
@@ -893,9 +929,19 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
         plt.figure()
         # end = 10
         end = len(x)
-        seaborn.scatterplot(x=x[:end], y=ny[:end])
-        seaborn.scatterplot(x=x[:end], y=nyn[:end])
-        seaborn.scatterplot(x=x[:end], y=nyx[:end])
+        seaborn.scatterplot(x=x[:end], y=ny[:end], label="inst")
+        seaborn.scatterplot(x=x[:end], y=nyn[:end], label="min")
+        seaborn.scatterplot(x=x[:end], y=nyx[:end], label="max")
+        _sid = blob["data"][0]["basename"].split("-")[-1].strip()
+        # if _sid == 'f003':
+        # breakpoint()
+        plt.title(f"norm-anat-index-v2 for {_sid}")
+        plt.xlabel("nth sample")
+        plt.ylabel("normalized anatomical index v2")
+        plt.legend(loc="upper left")
+        # plt.savefig(f'ft-norm-anat-index-v2-{dataset_uuid[:4]}.png')
+        plt.savefig(f"ft-norm-anat-index-v2-{_sid}.png")
+        exts = _exts
 
     datasets = {
         i.uuid: {"id_type": i.type} for e in exts if (i := e["dataset"])
@@ -1124,6 +1170,262 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=False):
     # this is where things get annoying with needing selects on instance measured
 
 
+def ext_values(exts):
+    datasets = {
+        i.uuid: {"id_type": i.type} for e in exts if (i := e["dataset"])
+    }
+
+    packages = {
+        i.uuid: {
+            "id_type": i.type,
+            "id_file": e["file_id"],
+        }
+        for e in exts
+        if (i := e["object"])
+    }
+
+    objects = {**datasets, **packages}
+    dataset_object = list(
+        set(
+            (d.uuid, o.uuid)
+            for e in exts
+            if (d := e["dataset"]) and (o := e["object"])
+        )
+    )
+
+    subjects = {
+        k: {
+            "type": "subject",
+            "desc_inst": "human",  # FIXME hardcoded
+            "id_sub": k[1],
+        }
+        for k in sorted(set((e["dataset"], e["subject"]) for e in exts))
+    }
+    parents = sorted(
+        set((e["dataset"],) + p for e in exts for p in e["parents"])
+    )
+
+    samples = {
+        k[:2]: {
+            "type": "sample",
+            "desc_inst": "nerve-cross-section",  # FIXME hardcoded
+            "id_sub": k[-1],
+            "id_sam": k[1],
+        }
+        for k in sorted(
+            set((e["dataset"], e["sample"], e["subject"]) for e in exts)
+        )
+    }
+
+    instances = {**subjects, **samples}
+
+    values_objects = [
+        (i, o["id_type"], o["id_file"] if "id_file" in o else None)
+        for i, o in objects.items()
+        if o["id_type"] != "dataset"  # already did it above
+    ]
+    values_dataset_object = dataset_object
+
+    return instances, parents, objects, values_objects, values_dataset_object
+
+
+def extract_demo_jp2(dataset_uuid, source_local=False):
+    # this is a 1.2.3 dataset so a bit different
+
+    resp = requests.get(
+        f"https://cassava.ucsd.edu/sparc/datasets/{dataset_uuid}/LATEST/path-metadata.json"
+    )
+
+    try:
+        blob = resp.json()
+    except Exception as e:
+        breakpoint()
+        raise e
+
+    for j in blob["data"]:
+        j["type"] = "pathmeta"
+
+    ir = fromJson(blob)
+
+    updated_transitive = max(
+        [i["timestamp_updated"] for i in ir["data"][1:]]
+    )  # 1: to skip the dataset object itself
+
+    jp2 = [
+        r
+        for r in ir["data"]
+        if "mimetype" in r and r["mimetype"] == "image/jp2"
+    ]
+
+    exts = [ext_pmeta123(j) for j in jp2]
+
+    instances, parents, objects, values_objects, values_dataset_object = (
+        ext_values(exts)
+    )
+
+    def make_values_instances(i):
+        values_instances = [
+            (
+                d.uuid,
+                f,
+                inst["type"],
+                i.luid[inst["desc_inst"]],
+                inst["id_sub"] if "id_sub" in inst else None,
+                inst["id_sam"] if "id_sam" in inst else None,
+            )
+            for (d, f), inst in instances.items()
+        ]
+
+        return values_instances
+
+    def make_values_parents(luinst):
+        """need the lookup for instances"""
+        values_parents = [
+            (luinst[d.uuid, child], luinst[d.uuid, parent])
+            for d, child, parent in parents
+        ]
+        return values_parents
+
+    def make_void(this_dataset_updated_uuid, i):
+        # we don't derive anything from the dataset updated uuid so nothing goes here
+        void = [
+            (o, i.id_nerve_cross_section, i.addr_const_null, None)
+            for o, b in objects.items()
+            if b["id_type"] == "package"
+        ]
+        return void
+
+    def make_vocd(this_dataset_updated_uuid, i):
+        # we don't derive anything from the dataset updated uuid so nothing goes here
+        vocd = [
+            (o, i.cd_obj, i.addr_const_null)
+            for o, b in objects.items()
+            if b["id_type"] == "package"
+        ]
+        return vocd
+
+    def make_voqd(this_dataset_updated_uuid, i):
+        voqd = []  # no quant for this load right now
+        return voqd
+
+    def make_values_cat(this_dataset_updated_uuid, i, luinst):
+        # we don't derive anything from the dataset updated uuid so nothing goes here
+        values_cv = [
+            (
+                None,
+                i.ct_hack,
+                e["object"].uuid,
+                i.id_nerve_cross_section,
+                i.cd_obj,  # if we mess this up the fk ok obj_desc_cat will catch it :)
+                luinst[e["dataset"].uuid, e["sample"]],  # get us the instance
+            )
+            for e in exts
+        ]
+        return values_cv
+
+    def make_values_quant(this_dataset_updated_uuid, i, luinst):
+        values_qv = []
+        return values_qv
+
+    return (
+        updated_transitive,
+        values_objects,
+        values_dataset_object,
+        make_values_instances,
+        make_values_parents,
+        make_void,
+        make_vocd,
+        make_voqd,
+        make_values_cat,
+        make_values_quant,
+    )
+
+
+import scipy
+import augpathlib as aug
+from sparcur.datasets import SamplesFilePath
+
+
+def extract_demo(dataset_uuid, source_local=True):
+    _dsp = (
+        "/mnt/str/tom/sparc-datasets/55c5b69c-a5b8-4881-a105-e4048af26fa5/SPARC/"
+        "Quantified morphology of the human vagus nerve with anti-claudin-1/"
+    )
+    p = _dsp + "derivative/CadaverVNMorphology_OutputMetrics.mat"
+    _p = aug.AugmentedPath(_dsp + "samples.xlsx")
+    sp = SamplesFilePath(_p)
+    ap = Path(p)
+    obj_uuid = ap.cache.meta.id.split(":")[-1]
+    m = scipy.io.loadmat(p)
+    m.keys()
+    ks = (
+        "NFasc",
+        "dFasc_um",
+        "dNerve_um",
+        "laterality",
+        "level",
+        "sex",
+        "sub_sam",
+    )
+    breakpoint()
+
+    subjects = None
+    samples = None
+    instances = None
+    parents = None
+
+    values_objects = None
+    values_dataset_object = None
+
+    def make_values_instances(i):
+        return values_instances
+
+    def make_values_parents(luinst):
+        return values_parents
+
+    def make_void(this_dataset_updated_uuid, i):
+        return void
+
+    def make_vocd(this_dataset_updated_uuid, i):
+        return vocd
+
+    def make_voqd(this_dataset_updated_uuid, i):
+        return voqd
+
+    def make_values_cat(this_dataset_updated_uuid, i, luinst):
+        return values_cv
+
+    def make_values_quant(this_dataset_updated_uuid, i, luinst):
+        return values_qv
+
+    return (
+        updated_transitive,
+        values_objects,
+        values_dataset_object,
+        make_values_instances,
+        make_values_parents,
+        make_void,
+        make_vocd,
+        make_voqd,
+        make_values_cat,
+        make_values_quant,
+    )
+
+
+def ingest_demo(
+    session, source_local=True, do_insert=True, commit=False, dev=False
+):
+    dataset_uuid = "55c5b69c-a5b8-4881-a105-e4048af26fa5"
+    ingest(dataset_uuid, extract_demo, session, commit=commit, dev=dev)
+
+
+def ingest_demo_jp2(
+    session, source_local=True, do_insert=True, commit=False, dev=False
+):
+    dataset_uuid = "55c5b69c-a5b8-4881-a105-e4048af26fa5"
+    ingest(dataset_uuid, extract_demo_jp2, session, commit=commit, dev=dev)
+
+
 def ingest_reva_ft_all(
     session: Session,  # type: ignore
     source_local: bool = False,
@@ -1217,24 +1519,51 @@ def main(source_local=False, commit=False, echo=True):
     # use connection env as unique session
     session = Session(engine)
 
-    # try to ingest reva facular tubular all
     try:
         ingest_reva_ft_all(
-            session=session,  # type: ignore
-            # source_local=source_local=source_local,
+            session,
+            source_local=source_local,
             do_insert=True,
             batch=True,
             commit=commit,
             dev=True,
         )
-    # failed: undue DB request, close connection, and remove connection env.
     except Exception as e:
         session.rollback()
         session.close()
         engine.dispose()
         raise e
 
-    # rm alloc memory in GIL for connection
+    if True:
+        try:
+            ingest_demo_jp2(
+                session,
+                source_local=source_local,
+                do_insert=True,
+                commit=commit,
+                dev=True,
+            )
+        except Exception as e:
+            session.rollback()
+            session.close()
+            engine.dispose()
+            raise e
+
+    if False:
+        try:
+            ingest_demo(
+                session,
+                source_local=source_local,
+                do_insert=True,
+                commit=commit,
+                dev=True,
+            )
+        except Exception as e:
+            session.rollback()
+            session.close()
+            engine.dispose()
+            raise e
+
     session.close()
     # rm alloc memory in GIL for connection env
     engine.dispose()
