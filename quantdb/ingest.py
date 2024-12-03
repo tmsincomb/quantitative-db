@@ -841,10 +841,13 @@ def extract_demo(dataset_uuid, source_local=True):
     sp = SamplesFilePath(_p)
     ap = Path(p)
     obj_uuid = ap.cache.meta.id.split(':')[-1]
+    obj_file_id = ap.cache.meta.file_id
     m = scipy.io.loadmat(p)
     m.keys()
     ks = 'NFasc', 'dFasc_um', 'dNerve_um', 'laterality', 'level', 'sex', 'sub_sam'
     breakpoint()
+
+    updated_transitive = None
 
     subjects = None
     samples = None
@@ -855,17 +858,74 @@ def extract_demo(dataset_uuid, source_local=True):
     values_dataset_object = None
 
     def make_values_instances(i):
+        # handled above
+        values_instances = []
         return values_instances
+
+    def make_values_parents(luinst):
+        values_parents = []  # handled above
+        return values_parents
+
+    def make_void(this_dataset_updated_uuid, i):
+        void = []
+        return void
+
+    def make_vocd(this_dataset_updated_uuid, i):
+        vocd = []
+        return vocd
+
+    def make_voqd(this_dataset_updated_uuid, i):
+        voqd = []
+        return voqd
+
+    def make_values_cat(this_dataset_updated_uuid, i, luinst):
+        values_cv = []
+        return values_cv
+
+    def make_values_quant(this_dataset_updated_uuid, i, luinst):
+        values_qv = [
+            'nerves'
+        ] + [
+            'fascicles'
+        ]
+        return values_qv
+
+    return (updated_transitive, values_objects, values_dataset_object,
+            make_values_instances, make_values_parents,
+            make_void, make_vocd, make_voqd,
+            make_values_cat, make_values_quant,
+            )
+
+
+def extract_template(dataset_uuid, source_local=True):
+
+    updated_transitive = None
+
+    instances = None
+    parents = None
+    objects = None
+
+    values_objects = None
+    values_dataset_object = None
+
+    def make_values_instances(i):
+        return values_instances
+
     def make_values_parents(luinst):
         return values_parents
+
     def make_void(this_dataset_updated_uuid, i):
         return void
+
     def make_vocd(this_dataset_updated_uuid, i):
         return vocd
+
     def make_voqd(this_dataset_updated_uuid, i):
         return voqd
+
     def make_values_cat(this_dataset_updated_uuid, i, luinst):
         return values_cv
+
     def make_values_quant(this_dataset_updated_uuid, i, luinst):
         return values_qv
 
