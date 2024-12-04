@@ -663,7 +663,33 @@ def make_app(db=None, name='quantdb-api-server', dev=False):
             raise e
 
         if gkw('return-query'):
-            return query
+            #from psycopg2cffi._impl.cursor import _combine_cmd_params  # this was an absolute pita to track down
+            #stq = sql_text(query)
+            #stq = stq.bindparams(**params)
+            #conn = session.connection()
+            #cur = conn.engine.raw_connection().cursor()
+            #cq, cp, _ = stq._compile_w_cache(dialect=conn.dialect, compiled_cache=conn.engine._compiled_cache, column_keys=sorted(params))
+            #almost = str(stq.compile(dialect=conn.dialect,)) #compile_kwargs={'literal_binds': True},
+            #wat = _combine_cmd_params(str(cq), params, cur.connection)
+            ord_params = {k: v for k, v in sorted(params.items())}
+            ARRAY = 'ARRAY'
+            ccuuid = '::uuid'
+            org_vars = ' '.join([f':var {key}="{ARRAY + repr(value) if isinstance(value, list) else (repr(str(value)) + ccuuid if isinstance(value, uuid.UUID) else repr(value))}"' for key, value in ord_params.items()])
+            return f'''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head><title>SQL query expansion for quantdb</title></head>
+<body>
+<pre>
+{ord_params}
+{org_vars}
+</pre>
+<br>
+<pre class="src src-sql">
+{query}
+</pre>
+</body>
+</html>'''
 
         try:
             res = session.execute(sql_text(query), params)

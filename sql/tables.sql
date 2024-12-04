@@ -236,6 +236,17 @@ CREATE INDEX IF NOT EXISTS idx_values_inst_dataset_id_formal ON values_inst (dat
 CREATE TRIGGER values_inst_dataset_is_dataset BEFORE INSERT
        ON values_inst FOR EACH ROW EXECUTE PROCEDURE dataset_is_dataset();
 
+CREATE FUNCTION values_desc_inst_matches_instance_desc_inst() RETURNS trigger as $$
+       BEGIN
+       IF EXISTS (SELECT id, desc_inst FROM values_inst WHERE desc_inst = NEW.desc_inst AND id = NEW.instance) THEN
+          RETURN NEW;
+       ELSE
+        RAISE EXCEPTION 'values desc_inst does not match instance desc_inst % % % %', NEW.desc_inst, (SELECT desc_inst FROM values_inst WHERE id = NEW.instance), (SELECT dataset FROM values_inst WHERE id = NEW.instance), (SELECT id_formal FROM values_inst WHERE id = NEW.instance)
+       USING HINT = 'values desc_inst must always match instance desc_inst';
+       END IF;
+       END;
+$$ language plpgsql;
+
 /*
 create table instance_subject(
 id integer references values_inst(id),
@@ -584,6 +595,9 @@ CREATE INDEX IF NOT EXISTS idx_values_quant_desc_inst ON values_quant (desc_inst
 CREATE INDEX IF NOT EXISTS idx_values_quant_desc_quant ON values_quant (desc_quant);
 CREATE INDEX IF NOT EXISTS idx_values_quant_instance ON values_quant (instance);
 
+CREATE TRIGGER values_quant_desc_inst BEFORE INSERT
+       ON values_quant FOR EACH ROW EXECUTE PROCEDURE values_desc_inst_matches_instance_desc_inst();
+
 -- TODO categorical values table over measured instances
 -- can we also use categorical values to store relations to transitive samples, subjects, datasets, etc.
 
@@ -619,6 +633,9 @@ CREATE INDEX IF NOT EXISTS idx_values_cat_desc_inst ON values_cat (desc_inst);
 CREATE INDEX IF NOT EXISTS idx_values_cat_desc_cat ON values_cat (desc_cat);
 CREATE INDEX IF NOT EXISTS idx_values_cat_instance ON values_cat (instance);
 CREATE INDEX IF NOT EXISTS idx_values_cat_value_controlled ON values_cat (value_controlled);
+
+CREATE TRIGGER values_cat_desc_inst BEFORE INSERT
+       ON values_cat FOR EACH ROW EXECUTE PROCEDURE values_desc_inst_matches_instance_desc_inst();
 
 ------------------- convenience functions
 
@@ -694,6 +711,15 @@ CREATE OR REPLACE FUNCTION insts_from_dataset_ids(in_dataset uuid, in_id_formals
 BEGIN
 RETURN QUERY
 SELECT im.id, im.dataset, im.id_formal FROM values_inst as im WHERE im.dataset = in_dataset AND im.id_formal = ANY (in_id_formals);
+END;
+$$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION insts_from_dataset(in_dataset uuid) RETURNS TABLE(id integer, dataset uuid, id_formal text) AS $$
+-- TODO this is the best we can do without having to deal with an array of pairs
+-- since our unit of work is usually a single dataset this is probably ok
+BEGIN
+RETURN QUERY
+SELECT im.id, im.dataset, im.id_formal FROM values_inst as im WHERE im.dataset = in_dataset;
 END;
 $$ language plpgsql;
 

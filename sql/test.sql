@@ -145,6 +145,8 @@ INSERT INTO aspects (iri, label) VALUES
 -- while distance is abstract and can unitized in countless ways (i.e. based on
 -- which two points you pick)
 
+('http://uri.interlex.org/tgbugs/uris/readable/aspect/count', 'count'),
+
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance', 'distance'),
 
 --('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-via-reva-ft-sample-id-raw', 'distance-via-reva-ft-sample-id-raw'),
@@ -186,6 +188,15 @@ INSERT INTO units (iri, label) VALUES
 
 INSERT INTO descriptors_quant (label, domain, aspect, unit, aggregation_type) VALUES
 -- lack of support for hierarchical queries over aspects is a killer here, and also for classes
+
+(
+'count', -- TODO 'count of domain-thing' vs 'count of range-thing in domain-thing'
+NULL,
+aspect_from_label('count'),
+unit_from_label('unitless'),  -- FIXME we MIGHT be able to have another column that points to desc_inst for members of population? TODO needs more design and examples
+-- it does seem that the quantitative descriptor sits at a nice place in the data model to allow for composition of domain/range scope/thing but then we would need to be able to distinguish between qd types that are scoped entirely by their subject (length) vs more than 1 (distance) vs count-of-sheep-in-field-at-time
+'instance' -- FIXME population probably
+),
 
 ('thing object uuid ratio', -- multiple objects means the entity will show up at multiple places, OR pick min or something ...
 /*
@@ -282,6 +293,12 @@ aspect_from_label('distance-via-reva-ft-sample-id-normalized-v2'),
 unit_from_label('unitless'),
 'max'),
 
+('nerve cross section diameter um',
+desc_inst_from_label('nerve-cross-section'),
+aspect_from_label('diameter'),
+unit_from_label('um'),
+'instance'),
+
 ('fascicle cross section diameter um',
 desc_inst_from_label('fascicle-cross-section'),
 aspect_from_label('diameter'),
@@ -329,6 +346,11 @@ INSERT INTO addresses (addr_type, addr_field) VALUES
 ('tabular-header', 'species'),
 ('tabular-header', 'sample_type'),
 ('tabular-header', 'modality'),
+
+('tabular-header', 'NFasc'),
+('tabular-header', 'dNerve_um'),
+('json-path-with-types', '#/#int/dFasc_um'),
+('json-path-with-types', '#/#int/dFasc_um/#int'),
 
 ('json-path-with-types', '#/curation-export/subjects/#int/id_sub'), -- [i for i, s in enumerate(subjects) if s['id_sub'] == id_sub][0]
 ('json-path-with-types', '#/curation-export/subjects/#int/species'),

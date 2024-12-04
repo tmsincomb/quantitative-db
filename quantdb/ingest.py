@@ -9,7 +9,7 @@ from sqlalchemy.sql import text as sql_text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import bindparam
 # FIXME sparcur dependencies, or keep ingest separate
-from sparcur.utils import fromJson
+from sparcur.utils import fromJson, PennsieveId as RemoteId
 from sparcur.paths import Path
 from sparcur import objects as sparcur_objects  # register pathmeta type
 from quantdb.utils import log, dbUri, isoformat
@@ -245,38 +245,67 @@ class Queries:
 
     def address_from_fadd_type_fadd(self, fadd_type, fadd):
         # FIXME multi etc.
-        res = [i for i, in self.session.execute(sql_text("select * from address_from_fadd_type_fadd(:fadd_type, :fadd)"), dict(fadd_type=fadd_type, fadd=fadd))]
+        params = dict(fadd_type=fadd_type, fadd=fadd)
+        res = [i for i, in self.session.execute(sql_text("select * from address_from_fadd_type_fadd(:fadd_type, :fadd)"), params)]
         if res:
-            return res[0]
+            out = res[0]
+            if out is None:
+                raise ValueError(f'needed a result here {params}')
+            else:
+                return out
 
 
     def desc_inst_from_label(self, label):
         # FIXME multi etc.
-        res = [i for i, in self.session.execute(sql_text("select * from desc_inst_from_label(:label)"), dict(label=label))]
+        params = dict(label=label)
+        res = [i for i, in self.session.execute(sql_text("select * from desc_inst_from_label(:label)"), params)]
         if res:
-            return res[0]
+            out = res[0]
+            if out is None:
+                raise ValueError(f'needed a result here {params}')
+            else:
+                return out
 
 
     def desc_quant_from_label(self, label):
         # FIXME multi etc.
-        res = [i for i, in self.session.execute(sql_text("select * from desc_quant_from_label(:label)"), dict(label=label))]
+        params = dict(label=label)
+        res = [i for i, in self.session.execute(sql_text("select * from desc_quant_from_label(:label)"), params)]
         if res:
-            return res[0]
+            out = res[0]
+            if out is None:
+                raise ValueError(f'needed a result here {params}')
+            else:
+                return out
 
 
     def desc_cat_from_label_domain_label(self, label, domain_label):
         # FIXME multi etc.
+        params = dict(label=label, domain_label=domain_label)
         res = [i for i, in self.session.execute(sql_text("select * from desc_cat_from_label_domain_label(:label, :domain_label)"),
-                                        dict(label=label, domain_label=domain_label))]
+                                                params)]
         if res:
-            return res[0]
+            out = res[0]
+            if out is None:
+                raise ValueError(f'needed a result here {params}')
+            else:
+                return out
 
 
     def cterm_from_label(self, label):
         # FIXME multi etc.
-        res = [i for i, in self.session.execute(sql_text("select * from cterm_from_label(:label)"), dict(label=label))]
+        params = dict(label=label)
+        res = [i for i, in self.session.execute(sql_text("select * from cterm_from_label(:label)"), params)]
         if res:
-            return res[0]
+            out = res[0]
+            if out is None:
+                raise ValueError(f'needed a result here {params}')
+            else:
+                return out
+
+
+    def insts_from_dataset(self, dataset):
+        return list(self.session.execute(sql_text("select * from insts_from_dataset(:dataset)"), dict(dataset=dataset)))
 
 
     def insts_from_dataset_ids(self, dataset, ids):
@@ -294,6 +323,12 @@ class InternalIds:
         self.addr_saty = q.address_from_fadd_type_fadd('tabular-header', 'sample_type')
 
         self.addr_tmod = q.address_from_fadd_type_fadd('tabular-header', 'modality')
+
+        self.addr_NFasc = q.address_from_fadd_type_fadd('tabular-header', 'NFasc')  # FIXME not really a tabular source
+        self.addr_dNerve_um = q.address_from_fadd_type_fadd('tabular-header', 'dNerve_um')  # FIXME not really a tabular source
+        self.addr_dFasc_um_idx = q.address_from_fadd_type_fadd('json-path-with-types', '#/#int/dFasc_um')  # FIXME not really a json source, FIXME how to distinguish the index from the value
+        self.addr_dFasc_um_value = q.address_from_fadd_type_fadd('json-path-with-types', '#/#int/dFasc_um/#int')  # FIXME not really a json source
+
         #addr_trai = address_from_fadd_type_fadd('tabular-header', 'raw_anat_index')
         #addr_tnai = address_from_fadd_type_fadd('tabular-header', 'norm_anat_index')
         #addr_context = address_from_fadd_type_fadd('context', '#/path-metadata/{index of match remote_id}/dataset_relative_path')  # XXX this doesn't do what we want, I think what we really would want in these contexts are objects_internal that reference the file system state for a given updated snapshot, that is the real "object" that corresponds to the path-metadata.json that we are working from
@@ -337,6 +372,10 @@ class InternalIds:
         self.qd_nain = q.desc_quant_from_label('reva ft sample anatomical location distance index normalized v2 min')
         self.qd_naix = q.desc_quant_from_label('reva ft sample anatomical location distance index normalized v2 max')
 
+        self.qd_count = q.desc_quant_from_label('count')  # FIXME see count-of-sheep-in-field-at-time issue
+        self.qd_nerve_cs_diameter_um = q.desc_quant_from_label('nerve cross section diameter um')
+        self.qd_fasc_cs_diameter_um = q.desc_quant_from_label('fascicle cross section diameter um')
+
         self.cd_mod = q.desc_cat_from_label_domain_label('hasDataAboutItModality', None)
         self.cd_obj = q.desc_cat_from_label_domain_label('hasAssociatedObject', None)
         self.cd_bot = q.desc_cat_from_label_domain_label('bottom', None)  # we just need something we can reference that points to null so we can have a refernce to all the objects, XXX but it can't actually be bottom because bottom by definition relates no entities
@@ -345,11 +384,13 @@ class InternalIds:
         self.id_nerve = q.desc_inst_from_label('nerve')
         self.id_nerve_volume = q.desc_inst_from_label('nerve-volume')
         self.id_nerve_cross_section = q.desc_inst_from_label('nerve-cross-section')
+        self.id_fascicle_cross_section = q.desc_inst_from_label('fascicle-cross-section')
         self.luid = {
             'human': self.id_human,
             'nerve': self.id_nerve,
             'nerve-volume': self.id_nerve_volume,
             'nerve-cross-section': self.id_nerve_cross_section,
+            'fascicle-cross-section': self.id_fascicle_cross_section
         }
 
         self.ct_mod = q.cterm_from_label('microct')  # lol ct ct
@@ -392,21 +433,26 @@ def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_a
         dict(id=dataset_uuid, id_type='dataset'))
 
     # oh dear https://stackoverflow.com/questions/34708509/how-to-use-returning-with-on-conflict-in-postgresql
-    res1 = session.execute(
-        sql_text("WITH ins AS (INSERT INTO objects_internal (type, dataset, updated_transitive, label) VALUES ('path-metadata', :dataset, :updated_transitive, :label) ON CONFLICT DO NOTHING RETURNING id) SELECT id FROM ins UNION ALL SELECT id FROM objects_internal WHERE type = 'path-metadata' AND dataset = :dataset AND updated_transitive = :updated_transitive"),  # TODO see whether we actually need union all here or whether union by itself is sufficient
-        dict(dataset=dataset_uuid, updated_transitive=updated_transitive, label=f'test-load-for-f001 {isoformat(updated_transitive)}'))
+    if updated_transitive:
+        res1 = session.execute(
+            sql_text("WITH ins AS (INSERT INTO objects_internal (type, dataset, updated_transitive, label) VALUES ('path-metadata', :dataset, :updated_transitive, :label) ON CONFLICT DO NOTHING RETURNING id) SELECT id FROM ins UNION ALL SELECT id FROM objects_internal WHERE type = 'path-metadata' AND dataset = :dataset AND updated_transitive = :updated_transitive"),  # TODO see whether we actually need union all here or whether union by itself is sufficient
+            dict(dataset=dataset_uuid, updated_transitive=updated_transitive, label=f'test-load-for-f001 {isoformat(updated_transitive)}'))
 
-    # it is better to use this approach for all top down information
-    # just assume that it is coming from some combination of the metadata files and the file system
-    # and leave it at that, prov can be chased down later if needed
-    this_dataset_updated_uuid = [_ for _, in res1][0]
+        # it is better to use this approach for all top down information
+        # just assume that it is coming from some combination of the metadata files and the file system
+        # and leave it at that, prov can be chased down later if needed
+        this_dataset_updated_uuid = [_ for _, in res1][0]
+    else:
+        this_dataset_updated_uuid = None
+
     void = make_void(this_dataset_updated_uuid, i)
     vocd = make_vocd(this_dataset_updated_uuid, i)
     voqd = make_voqd(this_dataset_updated_uuid, i)
 
-    res1_1 = session.execute(
-        sql_text('INSERT INTO objects (id, id_type, id_internal) VALUES (:id, :id_type, :id) ON CONFLICT DO NOTHING'),  # FIXME bad ocdn here
-        dict(id=this_dataset_updated_uuid, id_type='quantdb'))
+    if updated_transitive:
+        res1_1 = session.execute(
+            sql_text('INSERT INTO objects (id, id_type, id_internal) VALUES (:id, :id_type, :id) ON CONFLICT DO NOTHING'),  # FIXME bad ocdn here
+            dict(id=this_dataset_updated_uuid, id_type='quantdb'))
 
     vt, params = makeParamsValues(values_objects)
     session.execute(sql_text(f'INSERT INTO objects (id, id_type, id_file) VALUES {vt}{ocdn}'), params)
@@ -418,7 +464,10 @@ def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_a
     session.execute(sql_text(f'INSERT INTO values_inst (dataset, id_formal, type, desc_inst, id_sub, id_sam) VALUES {vt}{ocdn}'), params)
 
     # inserts that depend on instances having already been inserted
-    ilt = q.insts_from_dataset_ids(dataset_uuid, [f for d, f, *rest in values_instances])
+    #ilt = q.insts_from_dataset_ids(dataset_uuid, [f for d, f, *rest in values_instances])
+    # get all instances in a dataset since values_inst only includes instances we plan to insert
+    # not those that were already inserted that we want to add values for
+    ilt = q.insts_from_dataset(dataset_uuid)
     luinst = {(str(dataset), id_formal): id for id, dataset, id_formal in ilt}
     values_parents = make_values_parents(luinst)
     values_cv = make_values_cat(this_dataset_updated_uuid, i, luinst)
@@ -588,8 +637,8 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
     def make_values_instances(i):
         values_instances = [
             (d.uuid, f, inst['type'], i.luid[inst['desc_inst']],
-            inst['id_sub'] if 'id_sub' in inst else None,
-            inst['id_sam'] if 'id_sam' in inst else None,
+             inst['id_sub'] if 'id_sub' in inst else None,
+             inst['id_sam'] if 'id_sam' in inst else None,
             )
             for (d, f), inst in instances.items()]
 
@@ -705,6 +754,13 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
     # this is where things get annoying with needing selects on instance measured
 
 
+def values_objects_from_objects(objects):
+    return [
+        (i, o['id_type'], o['id_file'] if 'id_file' in o else None)
+        for i, o in objects.items()
+        if o['id_type'] != 'dataset'  # already did it above
+    ]
+
 def ext_values(exts):
     datasets = {i.uuid: {'id_type': i.type}
                 for e in exts
@@ -738,11 +794,7 @@ def ext_values(exts):
 
     instances = {**subjects, **samples}
 
-    values_objects = [
-        (i, o['id_type'], o['id_file'] if 'id_file' in o else None)
-        for i, o in objects.items()
-        if o['id_type'] != 'dataset'  # already did it above
-    ]
+    values_objects = values_objects_from_objects(objects)
     values_dataset_object = dataset_object
 
     return instances, parents, objects, values_objects, values_dataset_object
@@ -834,6 +886,7 @@ import scipy
 import augpathlib as aug
 from sparcur.datasets import SamplesFilePath
 def extract_demo(dataset_uuid, source_local=True):
+    dataset_id = RemoteId('dataset:' + dataset_uuid)
     _dsp = ('/mnt/str/tom/sparc-datasets/55c5b69c-a5b8-4881-a105-e4048af26fa5/SPARC/'
             'Quantified morphology of the human vagus nerve with anti-claudin-1/')
     p = _dsp + 'derivative/CadaverVNMorphology_OutputMetrics.mat'
@@ -845,49 +898,148 @@ def extract_demo(dataset_uuid, source_local=True):
     m = scipy.io.loadmat(p)
     m.keys()
     ks = 'NFasc', 'dFasc_um', 'dNerve_um', 'laterality', 'level', 'sex', 'sub_sam'
-    breakpoint()
+    # so insanely dFasc_um and dNerve_um claim dtype('<f8') but store float64 internally ???
+    fks = (
+        (lambda a: int(a[0])),
+        (lambda a: a.tolist()),
+        (lambda a: float(a[0])),
+        (lambda s: str(s)),
+        (lambda s: str(s)),
+        (lambda s: str(s)),
+        (lambda s: str(s)),
+    )
+
+    sane_data = [{k:fk(v[0]) for k, fk, v in zip(ks, fks, _)} for _ in zip(*[m[k][0] for k in ks])]
+    instances = {}
+    parents = []
+    nerve_qvs = []
+    fasc_qvs = []
+    for sd in sane_data:
+        ss = sd['sub_sam']
+        ss_prefix = ss[0]
+        if ss_prefix != 'C':
+            continue
+
+        subject_n, sample_n = ss[1:].split('-')
+        id_sub = f'sub-{subject_n}'
+        id_sam = f'sam-sub-{subject_n}_sam-{sample_n}'
+        instances[(dataset_id, id_sam)] = {  # needed for luinst but no inserted
+            'type': 'sample',
+            'desc_inst': 'nerve-cross-section',
+            'id_sub': id_sub,
+            'id_sam': id_sam,
+        }
+        nerve_qvs.append({
+            'id_formal': id_sam,
+            'desc_inst': 'nerve-cross-section',
+            'diameter-um': sd['dNerve_um'],
+            'number-of-fascicles': sd['NFasc'],
+        })
+
+        for i, fdum in enumerate(sd['dFasc_um']):
+            id_formal = f'fasc-{id_sam}-{i}'
+            parents.append((dataset_id, id_formal, id_sam))
+            instances[(dataset_id, id_formal)] = {
+                'type': 'below',
+                'desc_inst': 'fascicle-cross-section',
+                'id_sub': id_sub,
+                'id_sam': id_sam,
+            }
+            fasc_qvs.append({
+                'id_formal': id_formal,
+                'desc_inst': 'fascicle-cross-section',
+                'diameter-um': fdum,
+            })
 
     updated_transitive = None
 
-    subjects = None
-    samples = None
-    instances = None
-    parents = None
-
-    values_objects = None
-    values_dataset_object = None
+    objects = {obj_uuid: {'id_type': 'package', 'id_file': obj_file_id}}
+    values_objects = values_objects_from_objects(objects)
+    values_dataset_object = [(dataset_uuid, obj_uuid)]
 
     def make_values_instances(i):
-        # handled above
-        values_instances = []
+        values_instances = [
+            (d.uuid, f, inst['type'], i.luid[inst['desc_inst']],
+             inst['id_sub'] if 'id_sub' in inst else None,
+             inst['id_sam'] if 'id_sam' in inst else None,
+            )
+            for (d, f), inst in instances.items()
+            if inst['desc_inst'] != 'nerve-cross-section'  # XXX already handled from the jp2 side
+        ]
         return values_instances
 
     def make_values_parents(luinst):
-        values_parents = []  # handled above
+        """ need the lookup for instances """
+        values_parents = [
+            (luinst[d.uuid, child], luinst[d.uuid, parent])
+            for d, child, parent in parents]
         return values_parents
 
     def make_void(this_dataset_updated_uuid, i):
-        void = []
+        void = [(o, i.id_nerve_cross_section, i.addr_dFasc_um_idx, None)  # FIXME add_const_null is wrong, should be "from curator"
+             for o, b in objects.items() if b['id_type'] == 'package'
+        ] + [(o, i.id_fascicle_cross_section, i.addr_dFasc_um_idx, None)  # FIXME add_const_null is wrong, should be "from curator"
+             for o, b in objects.items() if b['id_type'] == 'package']
         return void
 
     def make_vocd(this_dataset_updated_uuid, i):
-        vocd = []
+        vocd = [(o, i.cd_obj, i.addr_const_null)
+                for o, b in objects.items() if b['id_type'] == 'package']
         return vocd
 
     def make_voqd(this_dataset_updated_uuid, i):
-        voqd = []
+        voqd = [
+            (obj_uuid, i.qd_count, i.addr_NFasc),
+            (obj_uuid, i.qd_nerve_cs_diameter_um, i.addr_dNerve_um),
+            (obj_uuid, i.qd_fasc_cs_diameter_um, i.addr_dFasc_um_value),
+        ]
         return voqd
 
     def make_values_cat(this_dataset_updated_uuid, i, luinst):
-        values_cv = []
+        values_cv = [
+            (None,
+             i.ct_hack,
+             obj_uuid,
+             i.id_nerve_cross_section,
+             i.cd_obj,  # if we mess this up the fk ok obj_desc_cat will catch it :)
+             luinst[dataset_uuid, id_formal],  # get us the instance
+             )
+            for id_formal in [e['id_formal'] for e in nerve_qvs]
+        ] + [
+            (None,
+             i.ct_hack,
+             obj_uuid,
+             i.id_fascicle_cross_section,
+             i.cd_obj,  # if we mess this up the fk ok obj_desc_cat will catch it :)
+             luinst[dataset_uuid, id_formal],  # get us the instance
+             )
+            for id_formal in [e['id_formal'] for e in fasc_qvs]
+        ]
+
         return values_cv
 
     def make_values_quant(this_dataset_updated_uuid, i, luinst):
         values_qv = [
-            'nerves'
-        ] + [
-            'fascicles'
-        ]
+            (e[k],
+             obj_uuid,
+             i.luid[e['desc_inst']],
+             qd,
+             luinst[dataset_uuid, e['id_formal']],
+             e[k],
+             )
+            for e, k, qd in
+            [
+                (e, k, qd)
+            for e in nerve_qvs
+            for k, qd in (
+                    ('number-of-fascicles', i.qd_count),  # FIXME population of thing counts within context
+                    ('diameter-um', i.qd_nerve_cs_diameter_um),
+            )] + [
+                (e, k, qd)
+            for e in fasc_qvs
+            for k, qd in (
+                    ('diameter-um', i.qd_fasc_cs_diameter_um),
+            )]]
         return values_qv
 
     return (updated_transitive, values_objects, values_dataset_object,
@@ -990,7 +1142,7 @@ def main(source_local=False, commit=False, echo=True):
             engine.dispose()
             raise e
 
-    if True:
+    if False:
         try:
             ingest_demo_jp2(session, source_local=source_local, do_insert=True, commit=commit, dev=True)
         except Exception as e:
