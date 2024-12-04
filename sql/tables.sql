@@ -1232,7 +1232,7 @@ USING HINT = 'instance did not include subject/sample reference when there shoul
 
 ELSIF NOT rec.three THEN
 
-RAISE EXCEPTION 'mismatch between parents, subjects, or samples: % %', (select id_formal from values_inst where id = NEW.id), (SELECT vi.id_formal FROM values_inst as vi JOIN get_parent_inst(NEW.id) as gpi ON vi.id = gpi.parent)--, NEW.id_sub, NEW.id_sam
+RAISE EXCEPTION 'mismatch between parents, subjects, or samples: % %', (select id_formal from values_inst where id = NEW.id), (SELECT string_agg(vi.id_formal, ', ') FROM values_inst as vi JOIN get_parent_inst(NEW.id) as gpi ON vi.id = gpi.parent)--, NEW.id_sub, NEW.id_sam
 USING HINT = 'there might be extra parents, subjects, or samples, check the set differences';
 
 END IF;
