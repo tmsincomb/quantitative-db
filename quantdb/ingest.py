@@ -326,6 +326,9 @@ class InternalIds:
 
         self.addr_NFasc = q.address_from_fadd_type_fadd('tabular-header', 'NFasc')  # FIXME not really a tabular source
         self.addr_dNerve_um = q.address_from_fadd_type_fadd('tabular-header', 'dNerve_um')  # FIXME not really a tabular source
+        self.addr_laterality = q.address_from_fadd_type_fadd('tabular-header', 'laterality')
+        self.addr_level = q.address_from_fadd_type_fadd('tabular-header', 'level')
+
         self.addr_dFasc_um_idx = q.address_from_fadd_type_fadd('json-path-with-types', '#/#int/dFasc_um')  # FIXME not really a json source, FIXME how to distinguish the index from the value
         self.addr_dFasc_um_value = q.address_from_fadd_type_fadd('json-path-with-types', '#/#int/dFasc_um/#int')  # FIXME not really a json source
 
@@ -362,6 +365,10 @@ class InternalIds:
         #addr_jpsaid = address_from_fadd_type_fadd('json-path-with-types', '#/curation-export/samples/#int/id_sam')
 
         self.addr_const_null = q.address_from_fadd_type_fadd('constant', None)
+
+        self.qd_nvlai1 = q.desc_quant_from_label('vagus level anatomical location distance index normalized v1')
+        self.qd_nvlain1 = q.desc_quant_from_label('vagus level anatomical location distance index normalized v1 min')
+        self.qd_nvlaix1 = q.desc_quant_from_label('vagus level anatomical location distance index normalized v1 max')
 
         #qd_rai = desc_quant_from_label('reva ft sample anatomical location distance index raw')
         self.qd_nai1 = q.desc_quant_from_label('reva ft sample anatomical location distance index normalized v1')
@@ -909,6 +916,26 @@ def extract_demo(dataset_uuid, source_local=True):
         (lambda s: str(s)),
     )
 
+    def level_to_vdd(level):
+        if level == 'C':  # cervical
+            return {
+                'vd': 0.05,  # FIXME this is a bit different than the reva ft case because min and max are actually uncertainty not a true range ???
+                'vd-min': 0,
+                'vd-max': 0.1,
+                'level': 'cervical-vagus',  # TODO cateogorical value
+            }
+
+        elif level == 'A':  # abdominal
+            return {
+                'vd': 0.75,
+                'vd-min': 0.5,
+                'vd-max': 1,
+                'level': 'abdominal-vagus',  # TODO cateogorical value
+            }
+        else:
+            msg = f'unknown vagus level {level}'
+            raise NotImplementedError(msg)
+
     sane_data = [{k:fk(v[0]) for k, fk, v in zip(ks, fks, _)} for _ in zip(*[m[k][0] for k in ks])]
     instances = {}
     parents = []
@@ -929,7 +956,9 @@ def extract_demo(dataset_uuid, source_local=True):
             'id_sub': id_sub,
             'id_sam': id_sam,
         }
+        vdd = level_to_vdd(sd['level'])
         nerve_qvs.append({
+            **vdd,
             'id_formal': id_sam,
             'desc_inst': 'nerve-cross-section',
             'diameter-um': sd['dNerve_um'],
@@ -946,6 +975,7 @@ def extract_demo(dataset_uuid, source_local=True):
                 'id_sam': id_sam,
             }
             fasc_qvs.append({
+                **vdd,
                 'id_formal': id_formal,
                 'desc_inst': 'fascicle-cross-section',
                 'diameter-um': fdum,
@@ -992,6 +1022,9 @@ def extract_demo(dataset_uuid, source_local=True):
             (obj_uuid, i.qd_count, i.addr_NFasc),
             (obj_uuid, i.qd_nerve_cs_diameter_um, i.addr_dNerve_um),
             (obj_uuid, i.qd_fasc_cs_diameter_um, i.addr_dFasc_um_value),
+            (obj_uuid, i.qd_nvlai1, i.addr_level),
+            (obj_uuid, i.qd_nvlain1, i.addr_level),
+            (obj_uuid, i.qd_nvlaix1, i.addr_level),
         ]
         return voqd
 
@@ -1034,11 +1067,17 @@ def extract_demo(dataset_uuid, source_local=True):
             for k, qd in (
                     ('number-of-fascicles', i.qd_count),  # FIXME population of thing counts within context
                     ('diameter-um', i.qd_nerve_cs_diameter_um),
+                    ('vd', i.qd_nvlai1),
+                    ('vd-min', i.qd_nvlain1),
+                    ('vd-max', i.qd_nvlaix1),
             )] + [
                 (e, k, qd)
             for e in fasc_qvs
             for k, qd in (
                     ('diameter-um', i.qd_fasc_cs_diameter_um),
+                    ('vd', i.qd_nvlai1),
+                    ('vd-min', i.qd_nvlain1),
+                    ('vd-max', i.qd_nvlaix1),
             )]]
         return values_qv
 

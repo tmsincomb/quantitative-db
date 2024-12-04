@@ -152,6 +152,10 @@ INSERT INTO aspects (iri, label) VALUES
 --('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-via-reva-ft-sample-id-raw', 'distance-via-reva-ft-sample-id-raw'),
 
 -- have a version independent aspect that can be used to pull back all related aspects
+('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-vagus-normalized', 'distance-vagus-normalized'),
+('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-via-vagus-level-normalized', 'distance-via-vagus-level-normalized'),
+('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-via-vagus-level-normalized-v1', 'distance-via-vagus-level-normalized-v1'),
+
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-via-reva-ft-sample-id-normalized', 'distance-via-reva-ft-sample-id-normalized'),
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-via-reva-ft-sample-id-normalized-v1', 'distance-via-reva-ft-sample-id-normalized-v1'),
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-via-reva-ft-sample-id-normalized-v2', 'distance-via-reva-ft-sample-id-normalized-v2'),
@@ -166,9 +170,15 @@ INSERT INTO aspects (iri, label) VALUES
 INSERT INTO aspect_parent (id, parent) VALUES
 (aspect_from_label('length'), aspect_from_label('distance')),
 --(aspect_from_label('distance-via-reva-ft-sample-id-raw'), aspect_from_label('distance')),
-(aspect_from_label('distance-via-reva-ft-sample-id-normalized'), aspect_from_label('distance')),
+(aspect_from_label('distance-vagus-normalized'), aspect_from_label('distance')),
+(aspect_from_label('distance-via-reva-ft-sample-id-normalized'), aspect_from_label('distance-vagus-normalized')),
+-- (aspect_from_label('distance-via-reva-ft-sample-id-normalized'), aspect_from_label('distance')),  -- TODO delete ? or ok ? might break stuff?
 (aspect_from_label('distance-via-reva-ft-sample-id-normalized-v1'), aspect_from_label('distance-via-reva-ft-sample-id-normalized')),
 (aspect_from_label('distance-via-reva-ft-sample-id-normalized-v2'), aspect_from_label('distance-via-reva-ft-sample-id-normalized')),
+
+(aspect_from_label('distance-via-vagus-level-normalized'), aspect_from_label('distance-vagus-normalized')),
+(aspect_from_label('distance-via-vagus-level-normalized-v1'), aspect_from_label('distance-via-vagus-level-normalized')),
+
 (aspect_from_label('diameter'), aspect_from_label('length')),
 (aspect_from_label('diameter-orthogonal-to-anterior-posterior-axis'), aspect_from_label('diameter')),
 (aspect_from_label('length-parallel-to-anterior-posterior-axis'), aspect_from_label('length'))
@@ -293,6 +303,28 @@ aspect_from_label('distance-via-reva-ft-sample-id-normalized-v2'),
 unit_from_label('unitless'),
 'max'),
 
+-- for 55c5
+
+('vagus level anatomical location distance index normalized v1',
+desc_inst_from_label('nerve'), -- FIXME make sure this works as expected
+aspect_from_label('distance-via-vagus-level-normalized-v1'),
+unit_from_label('unitless'),
+'instance'),
+
+('vagus level anatomical location distance index normalized v1 min',
+desc_inst_from_label('nerve'),
+aspect_from_label('distance-via-vagus-level-normalized-v1'),
+unit_from_label('unitless'),
+'min'),
+
+('vagus level anatomical location distance index normalized v1 max',
+desc_inst_from_label('nerve'),
+aspect_from_label('distance-via-vagus-level-normalized-v1'),
+unit_from_label('unitless'),
+'max'),
+
+-- general
+
 ('nerve cross section diameter um',
 desc_inst_from_label('nerve-cross-section'),
 aspect_from_label('diameter'),
@@ -349,6 +381,8 @@ INSERT INTO addresses (addr_type, addr_field) VALUES
 
 ('tabular-header', 'NFasc'),
 ('tabular-header', 'dNerve_um'),
+('tabular-header', 'laterality'),
+('tabular-header', 'level'),
 ('json-path-with-types', '#/#int/dFasc_um'),
 ('json-path-with-types', '#/#int/dFasc_um/#int'),
 
