@@ -99,6 +99,7 @@ def main_query(endpoint, kwargs):
             'im.dataset, '
             'o.id, '
             'o.id_type, '
+            'o.id_file, '  # beware that there might be more than one id_file if a package is multi-file, but we usually ban those
             'oi.updated_transitive'
         ),
         'values/cat': (
