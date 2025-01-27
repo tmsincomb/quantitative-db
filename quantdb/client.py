@@ -7,9 +7,7 @@ from quantdb.utils import dbUri
 
 def get_session(echo: bool = True) -> Session:
     # pull in the db connection info
-    dbkwargs = {
-        k: auth.get(f"db-{k}") for k in ("user", "host", "port", "database")
-    }  # TODO integrate with cli options
+    dbkwargs = {k: auth.get(f"db-{k}") for k in ("user", "host", "port", "database")}  # TODO integrate with cli options
     # custom user variable needed
     dbkwargs["dbuser"] = dbkwargs.pop("user")
     dbkwargs["dbuser"] = "quantdb-test-admin"

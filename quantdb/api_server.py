@@ -10,4 +10,4 @@ app = make_app(db=db)
 
 
 if __name__ == "__main__":
-    app.run(host="localhost", port=8989, threaded=True)
+    app.run(host="127.0.0.1", port=8989, reload=True)

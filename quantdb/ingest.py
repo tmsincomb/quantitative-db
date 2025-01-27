@@ -5,7 +5,7 @@ from collections import defaultdict
 
 import requests
 from sparcur import objects as sparcur_objects  # register pathmeta type
-
+# FIXME sparcur dependencies, or keep ingest separate
 # FIXME sparcur dependencies, or keep ingest separate
 from sparcur.utils import fromJson
 from sqlalchemy import create_engine
@@ -13,10 +13,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import bindparam
 
-# FIXME sparcur dependencies, or keep ingest separate
-from sparcur.utils import fromJson
-from sparcur import objects as sparcur_objects  # register pathmeta type
-from quantdb.utils import log, dbUri, isoformat
+from quantdb.utils import dbUri, isoformat, log
 
 ######### start database interaction section
 
@@ -1341,8 +1338,8 @@ def extract_demo_jp2(dataset_uuid, source_local=False):
     )
 
 
-import scipy
 import augpathlib as aug
+import scipy
 from sparcur.datasets import SamplesFilePath
 
 

@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.wsgi import WSGIMiddleware
 
+from quantdb.api import fastapi_app as app
 from quantdb.api_server import app as flask_app
 
-app = FastAPI()
+# app = FastAPI()
 
 app.mount("/", WSGIMiddleware(flask_app))
 

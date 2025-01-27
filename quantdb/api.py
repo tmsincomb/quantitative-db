@@ -134,11 +134,7 @@ def get_where(kwargs):
                 _where_cat.append(w)
             elif t == "quant":
                 # do not include value-quant if value-quant-margin is provided
-                if (
-                    u == "value-quant"
-                    and "value-quant-margin" in kwargs
-                    and kwargs["value-quant-margin"]
-                ):
+                if u == "value-quant" and "value-quant-margin" in kwargs and kwargs["value-quant-margin"]:
                     continue
                 else:
                     _where_quant.append(w)
@@ -212,9 +208,7 @@ def main_query(endpoint, kwargs):
             ),
         ),
         "desc/inst": ("id.iri, " "id.label, " "idpar.label as subclassof "),
-        "desc/cat": (
-            "cd.label, " "cdid.label AS domain, " "cd.range, " "cd.description "
-        ),
+        "desc/cat": ("cd.label, " "cdid.label AS domain, " "cd.range, " "cd.description "),
         "desc/quant": (
             "qd.label, "
             "id.label AS domain, "
@@ -366,26 +360,12 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
         )
         else ""
     )
-    ep_select_cat, ep_select_quant = (
-        ep_select if isinstance(ep_select, tuple) else (ep_select, ep_select)
-    )
+    ep_select_cat, ep_select_quant = ep_select if isinstance(ep_select, tuple) else (ep_select, ep_select)
     select_cat = f"SELECT {maybe_distinct}{ep_select_cat}" + (
-        (
-            s_prov_objs
-            + s_prov_i
-            + ((",\n" + s_prov_c) if endpoint != "values/inst" else "")
-        )
-        if kw.prov
-        else ""
+        (s_prov_objs + s_prov_i + ((",\n" + s_prov_c) if endpoint != "values/inst" else "")) if kw.prov else ""
     )
     select_quant = f"SELECT {maybe_distinct}{ep_select_quant}" + (
-        (
-            s_prov_objs
-            + s_prov_i
-            + ((",\n" + s_prov_q) if endpoint != "values/inst" else "")
-        )
-        if kw.prov
-        else ""
+        (s_prov_objs + s_prov_i + ((",\n" + s_prov_q) if endpoint != "values/inst" else "")) if kw.prov else ""
     )
     _where_cat, _where_quant, params = get_where(kwargs)
     where_cat = f"WHERE {_where_cat}" if _where_cat else ""
@@ -491,11 +471,7 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
             ),  # FIXME handle parents case
             "JOIN values_inst AS im ON qv.instance = im.id",
             q_inst_parent,
-            (
-                "JOIN descriptors_quant AS qd ON qv.desc_quant = qd.id"
-                if (sn.desc_quant or kw.desc_quant)
-                else ""
-            ),
+            ("JOIN descriptors_quant AS qd ON qv.desc_quant = qd.id" if (sn.desc_quant or kw.desc_quant) else ""),
             (
                 "\n".join(
                     (
@@ -506,20 +482,10 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
                 )
                 if kw.aspect
                 else (
-                    (
-                        q_par_aspect
-                        if sn.parent_aspect
-                        else "JOIN aspects AS a ON qd.aspect = a.id"
-                    )
-                    if sn.aspect
-                    else ""
+                    (q_par_aspect if sn.parent_aspect else "JOIN aspects AS a ON qd.aspect = a.id") if sn.aspect else ""
                 )
             ),  # FIXME handle parents case
-            (
-                "LEFT OUTER JOIN units AS u ON qd.unit = u.id"
-                if sn.unit or kw.unit
-                else ""
-            ),
+            ("LEFT OUTER JOIN units AS u ON qd.unit = u.id" if sn.unit or kw.unit else ""),
             (
                 (
                     (
@@ -554,11 +520,7 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
     ):  # FIXME TODO make it possible to cross query terms, units, aspects
         query = sw_quant
     else:
-        operator = (
-            "UNION"
-            if "union-cat-quant" in kwargs and kwargs["union-cat-quant"]
-            else "INTERSECT"
-        )
+        operator = "UNION" if "union-cat-quant" in kwargs and kwargs["union-cat-quant"] else "INTERSECT"
         query = f"{sw_cat}\n{operator}\n{sw_quant}"
 
     log.log(9, "\n" + query)
@@ -574,11 +536,7 @@ def to_json(record_type, res, prov=False):
                     {k: v for k, v in r._asdict().items() if k != "id"}
                     # do not leak internal ids because the might change and are not meaningful
                     if r.id_type == "quantdb"
-                    else {
-                        k: v
-                        for k, v in r._asdict().items()
-                        if k != "updated_transitive"
-                    }
+                    else {k: v for k, v in r._asdict().items() if k != "updated_transitive"}
                 )
                 for r in rows
             ]
@@ -611,11 +569,7 @@ def to_json(record_type, res, prov=False):
                 else:
                     raise NotImplementedError(f"wat {r.type}")
 
-                return {
-                    type_fields(k): v
-                    for k, v in r._asdict().items()
-                    if k not in rem
-                }
+                return {type_fields(k): v for k, v in r._asdict().items() if k not in rem}
 
             result = [prow(r) for r in rows]
         else:
@@ -636,28 +590,20 @@ def to_json(record_type, res, prov=False):
                 return {
                     k.split("_", 1 + usc)[-1]: v
                     for k in list(d)
-                    if k.startswith(prefix + "_")
-                    and (v := d.pop(k)) is not None
+                    if k.startswith(prefix + "_") and (v := d.pop(k)) is not None
                 }
 
             for r in result:
                 provs = pop_prefix(r, "prov")
-                if (
-                    "source_id_type" in provs
-                    and provs["source_id_type"] == "quantdb"
-                ):
+                if "source_id_type" in provs and provs["source_id_type"] == "quantdb":
                     provs.pop("source_id", None)  # don't leak internal ids
                 else:
-                    provs.pop(
-                        "source_updated_transitive", None
-                    )  # always None in this case
+                    provs.pop("source_updated_transitive", None)  # always None in this case
 
                 for prefix in ("desc_inst", "inst", "value", "value", "source"):
                     d = pop_prefix(provs, prefix)
                     if d:
-                        d["type"] = (
-                            "address" if prefix != "source" else "object"
-                        )
+                        d["type"] = "address" if prefix != "source" else "object"
                         provs[prefix] = d
 
                 provs["type"] = "prov"
@@ -732,15 +678,13 @@ args_default = {
 }
 
 
-app = FastAPI()
-from fastapi.middleware.wsgi import WSGIMiddleware
+# app = FastAPI()
+# from fastapi.middleware.wsgi import WSGIMiddleware
 
-app.mount("/quantdb", WSGIMiddleware(app))
+# app.mount("/quantdb", WSGIMiddleware(app))
 
 
-def getArgs(
-    request: Request, endpoint: str, dev: bool = False
-) -> Dict[str, Any]:
+def getArgs(request: Request, endpoint: str, dev: bool = False) -> Dict[str, Any]:
     default = copy.deepcopy(args_default)
 
     # TODO: temporary fix to allow flask and fastapi to work together
@@ -756,10 +700,7 @@ def getArgs(
     if endpoint != "objects":
         default.pop("source-only")
 
-    if not (
-        endpoint.startswith("desc/")
-        or endpoint in ("terms", "units", "aspects")
-    ):
+    if not (endpoint.startswith("desc/") or endpoint in ("terms", "units", "aspects")):
         default.pop("include-unused")
     else:
         # prevent filtering on the thing we are trying to query
@@ -777,18 +718,9 @@ def getArgs(
     if not endpoint.startswith("values/"):
         default.pop("prov")
     elif endpoint == "values/cat":
-        [
-            default.pop(k)
-            for k in list(default)
-            if k.startswith("value-quant")
-            or k in ("unit", "aspect", "agg-type")
-        ]
+        [default.pop(k) for k in list(default) if k.startswith("value-quant") or k in ("unit", "aspect", "agg-type")]
     elif endpoint == "values/quant":
-        [
-            default.pop(k)
-            for k in list(default)
-            if k in ("desc-cat", "value-cat", "value-cat-open")
-        ]
+        [default.pop(k) for k in list(default) if k in ("desc-cat", "value-cat", "value-cat-open")]
 
     if (endpoint == "values/inst") or (endpoint == "objects"):
         # prevent getting no results if only cat or quant
@@ -816,16 +748,12 @@ def getArgs(
                 v = request.args[k]
                 if k in ("dataset",):
                     if not v:
-                        raise exc.ArgMissingValue(
-                            f"parameter {k}= missing a value"
-                        )
+                        raise exc.ArgMissingValue(f"parameter {k}= missing a value")
                     else:
                         try:
                             v = uuid.UUID(v)
                         except ValueError as e:
-                            raise exc.BadValue(
-                                f"malformed value {k}={v}"
-                            ) from e
+                            raise exc.BadValue(f"malformed value {k}={v}") from e
             else:
                 v = request.args.getlist(k)
                 if k in ("object",):
@@ -833,16 +761,12 @@ def getArgs(
                     _v = []
                     for _o in v:
                         if not _o:
-                            raise exc.ArgMissingValue(
-                                f"parameter {k}= missing a value"
-                            )
+                            raise exc.ArgMissingValue(f"parameter {k}= missing a value")
                         else:
                             try:
                                 u = uuid.UUID(_o)
                             except ValueError as e:
-                                raise exc.BadValue(
-                                    f"malformed value {k}={_o}"
-                                ) from e
+                                raise exc.BadValue(f"malformed value {k}={_o}") from e
 
                             _v.append(u)
 
@@ -871,18 +795,14 @@ def getArgs(
 
 def make_app(db=None, name="quantdb-api-server", dev=False):
     app = Flask(name)
-    app.config["SQLALCHEMY_DATABASE_URI"] = (
-        get_settings().SQLALCHEMY_DATABASE_URI
-    )
+    app.config["SQLALCHEMY_DATABASE_URI"] = get_settings().SQLALCHEMY_DATABASE_URI
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     db.init_app(app)
     session = db.session
 
     bp = "/api/1/"
 
-    def default_flow(
-        endpoint, record_type, query_fun, json_fun, alt_query_fun=None
-    ):
+    def default_flow(endpoint, record_type, query_fun, json_fun, alt_query_fun=None):
         try:
             kwargs = getArgs(request, endpoint, dev=dev)
         except (exc.UnknownArg, exc.ArgMissingValue, exc.BadValue) as e:
@@ -917,9 +837,7 @@ def make_app(db=None, name="quantdb-api-server", dev=False):
             raise e
 
         try:
-            out = json_fun(
-                record_type, res, prov=("prov" in kwargs and kwargs["prov"])
-            )
+            out = json_fun(record_type, res, prov=("prov" in kwargs and kwargs["prov"]))
             resp = (
                 json.dumps(wrap_out(endpoint, kwargs, out), cls=JEncode),
                 200,
@@ -961,9 +879,7 @@ LEFT OUTER JOIN descriptors_inst AS idpar ON idpar.id = clp.parent
                 {},
             )
 
-        return default_flow(
-            "desc/inst", "desc-inst", main_query, to_json, alt_query_fun=query
-        )
+        return default_flow("desc/inst", "desc-inst", main_query, to_json, alt_query_fun=query)
 
     @app.route(f"{bp}/desc/cat")
     @app.route(f"{bp}/descriptors/cat")
@@ -1030,22 +946,16 @@ LEFT OUTER JOIN descriptors_inst AS idpar ON idpar.id = clp.parent
     @app.route(f"{bp}/controlled-terms")
     def route_1_cterms():
         def query(endpoint, kwargs):
-            return (
-                "select " "ct.iri, " "ct.label " "from controlled_terms as ct"
-            ), {}
+            return ("select " "ct.iri, " "ct.label " "from controlled_terms as ct"), {}
 
-        return default_flow(
-            "terms", "term", main_query, to_json, alt_query_fun=query
-        )
+        return default_flow("terms", "term", main_query, to_json, alt_query_fun=query)
 
     @app.route(f"{bp}/units")
     def route_1_units():
         def query(endpoint, kwargs):
             return ("select " "u.iri, " "u.label " "from units as u"), {}
 
-        return default_flow(
-            "units", "unit", main_query, to_json, alt_query_fun=query
-        )
+        return default_flow("units", "unit", main_query, to_json, alt_query_fun=query)
 
     @app.route(f"{bp}/aspects")
     def route_1_aspects():
@@ -1065,9 +975,7 @@ LEFT OUTER JOIN aspects AS aspar ON aspar.id = ap.parent
                 {},
             )
 
-        return default_flow(
-            "aspects", "aspect", main_query, to_json, alt_query_fun=query
-        )
+        return default_flow("aspects", "aspect", main_query, to_json, alt_query_fun=query)
 
     return app
 
@@ -1115,9 +1023,7 @@ def default_flow_fastapi(
         raise e
 
     try:
-        out = json_fun(
-            record_type, res, prov=("prov" in kwargs and kwargs["prov"])
-        )
+        out = json_fun(record_type, res, prov=("prov" in kwargs and kwargs["prov"]))
         resp = (
             json.dumps(wrap_out(endpoint, kwargs, out), cls=JEncode),
             200,

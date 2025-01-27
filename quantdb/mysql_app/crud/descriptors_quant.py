@@ -11,9 +11,7 @@ session = get_session()
 
 
 # Create a new DescriptorsQuant record
-def create_descriptors_quant(
-    db_session: Session, **kwargs: Any
-) -> DescriptorsQuant:
+def create_descriptors_quant(db_session: Session, **kwargs: Any) -> DescriptorsQuant:
     """
     Create a new DescriptorsQuant record in the database if it does not already exist.
 
@@ -36,9 +34,7 @@ def create_descriptors_quant(
     the session, and committed to the database.
     """
     # Check if the record already exists based on unique constraints or identifying fields
-    existing_record = (
-        db_session.query(DescriptorsQuant).filter_by(**kwargs).first()
-    )
+    existing_record = db_session.query(DescriptorsQuant).filter_by(**kwargs).first()
     if existing_record:
         logger.info("Record already exists: %s", existing_record)
         return existing_record
@@ -83,9 +79,7 @@ def read_descriptors_quant(
 
 
 # Update a DescriptorsQuant record
-def update_descriptors_quant(
-    db_session: Session, record_id: int, **kwargs: dict[str, Any]
-) -> None | DescriptorsQuant:
+def update_descriptors_quant(db_session: Session, record_id: int, **kwargs: dict[str, Any]) -> None | DescriptorsQuant:
     """
     Update a DescriptorsQuant record with the given record_id and kwargs.
 
@@ -158,9 +152,7 @@ if __name__ == "__main__":
     print(f"Read: {records}")
 
     # Update a record
-    updated_record = update_descriptors_quant(
-        session, new_record.id, label="Updated Label"
-    )
+    updated_record = update_descriptors_quant(session, new_record.id, label="Updated Label")
     print(f"Updated: {updated_record}")
 
     # # Delete a record
