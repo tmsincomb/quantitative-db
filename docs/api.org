@@ -67,6 +67,7 @@ to limit the results of a query to the =terms= endpoint by passing
 |--------------------+-----------+-------|
 | dataset            | uuid      |     1 |
 | inst               | string    |     n |
+| inst-parent        | string    |     n |
 | subject            | string    |     n |
 | sample             | string    |     n |
 | include-equivalent | bool      |     1 |
@@ -103,6 +104,7 @@ Not-implemented are marked with ni.
 |--------------------+---------+-------------+------------+--------------+-----------+----------+------------+-------+-------+---------|
 | dataset            |         |             |            |              |           |          |            |       |       |         |
 | inst               |         |             |            |              |           |          |            |       |       |         |
+| inst-parent        |         |             |            |              |           |          |            |       |       |         |
 | subject            |         |             |            |              |           |          |            |       |       |         |
 | sample             |         |             |            |              |           |          |            |       |       |         |
 | include-equivalent | ni      | ni          | ni         | ni           | ni        | ni       | ni         | ni    | ni    | ni      |

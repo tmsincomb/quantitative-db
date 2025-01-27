@@ -29,29 +29,24 @@ class JEncode(json.JSONEncoder):
 
 url_sql_where = (  # TODO arity spec here
     # dupes overwrite params but that is ok, this way we get the correct table alias for both cases
-    (
-        "object",
-        "object",
-        "cv.object = any(:object)",
-        "cat",
-    ),  # XXX should not use this outside values/ unless we left outer due to intersect ?
-    (
-        "object",
-        "object",
-        "qv.object = any(:object)",
-        "quant",
-    ),  # XXX should not use this outside values/ unless we left outer due to intersect ?
-    ("desc-inst", "desc_inst", "idin.label = any(:desc_inst)", "both"),
-    ("dataset", "dataset", "im.dataset = :dataset", "both"),
-    ("inst", "inst", "im.id_formal = any(:inst)", "both"),
-    ("subject", "subject", "im.id_sub = any(:subject)", "both"),
-    ("sample", "sample", "im.id_sam = any(:sample)", "both"),
-    ("desc-cat", "desc_cat", "cd.label = any(:desc_cat)", "cat"),
-    ("value-cat", "value_cat", "ct.label = any(:value_cat)", "cat"),
-    ("value-cat-open", "value_cat_open", "cv.value_open = any(:value_cat_open)", "cat"),
-    ("unit", "unit", "u.label = any(:unit)", "quant"),
-    ("aspect", "aspect", "ain.label = any(:aspect)", "quant"),
-    ("agg-type", "agg_type", "qd.aggregation_type = :agg_type", "quant"),
+    ('object', 'object', 'cv.object = any(:object)', 'cat'),  # XXX should not use this outside values/ unless we left outer due to intersect ?
+    ('object', 'object', 'qv.object = any(:object)', 'quant'),  # XXX should not use this outside values/ unless we left outer due to intersect ?
+
+    ('desc-inst', 'desc_inst', 'idin.label = any(:desc_inst)', 'both'),
+    ('dataset', 'dataset', 'im.dataset = :dataset', 'both'),
+    ('inst', 'inst', 'im.id_formal = any(:inst)', 'both'),
+    ('inst-parent', 'inst_parent', 'icin.id_formal = any(:inst_parent)', 'both'),
+    ('subject', 'subject', 'im.id_sub = any(:subject)', 'both'),
+    ('sample', 'sample', 'im.id_sam = any(:sample)', 'both'),
+
+    ('desc-cat', 'desc_cat', 'cd.label = any(:desc_cat)', 'cat'),
+
+    ('value-cat', 'value_cat', 'ct.label = any(:value_cat)', 'cat'),
+    ('value-cat-open', 'value_cat_open', 'cv.value_open = any(:value_cat_open)', 'cat'),
+
+    ('unit', 'unit', 'u.label = any(:unit)', 'quant'),
+    ('aspect', 'aspect', 'ain.label = any(:aspect)', 'quant'),
+    ('agg-type', 'agg_type', 'qd.aggregation_type = :agg_type', 'quant'),
     # TODO shape
 
     ('value-quant', 'value_quant', 'qv.value = :value_quant', 'quant'),
@@ -100,8 +95,12 @@ def main_query(endpoint, kwargs):
             "im.id_sub AS subject, "
             "id.label AS desc_inst"
         ),
-        "objects": (  # TODO probably some path metadata file type, etc. too
-            "im.dataset, " "o.id, " "o.id_type, " "oi.updated_transitive"
+        'objects': (  # TODO probably some path metadata file type, etc. too
+            'im.dataset, '
+            'o.id, '
+            'o.id_type, '
+            'o.id_file, '  # beware that there might be more than one id_file if a package is multi-file, but we usually ban those
+            'oi.updated_transitive'
         ),
         "values/cat": (
             "im.dataset, "
@@ -185,22 +184,23 @@ def main_query(endpoint, kwargs):
         parent_desc_inst = endpoint == "desc/inst"
 
     class kw:  # keywords
-        prov = gkw("prov")
-        source_only = gkw("source-only")
-        desc_inst = gkw("desc-inst")
-        desc_cat = gkw("desc-cat")
-        value_cat = gkw("value-cat")
-        aspect = gkw("aspect")
-        unit = gkw("unit")
-        agg_type = gkw("agg-type")
-        desc_quant = aspect or unit or agg_type
+        prov = gkw('prov')
+        source_only = gkw('source-only')
+        parent_inst = gkw('inst-parent')
+        desc_inst = gkw('desc-inst')
+        desc_cat = gkw('desc-cat')
+        value_cat = gkw('value-cat')
+        aspect = gkw('aspect')
+        unit = gkw('unit')
+        agg_type = gkw('agg-type')
+        desc_quant = (aspect or unit or agg_type)
 
     q_par_desc_inst = """
 JOIN descriptors_inst AS idstart ON idstart.id = {join_to}.desc_inst
 JOIN descriptors_inst AS id
 CROSS JOIN LATERAL get_parent_closed_desc_inst(idstart.id) AS idp ON idp.parent = id.id
-LEFT OUTER JOIN class_parent AS ip ON ip.id = id.id
-LEFT OUTER JOIN descriptors_inst AS idpar ON idpar.id = ip.parent
+LEFT OUTER JOIN class_parent AS clp ON clp.id = id.id
+LEFT OUTER JOIN descriptors_inst AS idpar ON idpar.id = clp.parent
 """
 
     q_par_aspect = """
@@ -300,129 +300,76 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
     where_cat = f"WHERE {_where_cat}" if _where_cat else ""
     where_quant = f"WHERE {_where_quant}" if _where_quant else ""
 
+    q_inst_parent = '\n'.join((
+        'JOIN values_inst AS icin',
+        'CROSS JOIN LATERAL get_child_closed_inst(icin.id) AS ic ON im.id = ic.child',
+    )) if kw.parent_inst else ''
+
     # FIXME even trying to be smart here about which joins to pull just papers over the underlying perf issue
     # shaves about 140ms off but the underlying issue remains
-    q_cat = "\n".join(
-        (
-            "FROM values_cat AS cv",
-            (
-                "\n".join(
-                    (
-                        "JOIN descriptors_inst AS idin",
-                        "CROSS JOIN LATERAL get_child_closed_desc_inst(idin.id) AS idc ON cv.desc_inst = idc.child -- FIXME",
-                    )
-                )
-                if kw.desc_inst
-                else ""
-            ),
-            (
-                (
-                    q_par_desc_inst.format(join_to="cv")
-                    if sn.parent_desc_inst
-                    else "JOIN descriptors_inst AS id ON cv.desc_inst = id.id"
-                )
-                if sn.desc_inst or kw.desc_inst
-                else ""
-            ),  # FIXME handle parents case
-            "JOIN values_inst AS im ON cv.instance = im.id",
-            (
-                "\n".join(
-                    (
-                        "JOIN descriptors_cat AS cd ON cv.desc_cat = cd.id",
-                        "LEFT OUTER JOIN descriptors_inst AS cdid ON cd.domain = cdid.id  -- XXX TODO mismach",
-                    )
-                )
-                if sn.desc_cat or kw.desc_cat
-                else ""
-            ),
-            (
-                "LEFT OUTER JOIN controlled_terms AS ct ON cv.value_controlled = ct.id"
-                if sn.value_cat or kw.value_cat
-                else ""
-            ),
-            (
-                (
-                    (
-                        "\n"
-                        "JOIN objects AS o ON cv.object = o.id\n"
-                        "LEFT OUTER JOIN objects_internal AS oi\n"
-                        "ON oi.id = o.id\n"
-                    )
-                    if kw.source_only
-                    else (
-                        "\n"  # have to use LEFT OUTER because object might have only one of cat or quant
-                        "LEFT OUTER JOIN values_quant AS qv ON qv.instance = im.id\n"
-                        "JOIN objects AS o ON cv.object = o.id OR qv.object = o.id\n"
-                        "LEFT OUTER JOIN objects_internal AS oi\n"
-                        "ON oi.id = o.id\n"
-                    )
-                )
-                if sn.objects or kw.prov
-                else ""
-            ),
-            (q_prov_i + q_prov_c) if kw.prov else "",
-        )
-    )
+    q_cat = '\n'.join((
+        'FROM values_cat AS cv',
+        '\n'.join((
+            'JOIN descriptors_inst AS idin',
+            'CROSS JOIN LATERAL get_child_closed_desc_inst(idin.id) AS idc ON cv.desc_inst = idc.child -- FIXME',
+        )) if kw.desc_inst else '',
+        (q_par_desc_inst.format(join_to='cv') if sn.parent_desc_inst else
+         'JOIN descriptors_inst AS id ON cv.desc_inst = id.id'
+         ) if sn.desc_inst or kw.desc_inst else '',  # FIXME handle parents case
+        'JOIN values_inst AS im ON cv.instance = im.id',
+        q_inst_parent,
+        '\n'.join((
+            'JOIN descriptors_cat AS cd ON cv.desc_cat = cd.id',
+            'LEFT OUTER JOIN descriptors_inst AS cdid ON cd.domain = cdid.id  -- XXX TODO mismach',
+        )) if sn.desc_cat or kw.desc_cat else '',
+        'LEFT OUTER JOIN controlled_terms AS ct ON cv.value_controlled = ct.id' if sn.value_cat or kw.value_cat else '',
+        (('\n'
+          'JOIN objects AS o ON cv.object = o.id\n'
+          'LEFT OUTER JOIN objects_internal AS oi\n'
+          'ON oi.id = o.id\n')
+         if kw.source_only else
+         ('\n'  # have to use LEFT OUTER because object might have only one of cat or quant
+          'LEFT OUTER JOIN values_quant AS qv ON qv.instance = im.id\n'
+          'JOIN objects AS o ON cv.object = o.id OR qv.object = o.id\n'
+          'LEFT OUTER JOIN objects_internal AS oi\n'
+          'ON oi.id = o.id\n')
+         ) if sn.objects or kw.prov else '',
+        (q_prov_i + q_prov_c) if kw.prov else '',
+    ))
 
-    q_quant = "\n".join(
-        (
-            "FROM values_quant AS qv",
-            (
-                "\n".join(
-                    (
-                        "JOIN descriptors_inst AS idin",
-                        "CROSS JOIN LATERAL get_child_closed_desc_inst(idin.id) AS idc ON qv.desc_inst = idc.child -- FIXME",
-                    )
-                )
-                if kw.desc_inst
-                else ""
-            ),
-            (
-                (
-                    q_par_desc_inst.format(join_to="qv")
-                    if sn.parent_desc_inst
-                    else "JOIN descriptors_inst AS id ON qv.desc_inst = id.id"
-                )
-                if sn.desc_inst or kw.desc_inst
-                else ""
-            ),  # FIXME handle parents case
-            "JOIN values_inst AS im ON qv.instance = im.id",
-            "JOIN descriptors_quant AS qd ON qv.desc_quant = qd.id" if (sn.desc_quant or kw.desc_quant) else "",
-            (
-                "\n".join(
-                    (
-                        "JOIN aspects AS ain",
-                        "CROSS JOIN LATERAL get_child_closed_aspect(ain.id) AS ac ON qd.aspect = ac.child",
-                        "JOIN aspects AS a ON ac.child = a.id",
-                    )
-                )
-                if kw.aspect
-                else (
-                    (q_par_aspect if sn.parent_aspect else "JOIN aspects AS a ON qd.aspect = a.id") if sn.aspect else ""
-                )
-            ),  # FIXME handle parents case
-            "LEFT OUTER JOIN units AS u ON qd.unit = u.id" if sn.unit or kw.unit else "",
-            (
-                (
-                    (
-                        "\n"
-                        "JOIN objects AS o ON qv.object = o.id\n"
-                        "LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id\n"
-                    )
-                    if kw.source_only
-                    else (
-                        "\n"  # have to use LEFT OUTER because object might have only one of cat or quant
-                        "LEFT OUTER JOIN values_cat AS cv ON cv.instance = im.id\n"
-                        "JOIN objects AS o ON qv.object = o.id OR cv.object = o.id\n"
-                        "LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id\n"
-                    )
-                )
-                if sn.objects or kw.prov
-                else ""
-            ),
-            (q_prov_i + q_prov_q) if kw.prov else "",
-        )
-    )
+    q_quant = '\n'.join((
+        'FROM values_quant AS qv',
+        '\n'.join((
+            'JOIN descriptors_inst AS idin',
+            'CROSS JOIN LATERAL get_child_closed_desc_inst(idin.id) AS idc ON qv.desc_inst = idc.child -- FIXME',
+        )) if kw.desc_inst else '',
+        (q_par_desc_inst.format(join_to='qv') if sn.parent_desc_inst else
+         'JOIN descriptors_inst AS id ON qv.desc_inst = id.id'
+         ) if sn.desc_inst or kw.desc_inst else '',  # FIXME handle parents case
+        'JOIN values_inst AS im ON qv.instance = im.id',
+        q_inst_parent,
+        'JOIN descriptors_quant AS qd ON qv.desc_quant = qd.id' if (
+            sn.desc_quant or kw.desc_quant) else '',
+        '\n'.join((
+            'JOIN aspects AS ain',
+            'CROSS JOIN LATERAL get_child_closed_aspect(ain.id) AS ac ON qd.aspect = ac.child',
+            'JOIN aspects AS a ON ac.child = a.id',
+        )) if kw.aspect else (
+            (q_par_aspect if sn.parent_aspect else
+             'JOIN aspects AS a ON qd.aspect = a.id'
+             ) if sn.aspect else ''),  # FIXME handle parents case
+        'LEFT OUTER JOIN units AS u ON qd.unit = u.id' if sn.unit or kw.unit else '',
+        (('\n'
+          'JOIN objects AS o ON qv.object = o.id\n'
+          'LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id\n')
+         if kw.source_only else
+         ('\n'  # have to use LEFT OUTER because object might have only one of cat or quant
+          'LEFT OUTER JOIN values_cat AS cv ON cv.instance = im.id\n'
+          'JOIN objects AS o ON qv.object = o.id OR cv.object = o.id\n'
+          'LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id\n')
+         ) if sn.objects or kw.prov else '',
+        (q_prov_i + q_prov_q) if kw.prov else '',
+    ))
 
     sw_cat = f"{select_cat}\n{q_cat}\n{where_cat}"  # XXX yes this can be malformed in some cases
     sw_quant = f"{select_quant}\n{q_quant}\n{where_quant}"  # XXX yes this can be malformed in some cases
@@ -556,11 +503,13 @@ args_default = {
     ## inst
     "desc-inst": [],  # aka class
     # value-inst
-    "dataset": None,
-    "inst": [],
-    "subject": [],
-    "sample": [],
-    "include-equivalent": False,
+    'dataset': None,
+    'inst': [],
+    'inst-parent': [],
+    'subject': [],
+    'sample': [],
+    'include-equivalent': False,
+
     ## cat
     "desc-cat": [],  # aka predicate
     "value-cat": [],
@@ -625,6 +574,13 @@ def getArgs(request, endpoint, dev=False):
     elif endpoint == "values/quant":
         [default.pop(k) for k in list(default) if k in ("desc-cat", "value-cat", "value-cat-open")]
 
+    if (endpoint == 'values/inst') or (endpoint == 'objects'):
+        # prevent getting no results if only cat or quant
+        # FIXME not quite sure how this interacts when other query parameters are provided
+        # but I'm pretty sure union cat-quant=false is actually only desired when query
+        # parameters that apply to both cat and quant are provided in the same query ...
+        default['union-cat-quant'] = True
+
     extras = set(request.args) - set(default)
     if extras:
         # FIXME raise this as a 401, TODO need error types for this
@@ -636,12 +592,31 @@ def getArgs(request, endpoint, dev=False):
             # arity is determined here
             if k in ('dataset', 'include-equivalent', 'union-cat-quant', 'include-unused', 'agg-type') or k.startswith('value-quant'):
                 v = request.args[k]
-                if k in ("dataset",):
-                    v = uuid.UUID(v)
+                if k in ('dataset',):
+                    if not v:
+                        raise exc.ArgMissingValue(f'parameter {k}= missing a value')
+                    else:
+                        try:
+                            v = uuid.UUID(v)
+                        except ValueError as e:
+                            raise exc.BadValue(f'malformed value {k}={v}') from e
             else:
                 v = request.args.getlist(k)
-                if k in ("object",):
-                    v = [uuid.UUID(_) for _ in v]  # caste to uuid to simplify sqlalchemy type mapping
+                if k in ('object',):
+                    # caste to uuid to simplify sqlalchemy type mapping
+                    _v = []
+                    for _o in v:
+                        if not _o:
+                            raise exc.ArgMissingValue(f'parameter {k}= missing a value')
+                        else:
+                            try:
+                                u = uuid.UUID(_o)
+                            except ValueError as e:
+                                raise exc.BadValue(f'malformed value {k}={_o}') from e
+
+                            _v.append(u)
+
+                    v = _v
         else:
             return d
 
@@ -678,8 +653,8 @@ def make_app(db=None, name="quantdb-api-server", dev=False):
     def default_flow(endpoint, record_type, query_fun, json_fun, alt_query_fun=None):
         try:
             kwargs = getArgs(request, endpoint, dev=dev)
-        except exc.UnknownArg as e:
-            return json.dumps({"error": e.args[0], "http_response_status": 422}), 422
+        except (exc.UnknownArg, exc.ArgMissingValue, exc.BadValue) as e:
+            return json.dumps({'error': e.args[0], 'http_response_status': 422}), 422
         except Exception as e:
             breakpoint()
             raise e
@@ -697,8 +672,34 @@ def make_app(db=None, name="quantdb-api-server", dev=False):
             breakpoint()
             raise e
 
-        if gkw("return-query"):
-            return query
+        if gkw('return-query'):
+            #from psycopg2cffi._impl.cursor import _combine_cmd_params  # this was an absolute pita to track down
+            #stq = sql_text(query)
+            #stq = stq.bindparams(**params)
+            #conn = session.connection()
+            #cur = conn.engine.raw_connection().cursor()
+            #cq, cp, _ = stq._compile_w_cache(dialect=conn.dialect, compiled_cache=conn.engine._compiled_cache, column_keys=sorted(params))
+            #almost = str(stq.compile(dialect=conn.dialect,)) #compile_kwargs={'literal_binds': True},
+            #wat = _combine_cmd_params(str(cq), params, cur.connection)
+            ord_params = {k: v for k, v in sorted(params.items())}
+            ARRAY = 'ARRAY'
+            ccuuid = '::uuid'
+            org_vars = ' '.join([f':var {key}="{ARRAY + repr(value) if isinstance(value, list) else (repr(str(value)) + ccuuid if isinstance(value, uuid.UUID) else repr(value))}"' for key, value in ord_params.items()])
+            return f'''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head><title>SQL query expansion for quantdb</title></head>
+<body>
+<pre>
+{ord_params}
+{org_vars}
+</pre>
+<br>
+<pre class="src src-sql">
+{query}
+</pre>
+</body>
+</html>'''
 
         try:
             res = session.execute(sql_text(query), params)
@@ -738,12 +739,9 @@ def make_app(db=None, name="quantdb-api-server", dev=False):
                     "idpar.label as subclassof"
                     """
 FROM descriptors_inst AS id
-LEFT OUTER JOIN class_parent AS ip ON ip.id = id.id
-LEFT OUTER JOIN descriptors_inst AS idpar ON idpar.id = ip.parent
-"""
-                ),
-                {},
-            )
+LEFT OUTER JOIN class_parent AS clp ON clp.id = id.id
+LEFT OUTER JOIN descriptors_inst AS idpar ON idpar.id = clp.parent
+"""), {}
 
         return default_flow("desc/inst", "desc-inst", main_query, to_json, alt_query_fun=query)
 

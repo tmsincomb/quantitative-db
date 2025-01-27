@@ -133,7 +133,9 @@ INSERT INTO descriptors_cat (label, domain, range) VALUES
 ('positiveStainType', NULL, 'controlled'), -- this is a more practical approach
 ('hasDataAboutItModality', NULL, 'controlled'),
 ('hasAnatomicalTag', NULL, 'controlled'),
-('bottom', NULL, 'controlled')
+('hasAssociatedObject', NULL, 'controlled'), -- hasObjectAboutIt isn't used here because that predicate expects the rdf object to be the pointer to the data object (uuid), there is surely a clearer way to do this, e.g. not bottom but maybe just hackProperty or something but we probably want it to be, what we would actually want is probably the 'top' object property, but we don't have that
+
+('bottom', NULL, 'controlled') -- XXX reminder: this one should never be used because it relates no individuals
 ;
 
 INSERT INTO aspects (iri, label) VALUES
@@ -143,13 +145,20 @@ INSERT INTO aspects (iri, label) VALUES
 -- while distance is abstract and can unitized in countless ways (i.e. based on
 -- which two points you pick)
 
+('http://uri.interlex.org/tgbugs/uris/readable/aspect/count', 'count'),
+
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance', 'distance'),
 
 --('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-via-reva-ft-sample-id-raw', 'distance-via-reva-ft-sample-id-raw'),
 
 -- have a version independent aspect that can be used to pull back all related aspects
+('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-vagus-normalized', 'distance-vagus-normalized'),
+('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-via-vagus-level-normalized', 'distance-via-vagus-level-normalized'),
+('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-via-vagus-level-normalized-v1', 'distance-via-vagus-level-normalized-v1'),
+
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-via-reva-ft-sample-id-normalized', 'distance-via-reva-ft-sample-id-normalized'),
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-via-reva-ft-sample-id-normalized-v1', 'distance-via-reva-ft-sample-id-normalized-v1'),
+('http://uri.interlex.org/tgbugs/uris/readable/aspect/distance-via-reva-ft-sample-id-normalized-v2', 'distance-via-reva-ft-sample-id-normalized-v2'),
 
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/length', 'length'),
 ('http://uri.interlex.org/tgbugs/uris/readable/aspect/diameter', 'diameter'),
@@ -161,8 +170,15 @@ INSERT INTO aspects (iri, label) VALUES
 INSERT INTO aspect_parent (id, parent) VALUES
 (aspect_from_label('length'), aspect_from_label('distance')),
 --(aspect_from_label('distance-via-reva-ft-sample-id-raw'), aspect_from_label('distance')),
-(aspect_from_label('distance-via-reva-ft-sample-id-normalized'), aspect_from_label('distance')),
+(aspect_from_label('distance-vagus-normalized'), aspect_from_label('distance')),
+(aspect_from_label('distance-via-reva-ft-sample-id-normalized'), aspect_from_label('distance-vagus-normalized')),
+-- (aspect_from_label('distance-via-reva-ft-sample-id-normalized'), aspect_from_label('distance')),  -- TODO delete ? or ok ? might break stuff?
 (aspect_from_label('distance-via-reva-ft-sample-id-normalized-v1'), aspect_from_label('distance-via-reva-ft-sample-id-normalized')),
+(aspect_from_label('distance-via-reva-ft-sample-id-normalized-v2'), aspect_from_label('distance-via-reva-ft-sample-id-normalized')),
+
+(aspect_from_label('distance-via-vagus-level-normalized'), aspect_from_label('distance-vagus-normalized')),
+(aspect_from_label('distance-via-vagus-level-normalized-v1'), aspect_from_label('distance-via-vagus-level-normalized')),
+
 (aspect_from_label('diameter'), aspect_from_label('length')),
 (aspect_from_label('diameter-orthogonal-to-anterior-posterior-axis'), aspect_from_label('diameter')),
 (aspect_from_label('length-parallel-to-anterior-posterior-axis'), aspect_from_label('length'))
@@ -182,6 +198,15 @@ INSERT INTO units (iri, label) VALUES
 
 INSERT INTO descriptors_quant (label, domain, aspect, unit, aggregation_type) VALUES
 -- lack of support for hierarchical queries over aspects is a killer here, and also for classes
+
+(
+'count', -- TODO 'count of domain-thing' vs 'count of range-thing in domain-thing'
+NULL,
+aspect_from_label('count'),
+unit_from_label('unitless'),  -- FIXME we MIGHT be able to have another column that points to desc_inst for members of population? TODO needs more design and examples
+-- it does seem that the quantitative descriptor sits at a nice place in the data model to allow for composition of domain/range scope/thing but then we would need to be able to distinguish between qd types that are scoped entirely by their subject (length) vs more than 1 (distance) vs count-of-sheep-in-field-at-time
+'instance' -- FIXME population probably
+),
 
 ('thing object uuid ratio', -- multiple objects means the entity will show up at multiple places, OR pick min or something ...
 /*
@@ -260,6 +285,52 @@ aspect_from_label('distance-via-reva-ft-sample-id-normalized-v1'),
 unit_from_label('unitless'),
 'max'),
 
+('reva ft sample anatomical location distance index normalized v2',
+desc_inst_from_label('nerve-volume'),
+aspect_from_label('distance-via-reva-ft-sample-id-normalized-v2'),
+unit_from_label('unitless'),
+'instance'),  -- FIXME this isn't really instance, it is normalized across a whole population, which we might want to indicate here
+
+('reva ft sample anatomical location distance index normalized v2 min',
+desc_inst_from_label('nerve-volume'),
+aspect_from_label('distance-via-reva-ft-sample-id-normalized-v2'),
+unit_from_label('unitless'),
+'min'),
+
+('reva ft sample anatomical location distance index normalized v2 max',
+desc_inst_from_label('nerve-volume'),
+aspect_from_label('distance-via-reva-ft-sample-id-normalized-v2'),
+unit_from_label('unitless'),
+'max'),
+
+-- for 55c5
+
+('vagus level anatomical location distance index normalized v1',
+desc_inst_from_label('nerve'), -- FIXME make sure this works as expected
+aspect_from_label('distance-via-vagus-level-normalized-v1'),
+unit_from_label('unitless'),
+'instance'),
+
+('vagus level anatomical location distance index normalized v1 min',
+desc_inst_from_label('nerve'),
+aspect_from_label('distance-via-vagus-level-normalized-v1'),
+unit_from_label('unitless'),
+'min'),
+
+('vagus level anatomical location distance index normalized v1 max',
+desc_inst_from_label('nerve'),
+aspect_from_label('distance-via-vagus-level-normalized-v1'),
+unit_from_label('unitless'),
+'max'),
+
+-- general
+
+('nerve cross section diameter um',
+desc_inst_from_label('nerve-cross-section'),
+aspect_from_label('diameter'),
+unit_from_label('um'),
+'instance'),
+
 ('fascicle cross section diameter um',
 desc_inst_from_label('fascicle-cross-section'),
 aspect_from_label('diameter'),
@@ -308,6 +379,13 @@ INSERT INTO addresses (addr_type, addr_field) VALUES
 ('tabular-header', 'sample_type'),
 ('tabular-header', 'modality'),
 
+('tabular-header', 'NFasc'),
+('tabular-header', 'dNerve_um'),
+('tabular-header', 'laterality'),
+('tabular-header', 'level'),
+('json-path-with-types', '#/#int/dFasc_um'),
+('json-path-with-types', '#/#int/dFasc_um/#int'),
+
 ('json-path-with-types', '#/curation-export/subjects/#int/id_sub'), -- [i for i, s in enumerate(subjects) if s['id_sub'] == id_sub][0]
 ('json-path-with-types', '#/curation-export/subjects/#int/species'),
 ('json-path-with-types', '#/curation-export/samples/#int/id_sam'),
@@ -323,6 +401,9 @@ INSERT INTO addresses (addr_type, addr_field) VALUES
 ('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1'),
 ('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1-min'),
 ('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1-max'),
+('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v2'),
+('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v2-min'),
+('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v2-max'),
 ('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-subject-id'),
 ('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-sample-id'),
 
