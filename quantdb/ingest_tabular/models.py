@@ -57,14 +57,14 @@ class Addresses(Base):
     #/path-metadata/data/#int/dataset_relative_path
     """
 
-    __tablename__ = "addresses"
+    __tablename__ = 'addresses'
     __table_args__ = (
-        PrimaryKeyConstraint("id", name="addresses_pkey"),
+        PrimaryKeyConstraint('id', name='addresses_pkey'),
         UniqueConstraint(
-            "addr_type",
-            "addr_field",
-            "value_type",
-            name="addresses_addr_type_addr_field_value_type_key",
+            'addr_type',
+            'addr_field',
+            'value_type',
+            name='addresses_addr_type_addr_field_value_type_key',
         ),
     )
 
@@ -81,87 +81,87 @@ class Addresses(Base):
     )
     addr_type = mapped_column(
         Enum(
-            "constant",
-            "tabular-header",
-            "tabular-alt-header",
-            "workbook-sheet-tabular-header",
-            "workbook-sheet-tabular-alt-header",
-            "json-path-with-types",
-            "file-system-extracted",
-            "arbitrary-function",
-            name="address_type",
+            'constant',
+            'tabular-header',
+            'tabular-alt-header',
+            'workbook-sheet-tabular-header',
+            'workbook-sheet-tabular-alt-header',
+            'json-path-with-types',
+            'file-system-extracted',
+            'arbitrary-function',
+            name='address_type',
         )
     )
     value_type = mapped_column(
-        Enum("single", "multi", name="field_value_type"),
+        Enum('single', 'multi', name='field_value_type'),
         server_default=text("'single'::field_value_type"),
     )
     addr_field = mapped_column(Text)
     curator_note = mapped_column(Text)
 
-    obj_desc_inst: Mapped[List["ObjDescInst"]] = relationship(
-        "ObjDescInst",
+    obj_desc_inst: Mapped[List['ObjDescInst']] = relationship(
+        'ObjDescInst',
         uselist=True,
-        foreign_keys="[ObjDescInst.addr_desc_inst]",
-        back_populates="addresses",
+        foreign_keys='[ObjDescInst.addr_desc_inst]',
+        back_populates='addresses',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    obj_desc_inst_: Mapped[List["ObjDescInst"]] = relationship(
-        "ObjDescInst",
+    obj_desc_inst_: Mapped[List['ObjDescInst']] = relationship(
+        'ObjDescInst',
         uselist=True,
-        foreign_keys="[ObjDescInst.addr_field]",
-        back_populates="addresses_field",
+        foreign_keys='[ObjDescInst.addr_field]',
+        back_populates='addresses_field',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    obj_desc_cat: Mapped[List["ObjDescCat"]] = relationship(
-        "ObjDescCat",
+    obj_desc_cat: Mapped[List['ObjDescCat']] = relationship(
+        'ObjDescCat',
         uselist=True,
-        foreign_keys="[ObjDescCat.addr_desc_inst]",
-        back_populates="addresses",
+        foreign_keys='[ObjDescCat.addr_desc_inst]',
+        back_populates='addresses',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    obj_desc_cat_: Mapped[List["ObjDescCat"]] = relationship(
-        "ObjDescCat",
+    obj_desc_cat_: Mapped[List['ObjDescCat']] = relationship(
+        'ObjDescCat',
         uselist=True,
-        foreign_keys="[ObjDescCat.addr_field]",
-        back_populates="addresses_",
+        foreign_keys='[ObjDescCat.addr_field]',
+        back_populates='addresses_',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    obj_desc_quant: Mapped[List["ObjDescQuant"]] = relationship(
-        "ObjDescQuant",
+    obj_desc_quant: Mapped[List['ObjDescQuant']] = relationship(
+        'ObjDescQuant',
         uselist=True,
-        foreign_keys="[ObjDescQuant.addr_aspect]",
-        back_populates="addresses_aspect",
+        foreign_keys='[ObjDescQuant.addr_aspect]',
+        back_populates='addresses_aspect',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    obj_desc_quant_: Mapped[List["ObjDescQuant"]] = relationship(
-        "ObjDescQuant",
+    obj_desc_quant_: Mapped[List['ObjDescQuant']] = relationship(
+        'ObjDescQuant',
         uselist=True,
-        foreign_keys="[ObjDescQuant.addr_desc_inst]",
-        back_populates="addresses",
+        foreign_keys='[ObjDescQuant.addr_desc_inst]',
+        back_populates='addresses',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    obj_desc_quant1: Mapped[List["ObjDescQuant"]] = relationship(
-        "ObjDescQuant",
+    obj_desc_quant1: Mapped[List['ObjDescQuant']] = relationship(
+        'ObjDescQuant',
         uselist=True,
-        foreign_keys="[ObjDescQuant.addr_field]",
-        back_populates="addresses_field",
+        foreign_keys='[ObjDescQuant.addr_field]',
+        back_populates='addresses_field',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    obj_desc_quant2: Mapped[List["ObjDescQuant"]] = relationship(
-        "ObjDescQuant",
+    obj_desc_quant2: Mapped[List['ObjDescQuant']] = relationship(
+        'ObjDescQuant',
         uselist=True,
-        foreign_keys="[ObjDescQuant.addr_unit]",
-        back_populates="addresses_unit",
+        foreign_keys='[ObjDescQuant.addr_unit]',
+        back_populates='addresses_unit',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
 
 
@@ -185,11 +185,11 @@ class Aspects(Base):
     iri: "http://uri.interlex.org/tgbugs/uris/readable/aspect/distance"
     """
 
-    __tablename__ = "aspects"
+    __tablename__ = 'aspects'
     __table_args__ = (
-        PrimaryKeyConstraint("id", name="aspects_pkey"),
-        UniqueConstraint("iri", name="aspects_iri_key"),
-        UniqueConstraint("label", name="aspects_label_key"),
+        PrimaryKeyConstraint('id', name='aspects_pkey'),
+        UniqueConstraint('iri', name='aspects_iri_key'),
+        UniqueConstraint('label', name='aspects_label_key'),
     )
 
     id = mapped_column(
@@ -221,12 +221,12 @@ class Aspects(Base):
     #     secondaryjoin=lambda: Aspects.id == t_aspect_parent.c.id,
     #     back_populates="aspects",
     # )
-    descriptors_quant: Mapped[List["DescriptorsQuant"]] = relationship(
-        "DescriptorsQuant",
+    descriptors_quant: Mapped[List['DescriptorsQuant']] = relationship(
+        'DescriptorsQuant',
         uselist=True,
-        back_populates="aspects",
+        back_populates='aspects',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
         sync_backref=False,
     )
 
@@ -244,11 +244,11 @@ class ControlledTerms(Base):
         IRI of the controlled term.
     """
 
-    __tablename__ = "controlled_terms"
+    __tablename__ = 'controlled_terms'
     __table_args__ = (
-        PrimaryKeyConstraint("id", name="controlled_terms_pkey"),
-        UniqueConstraint("iri", name="controlled_terms_iri_key"),
-        UniqueConstraint("label", name="controlled_terms_label_key"),
+        PrimaryKeyConstraint('id', name='controlled_terms_pkey'),
+        UniqueConstraint('iri', name='controlled_terms_iri_key'),
+        UniqueConstraint('label', name='controlled_terms_label_key'),
     )
 
     id = mapped_column(
@@ -265,7 +265,7 @@ class ControlledTerms(Base):
     label = mapped_column(Text, nullable=False)
     iri = mapped_column(Text, nullable=False)
 
-    values_cat: Mapped[List["ValuesCat"]] = relationship("ValuesCat", uselist=True, back_populates="controlled_terms")
+    values_cat: Mapped[List['ValuesCat']] = relationship('ValuesCat', uselist=True, back_populates='controlled_terms')
 
 
 class DescriptorsInst(Base):
@@ -284,11 +284,11 @@ class DescriptorsInst(Base):
 
     """
 
-    __tablename__ = "descriptors_inst"
+    __tablename__ = 'descriptors_inst'
     __table_args__ = (
-        PrimaryKeyConstraint("id", name="descriptors_inst_pkey"),
-        UniqueConstraint("iri", name="descriptors_inst_iri_key"),
-        UniqueConstraint("label", name="descriptors_inst_label_key"),
+        PrimaryKeyConstraint('id', name='descriptors_inst_pkey'),
+        UniqueConstraint('iri', name='descriptors_inst_iri_key'),
+        UniqueConstraint('label', name='descriptors_inst_label_key'),
     )
 
     id = mapped_column(
@@ -320,43 +320,43 @@ class DescriptorsInst(Base):
     #     secondaryjoin=lambda: DescriptorsInst.id == t_class_parent.c.id,
     #     back_populates="descriptors_inst",
     # )
-    descriptors_cat: Mapped[List["DescriptorsCat"]] = relationship(
-        "DescriptorsCat", uselist=True, back_populates="descriptors_inst"
+    descriptors_cat: Mapped[List['DescriptorsCat']] = relationship(
+        'DescriptorsCat', uselist=True, back_populates='descriptors_inst'
     )
-    descriptors_quant: Mapped[List["DescriptorsQuant"]] = relationship(
-        "DescriptorsQuant",
+    descriptors_quant: Mapped[List['DescriptorsQuant']] = relationship(
+        'DescriptorsQuant',
         uselist=True,
-        back_populates="descriptors_inst",
+        back_populates='descriptors_inst',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    obj_desc_inst: Mapped[List["ObjDescInst"]] = relationship(
-        "ObjDescInst",
+    obj_desc_inst: Mapped[List['ObjDescInst']] = relationship(
+        'ObjDescInst',
         uselist=True,
-        back_populates="descriptors_inst",
+        back_populates='descriptors_inst',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    values_inst: Mapped[List["ValuesInst"]] = relationship(
-        "ValuesInst",
+    values_inst: Mapped[List['ValuesInst']] = relationship(
+        'ValuesInst',
         uselist=True,
-        back_populates="descriptors_inst",
+        back_populates='descriptors_inst',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    values_cat: Mapped[List["ValuesCat"]] = relationship(
-        "ValuesCat",
+    values_cat: Mapped[List['ValuesCat']] = relationship(
+        'ValuesCat',
         uselist=True,
-        back_populates="descriptors_inst",
+        back_populates='descriptors_inst',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    values_quant: Mapped[List["ValuesQuant"]] = relationship(
-        "ValuesQuant",
+    values_quant: Mapped[List['ValuesQuant']] = relationship(
+        'ValuesQuant',
         uselist=True,
-        back_populates="descriptors_inst",
+        back_populates='descriptors_inst',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
 
 
@@ -404,7 +404,7 @@ class Objects(Base):
         - Index on 'id_internal'.
     """
 
-    __tablename__ = "objects"
+    __tablename__ = 'objects'
     __table_args__ = (
         # CheckConstraint(
         #     "id_type <> 'package'::remote_id_type OR id_file IS NOT NULL",
@@ -419,19 +419,19 @@ class Objects(Base):
         #     ["objects_internal.id"],
         #     name="objects_id_internal_fkey",
         # ),
-        PrimaryKeyConstraint("id", name="objects_pkey"),
-        Index("idx_objects_id_internal", "id_internal"),
+        PrimaryKeyConstraint('id', name='objects_pkey'),
+        Index('idx_objects_id_internal', 'id_internal'),
     )
 
     id = mapped_column(Uuid)
     id_type = mapped_column(
         Enum(
-            "organization",
-            "dataset",
-            "collection",
-            "package",
-            "quantdb",
-            name="remote_id_type",
+            'organization',
+            'dataset',
+            'collection',
+            'package',
+            'quantdb',
+            name='remote_id_type',
         ),
         nullable=False,
     )
@@ -441,17 +441,17 @@ class Objects(Base):
     # objects_internal: Mapped[Optional["ObjectsInternal"]] = relationship(
     #     "ObjectsInternal", foreign_keys=[id_internal], back_populates="objects"
     # )
-    objects: Mapped["Objects"] = relationship(
-        "Objects",
-        secondary="dataset_object",
+    objects: Mapped['Objects'] = relationship(
+        'Objects',
+        secondary='dataset_object',
         primaryjoin=lambda: Objects.id == t_dataset_object.c.dataset,
         secondaryjoin=lambda: Objects.id == t_dataset_object.c.object,
         # back_populates="objects_",
         # cascade="all, delete-orphan",
     )
-    objects_: Mapped["Objects"] = relationship(
-        "Objects",
-        secondary="dataset_object",
+    objects_: Mapped['Objects'] = relationship(
+        'Objects',
+        secondary='dataset_object',
         primaryjoin=lambda: Objects.id == t_dataset_object.c.object,
         secondaryjoin=lambda: Objects.id == t_dataset_object.c.dataset,
         # back_populates="objects",
@@ -463,51 +463,51 @@ class Objects(Base):
     #     foreign_keys="[ObjectsInternal.dataset]",
     #     back_populates="objects_",
     # )
-    obj_desc_inst: Mapped[List["ObjDescInst"]] = relationship(
-        "ObjDescInst",
+    obj_desc_inst: Mapped[List['ObjDescInst']] = relationship(
+        'ObjDescInst',
         uselist=True,
-        back_populates="objects",
+        back_populates='objects',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    obj_desc_cat: Mapped[List["ObjDescCat"]] = relationship(
-        "ObjDescCat",
+    obj_desc_cat: Mapped[List['ObjDescCat']] = relationship(
+        'ObjDescCat',
         uselist=True,
-        back_populates="objects",
+        back_populates='objects',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    obj_desc_quant: Mapped[List["ObjDescQuant"]] = relationship(
-        "ObjDescQuant",
+    obj_desc_quant: Mapped[List['ObjDescQuant']] = relationship(
+        'ObjDescQuant',
         uselist=True,
-        back_populates="objects",
+        back_populates='objects',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    values_inst: Mapped[List["ValuesInst"]] = relationship(
-        "ValuesInst",
+    values_inst: Mapped[List['ValuesInst']] = relationship(
+        'ValuesInst',
         uselist=True,
-        back_populates="objects",
+        back_populates='objects',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    values_cat: Mapped[List["ValuesCat"]] = relationship(
-        "ValuesCat",
+    values_cat: Mapped[List['ValuesCat']] = relationship(
+        'ValuesCat',
         uselist=True,
-        back_populates="objects",
+        back_populates='objects',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    values_quant: Mapped[List["ValuesQuant"]] = relationship(
-        "ValuesQuant",
+    values_quant: Mapped[List['ValuesQuant']] = relationship(
+        'ValuesQuant',
         uselist=True,
-        back_populates="objects",
+        back_populates='objects',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
 
     def __repr__(self):
-        return f"<Objects(id={self.id}, id_type={self.id_type})>"
+        return f'<Objects(id={self.id}, id_type={self.id_type})>'
 
     @staticmethod
     def preprocess_id(id_value: str) -> str:
@@ -525,13 +525,13 @@ class Objects(Base):
             The preprocessed id value.
         """
         if isinstance(id_value, str):
-            if id_value.startswith("N:dataset:"):
-                return id_value.replace("N:dataset:", "")
+            if id_value.startswith('N:dataset:'):
+                return id_value.replace('N:dataset:', '')
         # if isinstance(id_value, str):
         #     id_value = uuid.UUID(id_value)
         return id_value
 
-    @validates("id")
+    @validates('id')
     def validate_id(self, key: str, id_value: str) -> str:
         """
         Validate and preprocess the id before storing it.
@@ -592,11 +592,11 @@ class Objects(Base):
 
 
 class Units(Base):
-    __tablename__ = "units"
+    __tablename__ = 'units'
     __table_args__ = (
-        PrimaryKeyConstraint("id", name="units_pkey"),
-        UniqueConstraint("iri", name="units_iri_key"),
-        UniqueConstraint("label", name="units_label_key"),
+        PrimaryKeyConstraint('id', name='units_pkey'),
+        UniqueConstraint('iri', name='units_iri_key'),
+        UniqueConstraint('label', name='units_label_key'),
     )
 
     id = mapped_column(
@@ -614,58 +614,58 @@ class Units(Base):
     label = mapped_column(Text, nullable=False)
     iri = mapped_column(Text, nullable=False)
 
-    descriptors_quant: Mapped[List["DescriptorsQuant"]] = relationship(
-        "DescriptorsQuant", uselist=True, back_populates="units"
+    descriptors_quant: Mapped[List['DescriptorsQuant']] = relationship(
+        'DescriptorsQuant', uselist=True, back_populates='units'
     )
 
 
 t_aspect_parent = Table(
-    "aspect_parent",
+    'aspect_parent',
     metadata,
-    Column("id", Integer, nullable=False),
-    Column("parent", Integer, nullable=False),
-    ForeignKeyConstraint(["id"], ["aspects.id"], name="aspect_parent_id_fkey"),
-    ForeignKeyConstraint(["parent"], ["aspects.id"], name="aspect_parent_parent_fkey"),
-    PrimaryKeyConstraint("id", "parent", name="aspect_parent_pkey"),
+    Column('id', Integer, nullable=False),
+    Column('parent', Integer, nullable=False),
+    ForeignKeyConstraint(['id'], ['aspects.id'], name='aspect_parent_id_fkey'),
+    ForeignKeyConstraint(['parent'], ['aspects.id'], name='aspect_parent_parent_fkey'),
+    PrimaryKeyConstraint('id', 'parent', name='aspect_parent_pkey'),
 )
 
 
 t_class_parent = Table(
-    "class_parent",
+    'class_parent',
     metadata,
-    Column("id", Integer, nullable=False),
-    Column("parent", Integer, nullable=False),
-    ForeignKeyConstraint(["id"], ["descriptors_inst.id"], name="class_parent_id_fkey"),
-    ForeignKeyConstraint(["parent"], ["descriptors_inst.id"], name="class_parent_parent_fkey"),
-    PrimaryKeyConstraint("id", "parent", name="class_parent_pkey"),
+    Column('id', Integer, nullable=False),
+    Column('parent', Integer, nullable=False),
+    ForeignKeyConstraint(['id'], ['descriptors_inst.id'], name='class_parent_id_fkey'),
+    ForeignKeyConstraint(['parent'], ['descriptors_inst.id'], name='class_parent_parent_fkey'),
+    PrimaryKeyConstraint('id', 'parent', name='class_parent_pkey'),
 )
 
 
 t_dataset_object = Table(
-    "dataset_object",
+    'dataset_object',
     metadata,
-    Column("dataset", Uuid, nullable=False),
-    Column("object", Uuid, nullable=False),
-    ForeignKeyConstraint(["dataset"], ["objects.id"], name="dataset_object_dataset_fkey"),
-    ForeignKeyConstraint(["object"], ["objects.id"], name="dataset_object_object_fkey"),
-    PrimaryKeyConstraint("dataset", "object", name="dataset_object_pkey"),
+    Column('dataset', Uuid, nullable=False),
+    Column('object', Uuid, nullable=False),
+    ForeignKeyConstraint(['dataset'], ['objects.id'], name='dataset_object_dataset_fkey'),
+    ForeignKeyConstraint(['object'], ['objects.id'], name='dataset_object_object_fkey'),
+    PrimaryKeyConstraint('dataset', 'object', name='dataset_object_pkey'),
 )
 
 
 class DescriptorsCat(Base):
-    __tablename__ = "descriptors_cat"
+    __tablename__ = 'descriptors_cat'
     __table_args__ = (
         ForeignKeyConstraint(
-            ["domain"],
-            ["descriptors_inst.id"],
-            name="descriptors_cat_domain_fkey",
+            ['domain'],
+            ['descriptors_inst.id'],
+            name='descriptors_cat_domain_fkey',
         ),
-        PrimaryKeyConstraint("id", name="descriptors_cat_pkey"),
+        PrimaryKeyConstraint('id', name='descriptors_cat_pkey'),
         UniqueConstraint(
-            "domain",
-            "range",
-            "label",
-            name="descriptors_cat_domain_range_label_key",
+            'domain',
+            'range',
+            'label',
+            name='descriptors_cat_domain_range_label_key',
         ),
     )
 
@@ -681,18 +681,18 @@ class DescriptorsCat(Base):
         ),
     )
     domain = mapped_column(Integer)
-    range = mapped_column(Enum("open", "controlled", name="cat_range_type"))
+    range = mapped_column(Enum('open', 'controlled', name='cat_range_type'))
     label = mapped_column(Text)
     description = mapped_column(Text)
     curator_note = mapped_column(Text)
 
-    descriptors_inst: Mapped[Optional["DescriptorsInst"]] = relationship(
-        "DescriptorsInst", back_populates="descriptors_cat"
+    descriptors_inst: Mapped[Optional['DescriptorsInst']] = relationship(
+        'DescriptorsInst', back_populates='descriptors_cat'
     )
-    obj_desc_cat: Mapped[List["ObjDescCat"]] = relationship(
-        "ObjDescCat", uselist=True, back_populates="descriptors_cat"
+    obj_desc_cat: Mapped[List['ObjDescCat']] = relationship(
+        'ObjDescCat', uselist=True, back_populates='descriptors_cat'
     )
-    values_cat: Mapped[List["ValuesCat"]] = relationship("ValuesCat", uselist=True, back_populates="descriptors_cat")
+    values_cat: Mapped[List['ValuesCat']] = relationship('ValuesCat', uselist=True, back_populates='descriptors_cat')
 
 
 class DescriptorsQuant(Base):
@@ -732,24 +732,24 @@ class DescriptorsQuant(Base):
         Relationship to the ValuesQuant model.
     """
 
-    __tablename__ = "descriptors_quant"
+    __tablename__ = 'descriptors_quant'
     __table_args__ = (
-        ForeignKeyConstraint(["aspect"], ["aspects.id"], name="descriptors_quant_aspect_fkey"),
+        ForeignKeyConstraint(['aspect'], ['aspects.id'], name='descriptors_quant_aspect_fkey'),
         ForeignKeyConstraint(
-            ["domain"],
-            ["descriptors_inst.id"],
-            name="descriptors_quant_domain_fkey",
+            ['domain'],
+            ['descriptors_inst.id'],
+            name='descriptors_quant_domain_fkey',
         ),
-        ForeignKeyConstraint(["unit"], ["units.id"], name="descriptors_quant_unit_fkey"),
-        PrimaryKeyConstraint("id", name="descriptors_quant_pkey"),
-        UniqueConstraint("label", name="descriptors_quant_label_key"),
+        ForeignKeyConstraint(['unit'], ['units.id'], name='descriptors_quant_unit_fkey'),
+        PrimaryKeyConstraint('id', name='descriptors_quant_pkey'),
+        UniqueConstraint('label', name='descriptors_quant_label_key'),
         UniqueConstraint(
-            "unit",
-            "aspect",
-            "domain",
-            "shape",
-            "aggregation_type",
-            name="descriptors_quant_unit_aspect_domain_shape_aggregation_type_key",
+            'unit',
+            'aspect',
+            'domain',
+            'shape',
+            'aggregation_type',
+            name='descriptors_quant_unit_aspect_domain_shape_aggregation_type_key',
         ),
     )
 
@@ -765,78 +765,78 @@ class DescriptorsQuant(Base):
         ),
     )
     shape = mapped_column(
-        Enum("scalar", name="quant_shape"),
+        Enum('scalar', name='quant_shape'),
         nullable=False,
         server_default=text("'scalar'::quant_shape"),
     )
     label = mapped_column(Text, nullable=False)
     aggregation_type = mapped_column(
         Enum(
-            "instance",
-            "function",
-            "summary",
-            "mean",
-            "media",
-            "mode",
-            "sum",
-            "min",
-            "max",
-            name="quant_agg_type",
+            'instance',
+            'function',
+            'summary',
+            'mean',
+            'media',
+            'mode',
+            'sum',
+            'min',
+            'max',
+            name='quant_agg_type',
         ),
         nullable=False,
         server_default=text("'instance'::quant_agg_type"),
     )
     unit = mapped_column(Integer)
-    aspect = mapped_column(Integer, ForeignKey("aspects.id"))
+    aspect = mapped_column(Integer, ForeignKey('aspects.id'))
     domain = mapped_column(Integer)
     description = mapped_column(Text)
     curator_note = mapped_column(Text)
 
-    aspects: Mapped[Optional["Aspects"]] = relationship(
-        "Aspects",
-        back_populates="descriptors_quant",
+    aspects: Mapped[Optional['Aspects']] = relationship(
+        'Aspects',
+        back_populates='descriptors_quant',
         # viewonly=True,
         # cascade="all, delete-orphan",
     )
-    descriptors_inst: Mapped[Optional["DescriptorsInst"]] = relationship(
-        "DescriptorsInst",
-        back_populates="descriptors_quant",
+    descriptors_inst: Mapped[Optional['DescriptorsInst']] = relationship(
+        'DescriptorsInst',
+        back_populates='descriptors_quant',
         # viewonly=True,
         # cascade="all, delete-orphan",
     )
-    units: Mapped[Optional["Units"]] = relationship("Units", back_populates="descriptors_quant")
-    obj_desc_quant: Mapped[List["ObjDescQuant"]] = relationship(
-        "ObjDescQuant",
+    units: Mapped[Optional['Units']] = relationship('Units', back_populates='descriptors_quant')
+    obj_desc_quant: Mapped[List['ObjDescQuant']] = relationship(
+        'ObjDescQuant',
         uselist=True,
-        back_populates="descriptors_quant",
+        back_populates='descriptors_quant',
         # viewonly=True,
         # cascade="all, delete-orphan",
     )
-    values_quant: Mapped[List["ValuesQuant"]] = relationship(
-        "ValuesQuant", uselist=True, back_populates="descriptors_quant"
+    values_quant: Mapped[List['ValuesQuant']] = relationship(
+        'ValuesQuant', uselist=True, back_populates='descriptors_quant'
     )
 
 
 class ObjDescInst(Base):
-    __tablename__ = "obj_desc_inst"
+    __tablename__ = 'obj_desc_inst'
     __table_args__ = (
         ForeignKeyConstraint(
-            ["addr_desc_inst"],
-            ["addresses.id"],
-            name="obj_desc_inst_addr_desc_inst_fkey",
+            ['addr_desc_inst'],
+            ['addresses.id'],
+            name='obj_desc_inst_addr_desc_inst_fkey',
         ),
         ForeignKeyConstraint(
-            ["addr_field"],
-            ["addresses.id"],
-            name="obj_desc_inst_addr_field_fkey",
+            ['addr_field'],
+            ['addresses.id'],
+            name='obj_desc_inst_addr_field_fkey',
         ),
         ForeignKeyConstraint(
-            ["desc_inst"],
-            ["descriptors_inst.id"],
-            name="obj_desc_inst_desc_inst_fkey",
+            ['desc_inst'],
+            ['descriptors_inst.id'],
+            name='obj_desc_inst_desc_inst_fkey',
         ),
-        ForeignKeyConstraint(["object"], ["objects.id"], name="obj_desc_inst_object_fkey"),
-        PrimaryKeyConstraint("object", "desc_inst", name="obj_desc_inst_pkey"),
+        ForeignKeyConstraint(['object'], ['objects.id'], name='obj_desc_inst_object_fkey'),
+        PrimaryKeyConstraint('object', 'desc_inst', name='obj_desc_inst_pkey'),
     )
 
     object = mapped_column(Uuid, nullable=False)
@@ -845,45 +845,45 @@ class ObjDescInst(Base):
     addr_desc_inst = mapped_column(Integer)
     expect = mapped_column(Integer)
 
-    addresses: Mapped[Optional["Addresses"]] = relationship(
-        "Addresses",
+    addresses: Mapped[Optional['Addresses']] = relationship(
+        'Addresses',
         foreign_keys=[addr_desc_inst],
-        back_populates="obj_desc_inst",
+        back_populates='obj_desc_inst',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    addresses_field: Mapped["Addresses"] = relationship(
-        "Addresses",
+    addresses_field: Mapped['Addresses'] = relationship(
+        'Addresses',
         foreign_keys=[addr_field],
-        back_populates="obj_desc_inst_",
+        back_populates='obj_desc_inst_',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    descriptors_inst: Mapped["DescriptorsInst"] = relationship(
-        "DescriptorsInst",
-        back_populates="obj_desc_inst",
+    descriptors_inst: Mapped['DescriptorsInst'] = relationship(
+        'DescriptorsInst',
+        back_populates='obj_desc_inst',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    objects: Mapped["Objects"] = relationship(
-        "Objects",
-        back_populates="obj_desc_inst",
+    objects: Mapped['Objects'] = relationship(
+        'Objects',
+        back_populates='obj_desc_inst',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    values_cat: Mapped[List["ValuesCat"]] = relationship(
-        "ValuesCat",
+    values_cat: Mapped[List['ValuesCat']] = relationship(
+        'ValuesCat',
         uselist=True,
-        back_populates="obj_desc_inst",
+        back_populates='obj_desc_inst',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    values_quant: Mapped[List["ValuesQuant"]] = relationship(
-        "ValuesQuant",
+    values_quant: Mapped[List['ValuesQuant']] = relationship(
+        'ValuesQuant',
         uselist=True,
-        back_populates="obj_desc_inst",
+        back_populates='obj_desc_inst',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
 
 
@@ -946,42 +946,42 @@ class ValuesInst(Base):
         Relationship to the ValuesQuant table.
     """
 
-    __tablename__ = "values_inst"
+    __tablename__ = 'values_inst'
     __table_args__ = (
-        CheckConstraint("id_sam ~ '^sam-'::text", name="values_inst_id_sam_check"),
-        CheckConstraint("id_sub ~ '^sub-'::text", name="values_inst_id_sub_check"),
+        CheckConstraint("id_sam ~ '^sam-'::text", name='values_inst_id_sam_check'),
+        CheckConstraint("id_sub ~ '^sub-'::text", name='values_inst_id_sub_check'),
         CheckConstraint(
             "type <> 'below'::instance_type OR id_sub IS NOT NULL OR id_sam IS NOT NULL",
-            name="constraint_values_inst_type_below",
+            name='constraint_values_inst_type_below',
         ),
         CheckConstraint(
             "type <> 'sample'::instance_type OR id_sam IS NOT NULL AND id_sam = id_formal",
-            name="constraint_values_inst_type_id_sam",
+            name='constraint_values_inst_type_id_sam',
         ),
         CheckConstraint(
             "type <> 'subject'::instance_type OR id_sub = id_formal AND id_sam IS NULL",
-            name="constraint_values_inst_type_id_sub",
+            name='constraint_values_inst_type_id_sub',
         ),
         CheckConstraint(
             "type = 'below'::instance_type AND NOT id_formal ~ '^(sub|sam)-'::text OR type = 'subject'::instance_type AND id_formal ~ '^sub-'::text OR type = 'sample'::instance_type AND id_formal ~ '^sam-'::text",
-            name="constraint_values_inst_type_id_formal",
+            name='constraint_values_inst_type_id_formal',
         ),
-        ForeignKeyConstraint(["dataset"], ["objects.id"], name="values_inst_dataset_fkey"),
+        ForeignKeyConstraint(['dataset'], ['objects.id'], name='values_inst_dataset_fkey'),
         ForeignKeyConstraint(
-            ["desc_inst"],
-            ["descriptors_inst.id"],
-            name="values_inst_desc_inst_fkey",
+            ['desc_inst'],
+            ['descriptors_inst.id'],
+            name='values_inst_desc_inst_fkey',
         ),
-        PrimaryKeyConstraint("id", name="values_inst_pkey"),
-        UniqueConstraint("dataset", "id_formal", name="values_inst_dataset_id_formal_key"),
-        Index("idx_values_inst_dataset", "dataset"),
-        Index("idx_values_inst_dataset_id_formal", "dataset", "id_formal"),
-        Index("idx_values_inst_dataset_id_sam", "dataset", "id_sam"),
-        Index("idx_values_inst_dataset_id_sub", "dataset", "id_sub"),
-        Index("idx_values_inst_desc_inst", "desc_inst"),
-        Index("idx_values_inst_id_formal", "id_formal"),
-        Index("idx_values_inst_id_sam", "id_sam"),
-        Index("idx_values_inst_id_sub", "id_sub"),
+        PrimaryKeyConstraint('id', name='values_inst_pkey'),
+        UniqueConstraint('dataset', 'id_formal', name='values_inst_dataset_id_formal_key'),
+        Index('idx_values_inst_dataset', 'dataset'),
+        Index('idx_values_inst_dataset_id_formal', 'dataset', 'id_formal'),
+        Index('idx_values_inst_dataset_id_sam', 'dataset', 'id_sam'),
+        Index('idx_values_inst_dataset_id_sub', 'dataset', 'id_sub'),
+        Index('idx_values_inst_desc_inst', 'desc_inst'),
+        Index('idx_values_inst_id_formal', 'id_formal'),
+        Index('idx_values_inst_id_sam', 'id_sam'),
+        Index('idx_values_inst_id_sub', 'id_sub'),
     )
 
     id = mapped_column(
@@ -995,23 +995,23 @@ class ValuesInst(Base):
             cache=1,
         ),
     )
-    type = mapped_column(Enum("subject", "sample", "below", name="instance_type"), nullable=False)
+    type = mapped_column(Enum('subject', 'sample', 'below', name='instance_type'), nullable=False)
     id_sub = mapped_column(Text, nullable=False)
     desc_inst = mapped_column(Integer)
-    dataset = mapped_column(Uuid, ForeignKey("objects.id"))
+    dataset = mapped_column(Uuid, ForeignKey('objects.id'))
     id_formal = mapped_column(Text)
     local_identifier = mapped_column(Text)
     id_sam = mapped_column(Text)
 
-    objects: Mapped[Optional["Objects"]] = relationship(
-        "Objects",
-        back_populates="values_inst",
+    objects: Mapped[Optional['Objects']] = relationship(
+        'Objects',
+        back_populates='values_inst',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    descriptors_inst: Mapped[Optional["DescriptorsInst"]] = relationship(
-        "DescriptorsInst",
-        back_populates="values_inst",
+    descriptors_inst: Mapped[Optional['DescriptorsInst']] = relationship(
+        'DescriptorsInst',
+        back_populates='values_inst',
         viewonly=True,
         # cascade="all, delete-orphan",
         # single_parent=True,
@@ -1044,59 +1044,59 @@ class ValuesInst(Base):
     #     secondaryjoin=lambda: ValuesInst.id == t_instance_parent.c.id,
     #     back_populates="values_inst1",
     # )
-    values_cat: Mapped[List["ValuesCat"]] = relationship("ValuesCat", uselist=True, back_populates="values_inst")
-    values_quant: Mapped[List["ValuesQuant"]] = relationship(
-        "ValuesQuant",
+    values_cat: Mapped[List['ValuesCat']] = relationship('ValuesCat', uselist=True, back_populates='values_inst')
+    values_quant: Mapped[List['ValuesQuant']] = relationship(
+        'ValuesQuant',
         uselist=True,
-        back_populates="values_inst",
+        back_populates='values_inst',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
 
 
 t_equiv_inst = Table(
-    "equiv_inst",
+    'equiv_inst',
     metadata,
-    Column("left_thing", Integer, nullable=False),
-    Column("right_thing", Integer, nullable=False),
-    CheckConstraint("left_thing <> right_thing", name="sse_no_self"),
-    ForeignKeyConstraint(["left_thing"], ["values_inst.id"], name="equiv_inst_left_thing_fkey"),
-    ForeignKeyConstraint(["right_thing"], ["values_inst.id"], name="equiv_inst_right_thing_fkey"),
-    PrimaryKeyConstraint("left_thing", "right_thing", name="equiv_inst_pkey"),
+    Column('left_thing', Integer, nullable=False),
+    Column('right_thing', Integer, nullable=False),
+    CheckConstraint('left_thing <> right_thing', name='sse_no_self'),
+    ForeignKeyConstraint(['left_thing'], ['values_inst.id'], name='equiv_inst_left_thing_fkey'),
+    ForeignKeyConstraint(['right_thing'], ['values_inst.id'], name='equiv_inst_right_thing_fkey'),
+    PrimaryKeyConstraint('left_thing', 'right_thing', name='equiv_inst_pkey'),
 )
 
 
 t_instance_parent = Table(
-    "instance_parent",
+    'instance_parent',
     metadata,
-    Column("id", Integer, nullable=False),
-    Column("parent", Integer, nullable=False),
-    ForeignKeyConstraint(["id"], ["values_inst.id"], name="instance_parent_id_fkey"),
-    ForeignKeyConstraint(["parent"], ["values_inst.id"], name="instance_parent_parent_fkey"),
-    PrimaryKeyConstraint("id", "parent", name="instance_parent_pkey"),
+    Column('id', Integer, nullable=False),
+    Column('parent', Integer, nullable=False),
+    ForeignKeyConstraint(['id'], ['values_inst.id'], name='instance_parent_id_fkey'),
+    ForeignKeyConstraint(['parent'], ['values_inst.id'], name='instance_parent_parent_fkey'),
+    PrimaryKeyConstraint('id', 'parent', name='instance_parent_pkey'),
 )
 
 
 class ObjDescCat(Base):
-    __tablename__ = "obj_desc_cat"
+    __tablename__ = 'obj_desc_cat'
     __table_args__ = (
         ForeignKeyConstraint(
-            ["addr_desc_inst"],
-            ["addresses.id"],
-            name="obj_desc_cat_addr_desc_inst_fkey",
+            ['addr_desc_inst'],
+            ['addresses.id'],
+            name='obj_desc_cat_addr_desc_inst_fkey',
         ),
         ForeignKeyConstraint(
-            ["addr_field"],
-            ["addresses.id"],
-            name="obj_desc_cat_addr_field_fkey",
+            ['addr_field'],
+            ['addresses.id'],
+            name='obj_desc_cat_addr_field_fkey',
         ),
         ForeignKeyConstraint(
-            ["desc_cat"],
-            ["descriptors_cat.id"],
-            name="obj_desc_cat_desc_cat_fkey",
+            ['desc_cat'],
+            ['descriptors_cat.id'],
+            name='obj_desc_cat_desc_cat_fkey',
         ),
-        ForeignKeyConstraint(["object"], ["objects.id"], name="obj_desc_cat_object_fkey"),
-        PrimaryKeyConstraint("object", "desc_cat", name="obj_desc_cat_pkey"),
+        ForeignKeyConstraint(['object'], ['objects.id'], name='obj_desc_cat_object_fkey'),
+        PrimaryKeyConstraint('object', 'desc_cat', name='obj_desc_cat_pkey'),
     )
 
     object = mapped_column(Uuid, nullable=False)
@@ -1105,49 +1105,49 @@ class ObjDescCat(Base):
     addr_desc_inst = mapped_column(Integer)
     expect = mapped_column(Integer)
 
-    addresses: Mapped[Optional["Addresses"]] = relationship(
-        "Addresses",
+    addresses: Mapped[Optional['Addresses']] = relationship(
+        'Addresses',
         foreign_keys=[addr_desc_inst],
-        back_populates="obj_desc_cat",
+        back_populates='obj_desc_cat',
     )
-    addresses_: Mapped["Addresses"] = relationship(
-        "Addresses", foreign_keys=[addr_field], back_populates="obj_desc_cat_"
+    addresses_: Mapped['Addresses'] = relationship(
+        'Addresses', foreign_keys=[addr_field], back_populates='obj_desc_cat_'
     )
-    descriptors_cat: Mapped["DescriptorsCat"] = relationship("DescriptorsCat", back_populates="obj_desc_cat")
-    objects: Mapped["Objects"] = relationship("Objects", back_populates="obj_desc_cat")
-    values_cat: Mapped[List["ValuesCat"]] = relationship("ValuesCat", uselist=True, back_populates="obj_desc_cat")
+    descriptors_cat: Mapped['DescriptorsCat'] = relationship('DescriptorsCat', back_populates='obj_desc_cat')
+    objects: Mapped['Objects'] = relationship('Objects', back_populates='obj_desc_cat')
+    values_cat: Mapped[List['ValuesCat']] = relationship('ValuesCat', uselist=True, back_populates='obj_desc_cat')
 
 
 class ObjDescQuant(Base):
-    __tablename__ = "obj_desc_quant"
+    __tablename__ = 'obj_desc_quant'
     __table_args__ = (
         ForeignKeyConstraint(
-            ["addr_aspect"],
-            ["addresses.id"],
-            name="obj_desc_quant_addr_aspect_fkey",
+            ['addr_aspect'],
+            ['addresses.id'],
+            name='obj_desc_quant_addr_aspect_fkey',
         ),
         ForeignKeyConstraint(
-            ["addr_desc_inst"],
-            ["addresses.id"],
-            name="obj_desc_quant_addr_desc_inst_fkey",
+            ['addr_desc_inst'],
+            ['addresses.id'],
+            name='obj_desc_quant_addr_desc_inst_fkey',
         ),
         ForeignKeyConstraint(
-            ["addr_field"],
-            ["addresses.id"],
-            name="obj_desc_quant_addr_field_fkey",
+            ['addr_field'],
+            ['addresses.id'],
+            name='obj_desc_quant_addr_field_fkey',
         ),
         ForeignKeyConstraint(
-            ["addr_unit"],
-            ["addresses.id"],
-            name="obj_desc_quant_addr_unit_fkey",
+            ['addr_unit'],
+            ['addresses.id'],
+            name='obj_desc_quant_addr_unit_fkey',
         ),
         ForeignKeyConstraint(
-            ["desc_quant"],
-            ["descriptors_quant.id"],
-            name="obj_desc_quant_desc_quant_fkey",
+            ['desc_quant'],
+            ['descriptors_quant.id'],
+            name='obj_desc_quant_desc_quant_fkey',
         ),
-        ForeignKeyConstraint(["object"], ["objects.id"], name="obj_desc_quant_object_fkey"),
-        PrimaryKeyConstraint("object", "desc_quant", name="obj_desc_quant_pkey"),
+        ForeignKeyConstraint(['object'], ['objects.id'], name='obj_desc_quant_object_fkey'),
+        PrimaryKeyConstraint('object', 'desc_quant', name='obj_desc_quant_pkey'),
     )
 
     object = mapped_column(Uuid, nullable=False)
@@ -1158,95 +1158,95 @@ class ObjDescQuant(Base):
     addr_desc_inst = mapped_column(Integer)
     expect = mapped_column(Integer)
 
-    addresses: Mapped[Optional["Addresses"]] = relationship(
-        "Addresses",
+    addresses: Mapped[Optional['Addresses']] = relationship(
+        'Addresses',
         foreign_keys=[addr_desc_inst],
-        back_populates="obj_desc_quant_",
+        back_populates='obj_desc_quant_',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    addresses_aspect: Mapped[Optional["Addresses"]] = relationship(
-        "Addresses",
+    addresses_aspect: Mapped[Optional['Addresses']] = relationship(
+        'Addresses',
         foreign_keys=[addr_aspect],
-        back_populates="obj_desc_quant",
+        back_populates='obj_desc_quant',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    addresses_field: Mapped["Addresses"] = relationship(
-        "Addresses",
+    addresses_field: Mapped['Addresses'] = relationship(
+        'Addresses',
         foreign_keys=[addr_field],
-        back_populates="obj_desc_quant1",
+        back_populates='obj_desc_quant1',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    addresses_unit: Mapped[Optional["Addresses"]] = relationship(
-        "Addresses",
+    addresses_unit: Mapped[Optional['Addresses']] = relationship(
+        'Addresses',
         foreign_keys=[addr_unit],
-        back_populates="obj_desc_quant2",
+        back_populates='obj_desc_quant2',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    descriptors_quant: Mapped["DescriptorsQuant"] = relationship(
-        "DescriptorsQuant",
-        back_populates="obj_desc_quant",
+    descriptors_quant: Mapped['DescriptorsQuant'] = relationship(
+        'DescriptorsQuant',
+        back_populates='obj_desc_quant',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    objects: Mapped["Objects"] = relationship(
-        "Objects",
-        back_populates="obj_desc_quant",
+    objects: Mapped['Objects'] = relationship(
+        'Objects',
+        back_populates='obj_desc_quant',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    values_quant: Mapped[List["ValuesQuant"]] = relationship(
-        "ValuesQuant",
+    values_quant: Mapped[List['ValuesQuant']] = relationship(
+        'ValuesQuant',
         uselist=True,
-        back_populates="obj_desc_quant",
+        back_populates='obj_desc_quant',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
 
 
 class ValuesCat(Base):
-    __tablename__ = "values_cat"
+    __tablename__ = 'values_cat'
     __table_args__ = (
         CheckConstraint(
-            "value_open IS NOT NULL OR value_controlled IS NOT NULL",
-            name="constraint_values_cat_some_value",
+            'value_open IS NOT NULL OR value_controlled IS NOT NULL',
+            name='constraint_values_cat_some_value',
         ),
         ForeignKeyConstraint(
-            ["desc_cat"],
-            ["descriptors_cat.id"],
-            name="values_cat_desc_cat_fkey",
+            ['desc_cat'],
+            ['descriptors_cat.id'],
+            name='values_cat_desc_cat_fkey',
         ),
         ForeignKeyConstraint(
-            ["desc_inst"],
-            ["descriptors_inst.id"],
-            name="values_cat_desc_inst_fkey",
+            ['desc_inst'],
+            ['descriptors_inst.id'],
+            name='values_cat_desc_inst_fkey',
         ),
-        ForeignKeyConstraint(["instance"], ["values_inst.id"], name="values_cat_instance_fkey"),
+        ForeignKeyConstraint(['instance'], ['values_inst.id'], name='values_cat_instance_fkey'),
         ForeignKeyConstraint(
-            ["object", "desc_cat"],
-            ["obj_desc_cat.object", "obj_desc_cat.desc_cat"],
-            name="values_cat_object_desc_cat_fkey",
+            ['object', 'desc_cat'],
+            ['obj_desc_cat.object', 'obj_desc_cat.desc_cat'],
+            name='values_cat_object_desc_cat_fkey',
         ),
         ForeignKeyConstraint(
-            ["object", "desc_inst"],
-            ["obj_desc_inst.object", "obj_desc_inst.desc_inst"],
-            name="values_cat_object_desc_inst_fkey",
+            ['object', 'desc_inst'],
+            ['obj_desc_inst.object', 'obj_desc_inst.desc_inst'],
+            name='values_cat_object_desc_inst_fkey',
         ),
-        ForeignKeyConstraint(["object"], ["objects.id"], name="values_cat_object_fkey"),
+        ForeignKeyConstraint(['object'], ['objects.id'], name='values_cat_object_fkey'),
         ForeignKeyConstraint(
-            ["value_controlled"],
-            ["controlled_terms.id"],
-            name="values_cat_value_controlled_fkey",
+            ['value_controlled'],
+            ['controlled_terms.id'],
+            name='values_cat_value_controlled_fkey',
         ),
-        PrimaryKeyConstraint("id", name="values_cat_pkey"),
-        Index("idx_values_cat_desc_cat", "desc_cat"),
-        Index("idx_values_cat_desc_inst", "desc_inst"),
-        Index("idx_values_cat_instance", "instance"),
-        Index("idx_values_cat_object", "object"),
-        Index("idx_values_cat_value_controlled", "value_controlled"),
+        PrimaryKeyConstraint('id', name='values_cat_pkey'),
+        Index('idx_values_cat_desc_cat', 'desc_cat'),
+        Index('idx_values_cat_desc_inst', 'desc_inst'),
+        Index('idx_values_cat_instance', 'instance'),
+        Index('idx_values_cat_object', 'object'),
+        Index('idx_values_cat_value_controlled', 'value_controlled'),
     )
 
     id = mapped_column(
@@ -1267,45 +1267,45 @@ class ValuesCat(Base):
     value_controlled = mapped_column(Integer)
     instance = mapped_column(Integer)
 
-    descriptors_cat: Mapped["DescriptorsCat"] = relationship("DescriptorsCat", back_populates="values_cat")
-    descriptors_inst: Mapped["DescriptorsInst"] = relationship("DescriptorsInst", back_populates="values_cat")
-    values_inst: Mapped[Optional["ValuesInst"]] = relationship("ValuesInst", back_populates="values_cat")
-    obj_desc_cat: Mapped["ObjDescCat"] = relationship("ObjDescCat", back_populates="values_cat")
-    obj_desc_inst: Mapped["ObjDescInst"] = relationship("ObjDescInst", back_populates="values_cat")
-    objects: Mapped["Objects"] = relationship("Objects", back_populates="values_cat")
-    controlled_terms: Mapped[Optional["ControlledTerms"]] = relationship("ControlledTerms", back_populates="values_cat")
+    descriptors_cat: Mapped['DescriptorsCat'] = relationship('DescriptorsCat', back_populates='values_cat')
+    descriptors_inst: Mapped['DescriptorsInst'] = relationship('DescriptorsInst', back_populates='values_cat')
+    values_inst: Mapped[Optional['ValuesInst']] = relationship('ValuesInst', back_populates='values_cat')
+    obj_desc_cat: Mapped['ObjDescCat'] = relationship('ObjDescCat', back_populates='values_cat')
+    obj_desc_inst: Mapped['ObjDescInst'] = relationship('ObjDescInst', back_populates='values_cat')
+    objects: Mapped['Objects'] = relationship('Objects', back_populates='values_cat')
+    controlled_terms: Mapped[Optional['ControlledTerms']] = relationship('ControlledTerms', back_populates='values_cat')
 
 
 class ValuesQuant(Base):
-    __tablename__ = "values_quant"
+    __tablename__ = 'values_quant'
     __table_args__ = (
         ForeignKeyConstraint(
-            ["desc_inst"],
-            ["descriptors_inst.id"],
-            name="values_quant_desc_inst_fkey",
+            ['desc_inst'],
+            ['descriptors_inst.id'],
+            name='values_quant_desc_inst_fkey',
         ),
         ForeignKeyConstraint(
-            ["desc_quant"],
-            ["descriptors_quant.id"],
-            name="values_quant_desc_quant_fkey",
+            ['desc_quant'],
+            ['descriptors_quant.id'],
+            name='values_quant_desc_quant_fkey',
         ),
-        ForeignKeyConstraint(["instance"], ["values_inst.id"], name="values_quant_instance_fkey"),
+        ForeignKeyConstraint(['instance'], ['values_inst.id'], name='values_quant_instance_fkey'),
         ForeignKeyConstraint(
-            ["object", "desc_inst"],
-            ["obj_desc_inst.object", "obj_desc_inst.desc_inst"],
-            name="values_quant_object_desc_inst_fkey",
+            ['object', 'desc_inst'],
+            ['obj_desc_inst.object', 'obj_desc_inst.desc_inst'],
+            name='values_quant_object_desc_inst_fkey',
         ),
         ForeignKeyConstraint(
-            ["object", "desc_quant"],
-            ["obj_desc_quant.object", "obj_desc_quant.desc_quant"],
-            name="values_quant_object_desc_quant_fkey",
+            ['object', 'desc_quant'],
+            ['obj_desc_quant.object', 'obj_desc_quant.desc_quant'],
+            name='values_quant_object_desc_quant_fkey',
         ),
-        ForeignKeyConstraint(["object"], ["objects.id"], name="values_quant_object_fkey"),
-        PrimaryKeyConstraint("id", name="values_quant_pkey"),
-        Index("idx_values_quant_desc_inst", "desc_inst"),
-        Index("idx_values_quant_desc_quant", "desc_quant"),
-        Index("idx_values_quant_instance", "instance"),
-        Index("idx_values_quant_object", "object"),
+        ForeignKeyConstraint(['object'], ['objects.id'], name='values_quant_object_fkey'),
+        PrimaryKeyConstraint('id', name='values_quant_pkey'),
+        Index('idx_values_quant_desc_inst', 'desc_inst'),
+        Index('idx_values_quant_desc_quant', 'desc_quant'),
+        Index('idx_values_quant_instance', 'instance'),
+        Index('idx_values_quant_object', 'object'),
     )
 
     id = mapped_column(
@@ -1321,7 +1321,7 @@ class ValuesQuant(Base):
     )
     value = mapped_column(Numeric, nullable=False)
     object = mapped_column(
-        Uuid, ForeignKey("objects.id"), nullable=False
+        Uuid, ForeignKey('objects.id'), nullable=False
     )  # TODO: object is not obj id, but File Obj ID that | should be same
     desc_inst = mapped_column(Integer, nullable=False)
     desc_quant = mapped_column(Integer, nullable=False)
@@ -1330,47 +1330,47 @@ class ValuesQuant(Base):
     orig_value = mapped_column(String)
     orig_units = mapped_column(String)
 
-    descriptors_inst: Mapped["DescriptorsInst"] = relationship(
-        "DescriptorsInst",
-        back_populates="values_quant",
+    descriptors_inst: Mapped['DescriptorsInst'] = relationship(
+        'DescriptorsInst',
+        back_populates='values_quant',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    descriptors_quant: Mapped["DescriptorsQuant"] = relationship(
-        "DescriptorsQuant",
-        back_populates="values_quant",
+    descriptors_quant: Mapped['DescriptorsQuant'] = relationship(
+        'DescriptorsQuant',
+        back_populates='values_quant',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    values_inst: Mapped[Optional["ValuesInst"]] = relationship(
-        "ValuesInst",
-        back_populates="values_quant",
+    values_inst: Mapped[Optional['ValuesInst']] = relationship(
+        'ValuesInst',
+        back_populates='values_quant',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
-    obj_desc_inst: Mapped["ObjDescInst"] = relationship(
-        "ObjDescInst",
-        back_populates="values_quant",
+    obj_desc_inst: Mapped['ObjDescInst'] = relationship(
+        'ObjDescInst',
+        back_populates='values_quant',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
         # sync_backref=False,
     )
-    obj_desc_quant: Mapped["ObjDescQuant"] = relationship(
-        "ObjDescQuant",
-        back_populates="values_quant",
+    obj_desc_quant: Mapped['ObjDescQuant'] = relationship(
+        'ObjDescQuant',
+        back_populates='values_quant',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
         # sync_backref=False,
     )
-    objects: Mapped["Objects"] = relationship(
-        "Objects",
-        back_populates="values_quant",
+    objects: Mapped['Objects'] = relationship(
+        'Objects',
+        back_populates='values_quant',
         viewonly=True,
-        cascade="all, delete-orphan",
+        cascade='all, delete-orphan',
     )
 
     @staticmethod
-    def update_desc_inst(target: "ValuesQuant", value, oldvalue, initiator) -> None:
+    def update_desc_inst(target: 'ValuesQuant', value, oldvalue, initiator) -> None:
         """
         Automatically update desc_inst when descriptors_inst parent is updated.
         """
@@ -1382,7 +1382,7 @@ class ValuesQuant(Base):
         """
         Register event listeners for the ValuesQuant model.
         """
-        event.listen(ValuesQuant.descriptors_inst, "set", ValuesQuant.update_desc_inst)
+        event.listen(ValuesQuant.descriptors_inst, 'set', ValuesQuant.update_desc_inst)
 
 
 # @event.listens_for(ValuesQuant.descriptors_inst, "set")
@@ -1404,10 +1404,10 @@ def update_all_children(target, value, oldvalue, initiator):
             for related_obj in related_objects:
                 # Update attributes on related objects as needed
                 # For demonstration, we'll update an attribute based on parent_value
-                if hasattr(related_obj, "child_value"):
-                    related_obj.child_value = f"Updated from parent_value: {value}"
-                if hasattr(related_obj, "other_child_value"):
-                    related_obj.other_child_value = f"Updated from parent_value: {value}"
+                if hasattr(related_obj, 'child_value'):
+                    related_obj.child_value = f'Updated from parent_value: {value}'
+                if hasattr(related_obj, 'other_child_value'):
+                    related_obj.other_child_value = f'Updated from parent_value: {value}'
 
 
 # # Attach the listener to all attributes on the Parent model
@@ -1449,7 +1449,7 @@ def update_foreign_key(target, value, oldvalue, initiator):
 def add_dynamic_listeners(base):
     for cls in base.__subclasses__():
         for relationship_prop in cls.__mapper__.relationships:
-            event.listen(getattr(cls, relationship_prop.key), "set", update_foreign_key)
+            event.listen(getattr(cls, relationship_prop.key), 'set', update_foreign_key)
 
 
 # Attach listeners to all models in the Base

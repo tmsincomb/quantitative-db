@@ -19,7 +19,7 @@ class Dataclass(Protocol):
 
 @dataclass
 class Unit:
-    __table__ = "units"
+    __table__ = 'units'
     id = Column(Integer, primary_key=True)
     label = Column(String, nullable=True)
     iri = Column(String)
@@ -27,7 +27,7 @@ class Unit:
 
 @dataclass
 class Objects:
-    __table__ = "objects"
+    __table__ = 'objects'
     id: UUID
     id_type: str
     id_file: int | None = None
@@ -36,7 +36,7 @@ class Objects:
 
 @dataclass
 class DescriptorQuant:
-    __table__ = "descriptors_quant"
+    __table__ = 'descriptors_quant'
     label: str
     aggregation_type: str
     unit: str | None = None
@@ -44,12 +44,12 @@ class DescriptorQuant:
     domain: str | None = None
     description: str | None = None
     curator_note: str | None = None
-    shape: str = "scalar"
+    shape: str = 'scalar'
 
 
 @dataclass
 class ValuesQuant:
-    __table__ = "values_quant"
+    __table__ = 'values_quant'
     value: float
     object: UUID
     desc_inst: int
@@ -62,14 +62,14 @@ class ValuesQuant:
 
 @dataclass
 class DescriptorInst:
-    __table__ = "descriptors_inst"
+    __table__ = 'descriptors_inst'
     label: str
     description: str | None = None
     iri: str | None = None
 
 
 class ObjDescQuant:
-    __table__ = "obj_desc_quant"
+    __table__ = 'obj_desc_quant'
     object: UUID
     desc_inst: int
     desc_quant: int
@@ -96,19 +96,19 @@ class Ingest:
             self.session.commit()
             return result
         except Exception as e:
-            print(f"Error: {e}")
+            print(f'Error: {e}')
             self.session.rollback()
 
     def insert_units(self, units: typing.Sequence[Unit]) -> None:
-        query = r"INSERT INTO units (label, iri) VALUES (:label, :iri)"
+        query = r'INSERT INTO units (label, iri) VALUES (:label, :iri)'
         self.execute_insert(query=query, dataclasses=units)
 
     def insert_objects(self, objects: typing.Sequence[Objects]) -> None:
-        query = r"INSERT INTO objects (id, id_type) VALUES (:id, :id_type) ON CONFLICT DO NOTHING"
+        query = r'INSERT INTO objects (id, id_type) VALUES (:id, :id_type) ON CONFLICT DO NOTHING'
         self.execute_insert(query=query, dataclasses=objects)
 
     def insert_descriptors_quant(self, descriptor_quants: typing.Sequence[DescriptorQuant]) -> None:
-        query = r"INSERT INTO descriptors_quant (label, domain, aspect, unit, aggregation_type) VALUES (:label, :domain, :aspect, :unit, :aggregation_type)"
+        query = r'INSERT INTO descriptors_quant (label, domain, aspect, unit, aggregation_type) VALUES (:label, :domain, :aspect, :unit, :aggregation_type)'
         self.execute_insert(query=query, dataclasses=descriptor_quants)
 
     def insert_values_quant(

@@ -50,25 +50,25 @@ def delete_object(session: Session, record_id):
 
 
 # Example usage
-if __name__ == "__main__":
+if __name__ == '__main__':
     # Create a new record
     new_record = create_object(
         session,
-        id="some-uuid",
-        id_type="dataset",
+        id='some-uuid',
+        id_type='dataset',
         id_file=123,
-        id_internal="another-uuid",
+        id_internal='another-uuid',
     )
-    print(f"Created: {new_record}")
+    print(f'Created: {new_record}')
 
     # Read records
     records = read_objects(session)
-    print(f"Read: {records}")
+    print(f'Read: {records}')
 
     # Update a record
     updated_record = update_object(session, new_record.id, id_file=456)
-    print(f"Updated: {updated_record}")
+    print(f'Updated: {updated_record}')
 
     # Delete a record
     deleted_record = delete_object(session, new_record.id)
-    print(f"Deleted: {deleted_record}")
+    print(f'Deleted: {deleted_record}')

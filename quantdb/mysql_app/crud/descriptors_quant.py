@@ -36,7 +36,7 @@ def create_descriptors_quant(db_session: Session, **kwargs: Any) -> DescriptorsQ
     # Check if the record already exists based on unique constraints or identifying fields
     existing_record = db_session.query(DescriptorsQuant).filter_by(**kwargs).first()
     if existing_record:
-        logger.info("Record already exists: %s", existing_record)
+        logger.info('Record already exists: %s', existing_record)
         return existing_record
 
     # Create a new record if it doesn't exist
@@ -99,11 +99,11 @@ def update_descriptors_quant(db_session: Session, record_id: int, **kwargs: dict
     """
     record = db_session.query(DescriptorsQuant).get(record_id)
     if not record:
-        print(f"Record with id {record_id} not found")
+        print(f'Record with id {record_id} not found')
         return None
     for key, value in kwargs.items():
         setattr(record, key, value)
-    print(f"Updated record: {record}")
+    print(f'Updated record: {record}')
     session.commit()
     return record
 
@@ -134,26 +134,26 @@ def delete_descriptors_quant(db_session: Session, record_id: int) -> None | Any:
 
 
 # Example usage
-if __name__ == "__main__":
+if __name__ == '__main__':
     # Create a new record
     new_record = create_descriptors_quant(
         session,
-        label="Example Label",
-        shape="scalar",
-        aggregation_type="instance",
+        label='Example Label',
+        shape='scalar',
+        aggregation_type='instance',
         unit=1,
         aspect=1,
         domain=1,
     )
-    print(f"Created: {new_record}")
+    print(f'Created: {new_record}')
 
     # Read records
     records = read_descriptors_quant(session)
-    print(f"Read: {records}")
+    print(f'Read: {records}')
 
     # Update a record
-    updated_record = update_descriptors_quant(session, new_record.id, label="Updated Label")
-    print(f"Updated: {updated_record}")
+    updated_record = update_descriptors_quant(session, new_record.id, label='Updated Label')
+    print(f'Updated: {updated_record}')
 
     # # Delete a record
     # deleted_record = delete_descriptors_quant(session, new_record.id)
