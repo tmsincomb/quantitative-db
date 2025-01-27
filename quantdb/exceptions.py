@@ -3,12 +3,12 @@ class QuantdbError(Exception):
 
 
 class UnknownArg(QuantdbError):
-    """ url query parameter unknown """
+    """url query parameter unknown"""
 
 
 class ArgMissingValue(QuantdbError):
-    """ url query parameter contained no value """
+    """url query parameter contained no value"""
 
 
 class BadValue(QuantdbError):
-    """ url query parameter contained a malformed value """
+    """url query parameter contained a malformed value"""

@@ -13,10 +13,10 @@ def test():
     client = app.test_client()
     runner = app.test_cli_runner()
 
-    dataset_uuid = "aa43eda8-b29a-4c25-9840-ecbd57598afc"
-    some_object = "414886a9-9ec7-447e-b4d8-3ae42fda93b7"  # XXX FAKE
-    actual_package_uuid = "15bcbcd5-b054-40ef-9b5c-6a260d441621"
-    base = "http://localhost:8989/api/1/"
+    dataset_uuid = 'aa43eda8-b29a-4c25-9840-ecbd57598afc'
+    some_object = '414886a9-9ec7-447e-b4d8-3ae42fda93b7'  # XXX FAKE
+    actual_package_uuid = '15bcbcd5-b054-40ef-9b5c-6a260d441621'
+    base = 'http://localhost:8989/api/1/'
     urls = (
         f'{base}values/inst',
         f'{base}values/inst?dataset={dataset_uuid}',
@@ -26,12 +26,10 @@ def test():
         f'{base}values/inst?dataset={dataset_uuid}&inst-parent=sub-f001',
         f'{base}values/inst?dataset={dataset_uuid}&inst-parent=sam-r-seg-c1&inst-parent=sam-l-seg-c1',
         f'{base}values/inst?desc-inst=nerve-volume',
-
         f'{base}objects?dataset={dataset_uuid}',
         f'{base}objects?dataset={dataset_uuid}&aspect=distance',
         f'{base}objects?dataset={dataset_uuid}&aspect=distance&value-quant-min=0.5',  # expect nothing
         f'{base}objects?dataset={dataset_uuid}&aspect=distance&value-quant-min=0.5&union-cat-quant=true',
-
         f'{base}objects?dataset={dataset_uuid}&subject=sub-f001',
         f'{base}objects?subject=sub-f001',
         f'{base}objects?subject=sub-f001&union-cat-quant=true',
@@ -46,7 +44,6 @@ def test():
         f'{base}objects?aspect=distance&value-quant-min=0.5',
         f'{base}objects?aspect=distance&value-quant-min=0.5&source-only=true',
         f'{base}objects?desc-inst=nerve-volume&aspect=distance&value-quant-min=0.5&source-only=true',
-
         # values-quant
         f'{base}values/quant?dataset={dataset_uuid}&aspect=distance',
         f'{base}values/quant?object={actual_package_uuid}&aspect=distance',
@@ -54,50 +51,47 @@ def test():
         f'{base}values/quant?aspect=distance-via-reva-ft-sample-id-normalized-v1',
         f'{base}values/quant?aspect=distance-via-reva-ft-sample-id-normalized-v1&agg-type=instance',
         f'{base}values/quant?aspect=distance-via-reva-ft-sample-id-normalized-v1&value-quant-min=0.4&value-quant-max=0.7',
-
         # values-cat
-        f"{base}values/cat?object={actual_package_uuid}",
-        f"{base}values/cat?object={actual_package_uuid}&union-cat-quant=true",  # shouldn't need it in this case
-        f"{base}values/cat-quant?object={actual_package_uuid}",
-        f"{base}values/cat-quant?object={actual_package_uuid}&union-cat-quant=true",
+        f'{base}values/cat?object={actual_package_uuid}',
+        f'{base}values/cat?object={actual_package_uuid}&union-cat-quant=true',  # shouldn't need it in this case
+        f'{base}values/cat-quant?object={actual_package_uuid}',
+        f'{base}values/cat-quant?object={actual_package_uuid}&union-cat-quant=true',
         # values-cat-quant
-        f"{base}values?dataset={dataset_uuid}&aspect=distance&value-quant-min=0.5",
-        f"{base}values?dataset={dataset_uuid}&aspect=distance&value-quant-min=0.5&union-cat-quant=true",
-        f"{base}values?object={actual_package_uuid}",
-        f"{base}values?object={actual_package_uuid}&union-cat-quant=true",
-        f"{base}values/inst?object={actual_package_uuid}",
-        f"{base}values/inst?object={actual_package_uuid}&union-cat-quant=true",
+        f'{base}values?dataset={dataset_uuid}&aspect=distance&value-quant-min=0.5',
+        f'{base}values?dataset={dataset_uuid}&aspect=distance&value-quant-min=0.5&union-cat-quant=true',
+        f'{base}values?object={actual_package_uuid}',
+        f'{base}values?object={actual_package_uuid}&union-cat-quant=true',
+        f'{base}values/inst?object={actual_package_uuid}',
+        f'{base}values/inst?object={actual_package_uuid}&union-cat-quant=true',
         # prov
-        f"{base}values/inst?prov=true",
-        f"{base}values/quant?aspect=distance&prov=true",
-        f"{base}values/cat?object={actual_package_uuid}",
-        f"{base}values/cat?object={actual_package_uuid}&prov=true",  # FIXME somehow this has a 3x increase in records, and non-distinct
-        f"{base}values/cat-quant?object={actual_package_uuid}&union-cat-quant=true",
-        f"{base}values/cat-quant?object={actual_package_uuid}&union-cat-quant=true&prov=true",
-        f"{base}values/cat-quant",
-        f"{base}values/cat-quant?prov=true",
-        f"{base}values/cat-quant?union-cat-quant=true",
-        f"{base}values/cat-quant?union-cat-quant=true&prov=true",
+        f'{base}values/inst?prov=true',
+        f'{base}values/quant?aspect=distance&prov=true',
+        f'{base}values/cat?object={actual_package_uuid}',
+        f'{base}values/cat?object={actual_package_uuid}&prov=true',  # FIXME somehow this has a 3x increase in records, and non-distinct
+        f'{base}values/cat-quant?object={actual_package_uuid}&union-cat-quant=true',
+        f'{base}values/cat-quant?object={actual_package_uuid}&union-cat-quant=true&prov=true',
+        f'{base}values/cat-quant',
+        f'{base}values/cat-quant?prov=true',
+        f'{base}values/cat-quant?union-cat-quant=true',
+        f'{base}values/cat-quant?union-cat-quant=true&prov=true',
         # desc
-        f"{base}desc/inst",
-        f"{base}desc/cat",
-        f"{base}desc/quant",
-        f"{base}desc/inst?include-unused=true",
-        f"{base}desc/cat?include-unused=true",
-        f"{base}desc/quant?include-unused=true",
+        f'{base}desc/inst',
+        f'{base}desc/cat',
+        f'{base}desc/quant',
+        f'{base}desc/inst?include-unused=true',
+        f'{base}desc/cat?include-unused=true',
+        f'{base}desc/quant?include-unused=true',
         # descriptor values
-        f"{base}terms",
-        f"{base}aspects",
-        f"{base}units",
-        f"{base}terms?include-unused=true",
-        f"{base}aspects?include-unused=true",
-        f"{base}units?include-unused=true",
+        f'{base}terms',
+        f'{base}aspects',
+        f'{base}units',
+        f'{base}terms?include-unused=true',
+        f'{base}aspects?include-unused=true',
+        f'{base}units?include-unused=true',
         # TODO maybe shapes here as well?
-
         f'{base}terms?inst-parent=sam-r-seg-c1&inst-parent=sam-l-seg-c1',
         f'{base}aspects?inst-parent=sam-r-seg-c1&inst-parent=sam-l-seg-c1',
         f'{base}units?inst-parent=sam-r-seg-c1&inst-parent=sam-l-seg-c1',
-
     )
     # log.setLevel(9)
     resps = []
@@ -126,9 +120,7 @@ def test_demo_load():
     dataset_uuid = '55c5b69c-a5b8-4881-a105-e4048af26fa5'
     package_uuid = '20720c2e-83fb-4454-bef1-1ce6a97fa748'
     base = 'http://localhost:8989/api/1/'
-    urls = (
-        f'{base}values/cat-quant?desc-inst=fascicle-cross-section',
-    )
+    urls = (f'{base}values/cat-quant?desc-inst=fascicle-cross-section',)
 
     resps = []
     for url in urls:
