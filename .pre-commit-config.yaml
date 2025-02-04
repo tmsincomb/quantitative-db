@@ -18,4 +18,4 @@ repos:
     hooks:
       - id: blue
         args: ["-l", "120"]
-        exclude: quantdb/api.py
+        exclude: api.py
