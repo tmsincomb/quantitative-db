@@ -6,8 +6,6 @@ from collections import defaultdict
 import requests
 from sparcur import objects as sparcur_objects  # register pathmeta type
 from sparcur.paths import Path
-
-# FIXME sparcur dependencies, or keep ingest separate
 from sparcur.utils import PennsieveId as RemoteId
 from sparcur.utils import fromJson
 from sqlalchemy import create_engine
@@ -17,6 +15,8 @@ from sqlalchemy.sql import bindparam
 from sqlalchemy.sql import text as sql_text
 
 from quantdb.utils import dbUri, isoformat, log
+
+# FIXME sparcur dependencies, or keep ingest separate
 
 ######### start database interaction section
 
