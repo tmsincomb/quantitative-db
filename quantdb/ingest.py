@@ -5,14 +5,8 @@ from collections import defaultdict
 
 import requests
 from sparcur import objects as sparcur_objects  # register pathmeta type
-
-<<<<<<< HEAD
-# FIXME sparcur dependencies, or keep ingest separate
-=======
 from sparcur.paths import Path
 from sparcur.utils import PennsieveId as RemoteId
-
->>>>>>> master
 from sparcur.utils import fromJson
 from sqlalchemy import create_engine
 from sqlalchemy.dialects.postgresql import JSONB
@@ -22,20 +16,12 @@ from sqlalchemy.sql import text as sql_text
 
 from quantdb.utils import dbUri, isoformat, log
 
-<<<<<<< HEAD
-=======
-
 # FIXME sparcur dependencies, or keep ingest separate
->>>>>>> master
 
 ######### start database interaction section
 
 
-<<<<<<< HEAD
-log = log.getChild("ingest")
-=======
 log = log.getChild('ingest')
->>>>>>> master
 
 try:
     if get_ipython().__class__.__name__ == "ZMQInteractiveShell":
@@ -115,13 +101,8 @@ def makeParamsValues(*value_sets, constants=tuple(), types=tuple(), row_types=tu
         else:
             proto_params = [(tuple(getname(value) for value in row), row) for row in values]
 
-<<<<<<< HEAD
-        values_template = ", ".join(
-            "(" + ", ".join(constants + tuple(":" + name for name in names)) + ")" for names, _ in proto_params
-=======
         values_template = ', '.join(
             '(' + ', '.join(constants + tuple(':' + name for name in names)) + ')' for names, _ in proto_params
->>>>>>> master
         )
         yield values_template
         if row_types:
@@ -157,19 +138,11 @@ t throacic
 a abdominal
 """
 sam_ordering = {
-<<<<<<< HEAD
-    "l": 0,  # left
-    "r": 0,  # right
-    "c": 0,  # cardiac safe to keep at zero since the c index usually come after t
-    "a": 1,  # anterior abdominal
-    "p": 1,  # posterior abdominal
-=======
     'l': 0,  # left
     'r': 0,  # right
     'c': 1,  # central +cardiac safe to keep at zero since the c index usually come after t+ FIXME means central so it is where both sides merge so have to redo the ordering which will force a v2
     'a': 2,  # anterior
     'p': 2,  # posterior
->>>>>>> master
 }
 seg_ordering = {
     "c": 0,  # cervical
@@ -192,11 +165,7 @@ def anat_index(sample):
             seg_ind = v
             break
     else:
-<<<<<<< HEAD
-        if sam_id == "c":
-=======
         if sam_id == 'c':
->>>>>>> master
             # print('c sample', sample)
             # rest = int(''.join(_ for _ in seg_id if _.isdigit()))
             rest = int(seg_id[:-1])
@@ -219,18 +188,6 @@ def pps(path_structure):
     if len(path_structure) == 6:
         # FIXME utter hack
         top, subject, sam_1, segment, modality, file = path_structure
-<<<<<<< HEAD
-        p1 = sam_1, subject  # child, parent to match db convention wasDerivedFrom
-        p2 = segment, sam_1
-        return {
-            "parents": (p1, p2),
-            "subject": subject,
-            "sample": segment,
-            "modality": modality,
-            # note that because we do not convert to a single value we cannot include raw_anat_index in the qdb but that's ok
-            "raw_anat_index_v1": anat_index(segment),
-        }
-=======
     elif len(path_structure) == 5:
         top, subject, sam_1, segment, file = path_structure
         modality = None  # FIXME from metadata sample id
@@ -238,7 +195,6 @@ def pps(path_structure):
             modality = 'microct'
         else:
             raise NotImplementedError(path_structure)
->>>>>>> master
     else:
         raise NotImplementedError(path_structure)
 
@@ -273,19 +229,6 @@ def pps123(path_structure):
 
 def ext_pmeta(j, _pps=pps):
     out = {}
-<<<<<<< HEAD
-    out["dataset"] = j["dataset_id"]
-    out["object"] = j["remote_id"]
-    out["file_id"] = (
-        j["file_id"] if "file_id" in j else int(j["uri_api"].rsplit("/")[-1])
-    )  # XXX old pathmeta schema that didn't include file id
-    ps = pathlib.Path(j["dataset_relative_path"]).parts
-    [p for p in ps if p.startswith("sub-") or p.startswith("sam-")]
-    out.update(pps(ps))
-    return out
-
-
-=======
     out['dataset'] = j['dataset_id']
     out['object'] = j['remote_id']
     out['file_id'] = (
@@ -301,52 +244,12 @@ def ext_pmeta123(j):
     return ext_pmeta(j, _pps=pps123)
 
 
->>>>>>> master
 class Queries:
     def __init__(self, session):
         self.session = session
 
     def address_from_fadd_type_fadd(self, fadd_type, fadd):
         # FIXME multi etc.
-<<<<<<< HEAD
-        res = [
-            i
-            for i, in self.session.execute(
-                sql_text("select * from address_from_fadd_type_fadd(:fadd_type, :fadd)"),
-                dict(fadd_type=fadd_type, fadd=fadd),
-            )
-        ]
-        if res:
-            return res[0]
-
-    def desc_inst_from_label(self, label):
-        # FIXME multi etc.
-        res = [
-            i for i, in self.session.execute(sql_text("select * from desc_inst_from_label(:label)"), dict(label=label))
-        ]
-        if res:
-            return res[0]
-
-    def desc_quant_from_label(self, label):
-        # FIXME multi etc.
-        res = [
-            i for i, in self.session.execute(sql_text("select * from desc_quant_from_label(:label)"), dict(label=label))
-        ]
-        if res:
-            return res[0]
-
-    def desc_cat_from_label_domain_label(self, label, domain_label):
-        # FIXME multi etc.
-        res = [
-            i
-            for i, in self.session.execute(
-                sql_text("select * from desc_cat_from_label_domain_label(:label, :domain_label)"),
-                dict(label=label, domain_label=domain_label),
-            )
-        ]
-        if res:
-            return res[0]
-=======
         params = dict(fadd_type=fadd_type, fadd=fadd)
         res = [
             i
@@ -398,7 +301,6 @@ class Queries:
                 raise ValueError(f'needed a result here {params}')
             else:
                 return out
->>>>>>> master
 
     def cterm_from_label(self, label):
         # FIXME multi etc.
@@ -411,12 +313,6 @@ class Queries:
             else:
                 return out
 
-<<<<<<< HEAD
-    def insts_from_dataset_ids(self, dataset, ids):
-        return list(
-            self.session.execute(
-                sql_text("select * from insts_from_dataset_ids(:dataset, :ids)"), dict(dataset=dataset, ids=ids)
-=======
     def insts_from_dataset(self, dataset):
         return list(self.session.execute(sql_text('select * from insts_from_dataset(:dataset)'), dict(dataset=dataset)))
 
@@ -424,7 +320,6 @@ class Queries:
         return list(
             self.session.execute(
                 sql_text('select * from insts_from_dataset_ids(:dataset, :ids)'), dict(dataset=dataset, ids=ids)
->>>>>>> master
             )
         )
 
@@ -433,19 +328,6 @@ class InternalIds:
     def __init__(self, queries):
         q = queries
         self._q = queries
-<<<<<<< HEAD
-
-        self.addr_suid = q.address_from_fadd_type_fadd("tabular-header", "id_sub")
-        self.addr_said = q.address_from_fadd_type_fadd("tabular-header", "id_sam")
-        self.addr_spec = q.address_from_fadd_type_fadd("tabular-header", "species")
-        self.addr_saty = q.address_from_fadd_type_fadd("tabular-header", "sample_type")
-
-        self.addr_tmod = q.address_from_fadd_type_fadd("tabular-header", "modality")
-        # addr_trai = address_from_fadd_type_fadd('tabular-header', 'raw_anat_index')
-        # addr_tnai = address_from_fadd_type_fadd('tabular-header', 'norm_anat_index')
-        # addr_context = address_from_fadd_type_fadd('context', '#/path-metadata/{index of match remote_id}/dataset_relative_path')  # XXX this doesn't do what we want, I think what we really would want in these contexts are objects_internal that reference the file system state for a given updated snapshot, that is the real "object" that corresponds to the path-metadata.json that we are working from
-
-=======
 
         self.addr_suid = q.address_from_fadd_type_fadd('tabular-header', 'id_sub')
         self.addr_said = q.address_from_fadd_type_fadd('tabular-header', 'id_sam')
@@ -472,40 +354,16 @@ class InternalIds:
         # addr_tnai = address_from_fadd_type_fadd('tabular-header', 'norm_anat_index')
         # addr_context = address_from_fadd_type_fadd('context', '#/path-metadata/{index of match remote_id}/dataset_relative_path')  # XXX this doesn't do what we want, I think what we really would want in these contexts are objects_internal that reference the file system state for a given updated snapshot, that is the real "object" that corresponds to the path-metadata.json that we are working from
 
->>>>>>> master
         # addr_jpmod = address_from_fadd_type_fadd('json-path-with-types', '#/#int/modality')
         # addr_jprai = address_from_fadd_type_fadd('json-path-with-types', '#/#int/anat_index')
         # addr_jpnai = address_from_fadd_type_fadd('json-path-with-types', '#/#int/norm_anat_index')
 
         self.addr_jpdrp = q.address_from_fadd_type_fadd(
-<<<<<<< HEAD
-            "json-path-with-types", "#/path-metadata/data/#int/dataset_relative_path"
-=======
             'json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path'
->>>>>>> master
         )
 
         # XXX these are more accurate if opaque
         self.addr_jpmod = q.address_from_fadd_type_fadd(
-<<<<<<< HEAD
-            "json-path-with-types", "#/path-metadata/data/#int/dataset_relative_path#derive-modality"
-        )
-        # addr_jprai = address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-raw-anat-index')
-        self.addr_jpnai = q.address_from_fadd_type_fadd(
-            "json-path-with-types", "#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1"
-        )
-        self.addr_jpnain = q.address_from_fadd_type_fadd(
-            "json-path-with-types", "#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1-min"
-        )
-        self.addr_jpnaix = q.address_from_fadd_type_fadd(
-            "json-path-with-types", "#/path-metadata/data/#int/dataset_relative_path#derive-norm-anat-index-v1-max"
-        )
-        self.addr_jpsuid = q.address_from_fadd_type_fadd(
-            "json-path-with-types", "#/path-metadata/data/#int/dataset_relative_path#derive-subject-id"
-        )
-        self.addr_jpsaid = q.address_from_fadd_type_fadd(
-            "json-path-with-types", "#/path-metadata/data/#int/dataset_relative_path#derive-sample-id"
-=======
             'json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-modality'
         )
         # addr_jprai = address_from_fadd_type_fadd('json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-raw-anat-index')
@@ -532,7 +390,6 @@ class InternalIds:
         )
         self.addr_jpsaid = q.address_from_fadd_type_fadd(
             'json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-sample-id'
->>>>>>> master
         )
 
         self.addr_jpspec = q.address_from_fadd_type_fadd("json-path-with-types", "#/local/tom-made-it-up/species")
@@ -547,25 +404,6 @@ class InternalIds:
 
         self.addr_const_null = q.address_from_fadd_type_fadd("constant", None)
 
-<<<<<<< HEAD
-        # qd_rai = desc_quant_from_label('reva ft sample anatomical location distance index raw')
-        self.qd_nai = q.desc_quant_from_label("reva ft sample anatomical location distance index normalized v1")
-        self.qd_nain = q.desc_quant_from_label("reva ft sample anatomical location distance index normalized v1 min")
-        self.qd_naix = q.desc_quant_from_label("reva ft sample anatomical location distance index normalized v1 max")
-
-        self.cd_mod = q.desc_cat_from_label_domain_label("hasDataAboutItModality", None)
-        self.cd_bot = q.desc_cat_from_label_domain_label(
-            "bottom", None
-        )  # we just need something we can reference that points to null so we can have a refernce to all the objects
-
-        self.id_human = q.desc_inst_from_label("human")
-        self.id_nerve = q.desc_inst_from_label("nerve")
-        self.id_nerve_volume = q.desc_inst_from_label("nerve-volume")
-        self.luid = {
-            "human": self.id_human,
-            "nerve": self.id_nerve,
-            "nerve-volume": self.id_nerve_volume,
-=======
         self.qd_nvlai1 = q.desc_quant_from_label('vagus level anatomical location distance index normalized v1')
         self.qd_nvlain1 = q.desc_quant_from_label('vagus level anatomical location distance index normalized v1 min')
         self.qd_nvlaix1 = q.desc_quant_from_label('vagus level anatomical location distance index normalized v1 max')
@@ -600,7 +438,6 @@ class InternalIds:
             'nerve-volume': self.id_nerve_volume,
             'nerve-cross-section': self.id_nerve_cross_section,
             'fascicle-cross-section': self.id_fascicle_cross_section,
->>>>>>> master
         }
 
         self.ct_mod = q.cterm_from_label("microct")  # lol ct ct
@@ -616,11 +453,7 @@ class Inserts:
     pass
 
 
-<<<<<<< HEAD
-def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_args=None):
-=======
 def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_args=None, **kwargs):
->>>>>>> master
     """generic ingest workflow
     this_dataset_updated_uuid might not be needed in future,
     add a kwarg to control it maybe?
@@ -643,11 +476,7 @@ def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_a
         make_values_cat,
         make_values_quant,
     ) = (
-<<<<<<< HEAD
-        extract_fun(dataset_uuid) if values_args is None else values_args
-=======
         extract_fun(dataset_uuid, **kwargs) if values_args is None else values_args
->>>>>>> master
     )
 
     q = Queries(session)
@@ -657,23 +486,6 @@ def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_a
     values_instances = make_values_instances(i)
 
     res0 = session.execute(
-<<<<<<< HEAD
-        sql_text("INSERT INTO objects (id, id_type) VALUES (:id, :id_type) ON CONFLICT DO NOTHING"),
-        dict(id=dataset_uuid, id_type="dataset"),
-    )
-
-    # oh dear https://stackoverflow.com/questions/34708509/how-to-use-returning-with-on-conflict-in-postgresql
-    res1 = session.execute(
-        sql_text(
-            "WITH ins AS (INSERT INTO objects_internal (type, dataset, updated_transitive, label) VALUES ('path-metadata', :dataset, :updated_transitive, :label) ON CONFLICT DO NOTHING RETURNING id) SELECT id FROM ins UNION ALL SELECT id FROM objects_internal WHERE type = 'path-metadata' AND dataset = :dataset AND updated_transitive = :updated_transitive"
-        ),  # TODO see whether we actually need union all here or whether union by itself is sufficient
-        dict(
-            dataset=dataset_uuid,
-            updated_transitive=updated_transitive,
-            label=f"test-load-for-f001 {isoformat(updated_transitive)}",
-        ),
-    )
-=======
         sql_text('INSERT INTO objects (id, id_type) VALUES (:id, :id_type) ON CONFLICT DO NOTHING'),
         dict(id=dataset_uuid, id_type='dataset'),
     )
@@ -697,20 +509,11 @@ def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_a
         this_dataset_updated_uuid = [_ for _, in res1][0]
     else:
         this_dataset_updated_uuid = None
->>>>>>> master
 
     void = make_void(this_dataset_updated_uuid, i)
     vocd = make_vocd(this_dataset_updated_uuid, i)
     voqd = make_voqd(this_dataset_updated_uuid, i)
 
-<<<<<<< HEAD
-    res1_1 = session.execute(
-        sql_text(
-            "INSERT INTO objects (id, id_type, id_internal) VALUES (:id, :id_type, :id) ON CONFLICT DO NOTHING"
-        ),  # FIXME bad ocdn here
-        dict(id=this_dataset_updated_uuid, id_type="quantdb"),
-    )
-=======
     if updated_transitive:
         res1_1 = session.execute(
             sql_text(
@@ -718,7 +521,6 @@ def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_a
             ),  # FIXME bad ocdn here
             dict(id=this_dataset_updated_uuid, id_type='quantdb'),
         )
->>>>>>> master
 
     vt, params = makeParamsValues(values_objects)
     session.execute(sql_text(f"INSERT INTO objects (id, id_type, id_file) VALUES {vt}{ocdn}"), params)
@@ -728,11 +530,7 @@ def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_a
 
     vt, params = makeParamsValues(values_instances)
     session.execute(
-<<<<<<< HEAD
-        sql_text(f"INSERT INTO values_inst (dataset, id_formal, type, desc_inst, id_sub, id_sam) VALUES {vt}{ocdn}"),
-=======
         sql_text(f'INSERT INTO values_inst (dataset, id_formal, type, desc_inst, id_sub, id_sam) VALUES {vt}{ocdn}'),
->>>>>>> master
         params,
     )
 
@@ -751,38 +549,6 @@ def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_a
 
     vt, params = makeParamsValues(void)
     session.execute(
-<<<<<<< HEAD
-        sql_text(f"INSERT INTO obj_desc_inst (object, desc_inst, addr_field, addr_desc_inst) VALUES {vt}{ocdn}"), params
-    )
-
-    vt, params = makeParamsValues(vocd)
-    session.execute(sql_text(f"INSERT INTO obj_desc_cat (object, desc_cat, addr_field) VALUES {vt}{ocdn}"), params)
-
-    vt, params = makeParamsValues(voqd)
-    session.execute(sql_text(f"INSERT INTO obj_desc_quant (object, desc_quant, addr_field) VALUES {vt}{ocdn}"), params)
-
-    vt, params = makeParamsValues(values_cv)
-    session.execute(
-        sql_text(
-            f"INSERT INTO values_cat (value_open, value_controlled, object, desc_inst, desc_cat, instance) VALUES {vt}{ocdn}"
-        ),
-        params,
-    )
-
-    vt, params, bindparams = makeParamsValues(
-        # FIXME LOL the types spec here is atrocious ... but it does work ...
-        # XXX and barring the unfortunate case, which we have now encountered  where
-        # now fixed in the local impl
-        values_qv,
-        row_types=(None, None, None, None, None, JSONB),
-    )
-
-    t = sql_text(
-        f"INSERT INTO values_quant (value, object, desc_inst, desc_quant, instance, value_blob) VALUES {vt}{ocdn}"
-    )
-    tin = t.bindparams(*bindparams)
-    session.execute(tin, params)
-=======
         sql_text(f'INSERT INTO obj_desc_inst (object, desc_inst, addr_field, addr_desc_inst) VALUES {vt}{ocdn}'), params
     )
 
@@ -819,7 +585,6 @@ def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_a
         )
         tin = t.bindparams(*bindparams)
         session.execute(tin, params)
->>>>>>> master
 
     if commit:
         session.commit()
@@ -829,15 +594,9 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
     if source_local:
         with open(
             pathlib.Path(
-<<<<<<< HEAD
-                f"~/.local/share/sparcur/export/datasets/{dataset_uuid}/LATEST/path-metadata.json"
-            ).expanduser(),
-            "rt",
-=======
                 f'~/.local/share/sparcur/export/datasets/{dataset_uuid}/LATEST/path-metadata.json'
             ).expanduser(),
             'rt',
->>>>>>> master
         ) as f:
             blob = json.load(f)
 
@@ -855,49 +614,29 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
 
     ir = fromJson(blob)
 
-<<<<<<< HEAD
-    updated_transitive = max([i["timestamp_updated"] for i in ir["data"][1:]])  # 1: to skip the dataset object itself
-
-    jpx = [r for r in ir["data"] if "mimetype" in r and r["mimetype"] == "image/jpx"]
-
-    exts = [ext(j) for j in jpx]
-=======
     updated_transitive = max([i['timestamp_updated'] for i in ir['data'][1:]])  # 1: to skip the dataset object itself
 
     jpx = [r for r in ir['data'] if 'mimetype' in r and r['mimetype'] == 'image/jpx']
 
     exts = [ext_pmeta(j) for j in jpx]
->>>>>>> master
     # hrm = sorted(exts, key=lambda j: j['raw_anat_index'])
     # max_rai  = max([e['raw_anat_index'] for e in exts])
     # import math
     # log_max_rai = math.log10(max_rai)
 
     # normalize the index by mapping distinct values to the integers
-<<<<<<< HEAD
-    nondist = sorted([e["raw_anat_index_v1"] for e in exts])
-    lin_distinct = {v: i for i, v in enumerate(sorted(set([e["raw_anat_index_v1"] for e in exts])))}
-=======
     nondist = sorted([e['raw_anat_index_v2'] for e in exts])
     lin_distinct = {v: i for i, v in enumerate(sorted(set([e['raw_anat_index_v2'] for e in exts])))}
->>>>>>> master
     max_distinct = len(lin_distinct)
     mdp1 = max_distinct + 0.1  # to simplify adding overlap
 
     dd = defaultdict(list)
     for e in exts:
         # e['norm_anat_index'] = math.log10(e['raw_anat_index']) / log_max_rai
-<<<<<<< HEAD
-        pos = lin_distinct[e["raw_anat_index_v1"]]
-        e["norm_anat_index_v1"] = (pos + 0.55) / mdp1
-        e["norm_anat_index_v1_min"] = pos / mdp1
-        e["norm_anat_index_v1_max"] = (
-=======
         pos = lin_distinct[e['raw_anat_index_v2']]
         e['norm_anat_index_v2'] = (pos + 0.55) / mdp1
         e['norm_anat_index_v2_min'] = pos / mdp1
         e['norm_anat_index_v2_max'] = (
->>>>>>> master
             pos + 1.1
         ) / mdp1  # ensure there is overlap between section for purposes of testing
         # TODO norm_anat_index_min
@@ -905,15 +644,9 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
         dd[e["dataset"], e["sample"]].append(e)
     inst_obj_index = dict(dd)
 
-<<<<<<< HEAD
-    max_nai = max([e["norm_anat_index_v1"] for e in exts])
-    min_nain = min([e["norm_anat_index_v1_min"] for e in exts])
-    max_naix = max([e["norm_anat_index_v1_max"] for e in exts])
-=======
     max_nai = max([e['norm_anat_index_v2'] for e in exts])
     min_nain = min([e['norm_anat_index_v2_min'] for e in exts])
     max_naix = max([e['norm_anat_index_v2_max'] for e in exts])
->>>>>>> master
 
     if visualize:
         mexts = []
@@ -927,16 +660,10 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
         exts = mexts
         x = list(range(len(exts)))
         # ry = sorted([e['raw_anat_index'] for e in exts])
-<<<<<<< HEAD
-        ny = sorted([e["norm_anat_index_v1"] for e in exts])
-        nyn = sorted([e["norm_anat_index_v1_min"] for e in exts])
-        nyx = sorted([e["norm_anat_index_v1_max"] for e in exts])
-=======
         idy = [b for a, b in sorted([(e['norm_anat_index_v2'], e['sample']) for e in exts])]
         ny = sorted([e['norm_anat_index_v2'] for e in exts])
         nyn = sorted([e['norm_anat_index_v2_min'] for e in exts])
         nyx = sorted([e['norm_anat_index_v2_max'] for e in exts])
->>>>>>> master
         nnx = list(zip(nyn, nyx))
         import pylab as plt
         import seaborn
@@ -960,42 +687,6 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
         plt.savefig(f'ft-norm-anat-index-v2-{_sid}.png')
         exts = _exts
 
-<<<<<<< HEAD
-    datasets = {i.uuid: {"id_type": i.type} for e in exts if (i := e["dataset"])}
-
-    packages = {
-        i.uuid: {
-            "id_type": i.type,
-            "id_file": e["file_id"],
-        }
-        for e in exts
-        if (i := e["object"])
-    }
-
-    objects = {**datasets, **packages}
-    dataset_object = list(set((d.uuid, o.uuid) for e in exts if (d := e["dataset"]) and (o := e["object"])))
-
-    subjects = {
-        k: {
-            "type": "subject",
-            "desc_inst": "human",
-            "id_sub": k[1],
-        }
-        for k in sorted(set((e["dataset"], e["subject"]) for e in exts))
-    }
-    segments = {
-        k[:2]: {
-            "type": "sample",  # FIXME vs below ???
-            "desc_inst": "nerve-volume",  # FIXME should this be nerve-segment and then we use nerve-volume for the 1:1 with files?
-            "id_sub": k[-1],
-            "id_sam": k[1],
-        }
-        for k in sorted(set((e["dataset"], e["sample"], e["subject"]) for e in exts))
-    }
-    parents = sorted(set((e["dataset"],) + p for e in exts for p in e["parents"]))
-    sam_other = {
-        p[:2]: {"type": "sample", "desc_inst": "nerve", "id_sub": p[-1], "id_sam": p[1]}
-=======
     datasets = {i.uuid: {'id_type': i.type} for e in exts if (i := e['dataset'])}
 
     packages = {
@@ -1030,7 +721,6 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
     parents = sorted(set((e['dataset'],) + p for e in exts for p in e['parents']))
     sam_other = {
         p[:2]: {'type': 'sample', 'desc_inst': 'nerve', 'id_sub': p[-1], 'id_sam': p[1]}
->>>>>>> master
         for p in parents
         if p[:2] not in segments
     }
@@ -1049,17 +739,10 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
             (
                 d.uuid,
                 f,
-<<<<<<< HEAD
-                inst["type"],
-                i.luid[inst["desc_inst"]],
-                inst["id_sub"] if "id_sub" in inst else None,
-                inst["id_sam"] if "id_sam" in inst else None,
-=======
                 inst['type'],
                 i.luid[inst['desc_inst']],
                 inst['id_sub'] if 'id_sub' in inst else None,
                 inst['id_sam'] if 'id_sam' in inst else None,
->>>>>>> master
             )
             for (d, f), inst in instances.items()
         ]
@@ -1096,11 +779,7 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
                 None,
             )  # XXX FIXME this is the only way I can think to do this right now ?
             for o, b in objects.items()
-<<<<<<< HEAD
-            if b["id_type"] == "package"
-=======
             if b['id_type'] == 'package'
->>>>>>> master
         ]
 
         return void
@@ -1111,15 +790,9 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
             # figuring out how to turn that around is going to take a bit of thinking
             (this_dataset_updated_uuid, i.cd_mod, i.addr_jpmod),
         ] + [
-<<<<<<< HEAD
-            (o, i.cd_bot, i.addr_const_null)  # XXX FIXME this is the only way I can think to do this right now ?
-            for o, b in objects.items()
-            if b["id_type"] == "package"
-=======
             (o, i.cd_obj, i.addr_const_null)  # XXX FIXME this is the only way I can think to do this right now ?
             for o, b in objects.items()
             if b['id_type'] == 'package'
->>>>>>> master
         ]
 
         return vocd
@@ -1148,32 +821,18 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
                 # e['object'].uuid,  # FIXME still not right this comes from the updated latest
                 i.id_nerve_volume,
                 cd,  # if we mess this up the fk ok obj_desc_cat will catch it :)
-<<<<<<< HEAD
-                luinst[e["dataset"].uuid, e["sample"]],  # get us the instance
-            )
-            for e in exts
-            for k, cd in (("modality", i.cd_mod),)
-=======
                 luinst[e['dataset'].uuid, e['sample']],  # get us the instance
             )
             for e in exts
             for k, cd in (('modality', i.cd_mod),)
->>>>>>> master
         ] + [
             (
                 None,
                 i.ct_hack,
-<<<<<<< HEAD
-                e["object"].uuid,
-                i.id_nerve_volume,
-                i.cd_bot,  # if we mess this up the fk ok obj_desc_cat will catch it :)
-                luinst[e["dataset"].uuid, e["sample"]],  # get us the instance
-=======
                 e['object'].uuid,
                 i.id_nerve_volume,
                 i.cd_obj,  # if we mess this up the fk ok obj_desc_cat will catch it :)
                 luinst[e['dataset'].uuid, e['sample']],  # get us the instance
->>>>>>> master
             )
             for e in exts
         ]
@@ -1188,25 +847,15 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
                 this_dataset_updated_uuid,
                 i.id_nerve_volume,
                 qd,  # if we mess this up the fk ok obj_desc_cat will catch it :)
-<<<<<<< HEAD
-                luinst[e["dataset"].uuid, e["sample"]],  # get us the instance
-=======
                 luinst[e['dataset'].uuid, e['sample']],  # get us the instance
->>>>>>> master
                 e[k],
             )
             for e in exts
             for k, qd in (
                 # ('raw_anat_index', qd_rai),  # XXX this is a bad place to store object -> field -> qd mappings also risks mismatch on address
-<<<<<<< HEAD
-                ("norm_anat_index_v1", i.qd_nai),
-                ("norm_anat_index_v1_min", i.qd_nain),
-                ("norm_anat_index_v1_max", i.qd_naix),
-=======
                 ('norm_anat_index_v2', i.qd_nai),
                 ('norm_anat_index_v2_min', i.qd_nain),
                 ('norm_anat_index_v2_max', i.qd_naix),
->>>>>>> master
             )
         ]
         return values_qv
@@ -1223,10 +872,6 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
         make_values_cat,
         make_values_quant,
     )
-<<<<<<< HEAD
-=======
-
->>>>>>> master
     # this is where things get annoying with needing selects on instance measured
 
 
@@ -1696,13 +1341,8 @@ def ingest_reva_ft_all(session, source_local=False, do_insert=True, batch=False,
 def main(source_local=False, commit=False, echo=True):
     from quantdb.config import auth
 
-<<<<<<< HEAD
-    dbkwargs = {k: auth.get(f"db-{k}") for k in ("user", "host", "port", "database")}  # TODO integrate with cli options
-    dbkwargs["dbuser"] = dbkwargs.pop("user")
-=======
     dbkwargs = {k: auth.get(f'db-{k}') for k in ('user', 'host', 'port', 'database')}  # TODO integrate with cli options
     dbkwargs['dbuser'] = dbkwargs.pop('user')
->>>>>>> master
     engine = create_engine(dbUri(**dbkwargs))
     engine.echo = echo
     session = Session(engine)

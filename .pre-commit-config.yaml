@@ -21,6 +21,6 @@ repos:
         exclude: |
           (?x)^(
               quantdb/api.py|
-              quantdb/ingest.py|ls
+              quantdb/ingest.py|
               sql;/.*
           )$
