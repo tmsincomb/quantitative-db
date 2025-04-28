@@ -24,7 +24,7 @@ from quantdb.utils import dbUri, isoformat, log
 log = log.getChild('ingest')
 
 try:
-    if get_ipython().__class__.__name__ == "ZMQInteractiveShell":
+    if get_ipython().__class__.__name__ == 'ZMQInteractiveShell':
         import sys  # FIXME hack that should be in jupyter-repl env or something
 
         sys.breakpointhook = lambda: None
@@ -66,7 +66,7 @@ class getName:
             return self.value_to_name[value]
         else:
             self.counter += 1
-            name = "v" + str(self.counter)
+            name = 'v' + str(self.counter)
 
             if type is None:
                 self.value_to_name[value] = name
@@ -80,8 +80,8 @@ class getName:
 def makeParamsValues(*value_sets, constants=tuple(), types=tuple(), row_types=tuple()):
     # TODO variable sized records and
     # common value names
-    if constants and not all(":" in c for c in constants):
-        raise ValueError(f"All constants must pass variables in via params {constants}")
+    if constants and not all(':' in c for c in constants):
+        raise ValueError(f'All constants must pass variables in via params {constants}')
 
     getname = getName()
 
@@ -145,9 +145,9 @@ sam_ordering = {
     'p': 2,  # posterior
 }
 seg_ordering = {
-    "c": 0,  # cervical
-    "t": 1,  # thoracic
-    "a": 2,  # abdominal
+    'c': 0,  # cervical
+    't': 1,  # thoracic
+    'a': 2,  # abdominal
 }
 
 
@@ -155,7 +155,7 @@ def anat_index(sample):
     # count the number of distinct values less than a given integer
     # create the map
 
-    sam, sam_id, seg, seg_id = sample.split("-")
+    sam, sam_id, seg, seg_id = sample.split('-')
     # FIXME bad becase left and right are unstable and we don't care about this, we just want relative to max possible
     # don't do this with sort
     sam_ind = sam_ordering[sam_id]
@@ -172,7 +172,7 @@ def anat_index(sample):
             suffix = int(seg_id[-1].encode().hex())
             return sam_ind, 0, rest, suffix
         else:
-            msg = f"unknown seg {sample}"
+            msg = f'unknown seg {sample}'
             print(msg)  # FIXME TODO logging
             # raise ValueError(msg)
             # return int(f'{sam_ind}000')
@@ -392,8 +392,8 @@ class InternalIds:
             'json-path-with-types', '#/path-metadata/data/#int/dataset_relative_path#derive-sample-id'
         )
 
-        self.addr_jpspec = q.address_from_fadd_type_fadd("json-path-with-types", "#/local/tom-made-it-up/species")
-        self.addr_jpsaty = q.address_from_fadd_type_fadd("json-path-with-types", "#/local/tom-made-it-up/sample_type")
+        self.addr_jpspec = q.address_from_fadd_type_fadd('json-path-with-types', '#/local/tom-made-it-up/species')
+        self.addr_jpsaty = q.address_from_fadd_type_fadd('json-path-with-types', '#/local/tom-made-it-up/sample_type')
 
         # future version when we actually have the metadata files
         # addr_jpmod = address_from_fadd_type_fadd('json-path-with-types', '#/curation-export/manifest/#int/modality')
@@ -402,7 +402,7 @@ class InternalIds:
         # addr_jpsuid = address_from_fadd_type_fadd('json-path-with-types', '#/curation-export/subjects/#int/id_sub')
         # addr_jpsaid = address_from_fadd_type_fadd('json-path-with-types', '#/curation-export/samples/#int/id_sam')
 
-        self.addr_const_null = q.address_from_fadd_type_fadd("constant", None)
+        self.addr_const_null = q.address_from_fadd_type_fadd('constant', None)
 
         self.qd_nvlai1 = q.desc_quant_from_label('vagus level anatomical location distance index normalized v1')
         self.qd_nvlain1 = q.desc_quant_from_label('vagus level anatomical location distance index normalized v1 min')
@@ -440,11 +440,11 @@ class InternalIds:
             'fascicle-cross-section': self.id_fascicle_cross_section,
         }
 
-        self.ct_mod = q.cterm_from_label("microct")  # lol ct ct
-        self.ct_hack = q.cterm_from_label("hack-associate-some-value")
+        self.ct_mod = q.cterm_from_label('microct')  # lol ct ct
+        self.ct_hack = q.cterm_from_label('hack-associate-some-value')
         self.luct = {
-            "ct-hack": self.ct_hack,
-            "microct": self.ct_mod,
+            'ct-hack': self.ct_hack,
+            'microct': self.ct_mod,
         }
 
 
@@ -459,10 +459,10 @@ def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_a
     add a kwarg to control it maybe?
     """
 
-    ocdn = " ON CONFLICT DO NOTHING" if dev else ""
+    ocdn = ' ON CONFLICT DO NOTHING' if dev else ''
 
     if extract_fun is None and values_args is None:
-        raise TypeError("need one of extract_fun or values_args")
+        raise TypeError('need one of extract_fun or values_args')
 
     (
         updated_transitive,
@@ -523,10 +523,10 @@ def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_a
         )
 
     vt, params = makeParamsValues(values_objects)
-    session.execute(sql_text(f"INSERT INTO objects (id, id_type, id_file) VALUES {vt}{ocdn}"), params)
+    session.execute(sql_text(f'INSERT INTO objects (id, id_type, id_file) VALUES {vt}{ocdn}'), params)
 
     vt, params = makeParamsValues(values_dataset_object)
-    session.execute(sql_text(f"INSERT INTO dataset_object (dataset, object) VALUES {vt}{ocdn}"), params)
+    session.execute(sql_text(f'INSERT INTO dataset_object (dataset, object) VALUES {vt}{ocdn}'), params)
 
     vt, params = makeParamsValues(values_instances)
     session.execute(
@@ -545,7 +545,7 @@ def ingest(dataset_uuid, extract_fun, session, commit=False, dev=False, values_a
     values_qv = make_values_quant(this_dataset_updated_uuid, i, luinst)
 
     vt, params = makeParamsValues(values_parents)
-    session.execute(sql_text(f"INSERT INTO instance_parent VALUES {vt}{ocdn}"), params)
+    session.execute(sql_text(f'INSERT INTO instance_parent VALUES {vt}{ocdn}'), params)
 
     vt, params = makeParamsValues(void)
     session.execute(
@@ -601,7 +601,7 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
             blob = json.load(f)
 
     else:
-        resp = requests.get(f"https://cassava.ucsd.edu/sparc/datasets/{dataset_uuid}/LATEST/path-metadata.json")
+        resp = requests.get(f'https://cassava.ucsd.edu/sparc/datasets/{dataset_uuid}/LATEST/path-metadata.json')
 
         try:
             blob = resp.json()
@@ -609,8 +609,8 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
             breakpoint()
             raise e
 
-    for j in blob["data"]:
-        j["type"] = "pathmeta"
+    for j in blob['data']:
+        j['type'] = 'pathmeta'
 
     ir = fromJson(blob)
 
@@ -641,7 +641,7 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
         ) / mdp1  # ensure there is overlap between section for purposes of testing
         # TODO norm_anat_index_min
         # TODO norm_anat_index_max
-        dd[e["dataset"], e["sample"]].append(e)
+        dd[e['dataset'], e['sample']].append(e)
     inst_obj_index = dict(dd)
 
     max_nai = max([e['norm_anat_index_v2'] for e in exts])
@@ -728,9 +728,9 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
     instances = {**subjects, **samples}
 
     values_objects = [
-        (i, o["id_type"], o["id_file"] if "id_file" in o else None)
+        (i, o['id_type'], o['id_file'] if 'id_file' in o else None)
         for i, o in objects.items()
-        if o["id_type"] != "dataset"  # already did it above
+        if o['id_type'] != 'dataset'  # already did it above
     ]
     values_dataset_object = dataset_object
 
@@ -1315,12 +1315,12 @@ def ingest_demo_jp2(session, source_local=True, do_insert=True, commit=False, de
 
 def ingest_reva_ft_all(session, source_local=False, do_insert=True, batch=False, commit=False, dev=False):
     dataset_uuids = (
-        "aa43eda8-b29a-4c25-9840-ecbd57598afc",  # f001
+        'aa43eda8-b29a-4c25-9840-ecbd57598afc',  # f001
         # the rest have uuid1 issues :/ all in the undefined folder it seems, might be able to fix with a reupload
-        "bc4cc558-727c-4691-ae6d-498b57a10085",  # f002  # XXX has a uuid1 so breaking in prod right now have to push the new pipelines
-        "ec6ad74e-7b59-409b-8fc7-a304319b6faf",  # f003  # also uuid1 issue
-        "a8b2bdc7-54df-46a3-810e-83cdf33cfc3a",  # f004
-        "04a5fed9-7ba6-4292-b1a6-9cab5c38895f",  # f005
+        'bc4cc558-727c-4691-ae6d-498b57a10085',  # f002  # XXX has a uuid1 so breaking in prod right now have to push the new pipelines
+        'ec6ad74e-7b59-409b-8fc7-a304319b6faf',  # f003  # also uuid1 issue
+        'a8b2bdc7-54df-46a3-810e-83cdf33cfc3a',  # f004
+        '04a5fed9-7ba6-4292-b1a6-9cab5c38895f',  # f005
     )
 
     batched = []
@@ -1378,5 +1378,5 @@ def main(source_local=False, commit=False, echo=True):
     engine.dispose()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
