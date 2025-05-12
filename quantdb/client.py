@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from quantdb.config import auth
 from quantdb.utils import dbUri
@@ -27,7 +28,14 @@ def get_session(echo: bool = True, test: bool = False) -> Session:
     dbkwargs['dbuser'] = 'quantdb-test-admin' if test else dbkwargs['dbuser']
     if test:
         dbkwargs['database'] = auth.get('test-db-database') or 'quantdb_test'
+    print(dbkwargs)
     engine = create_engine(dbUri(**dbkwargs))  # type: ignore
     engine.echo = echo
+    print(engine, dbkwargs)
     session = Session(engine)
     return session
+
+
+if __name__ == '__main__':
+    session = get_session(echo=False)
+    print(session.execute(text("SELECT * FROM information_schema.tables")).fetchall())
