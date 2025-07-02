@@ -23,11 +23,19 @@ def get_session(echo: bool = True, test: bool = False) -> Session:
         The database session.
     """
     # pull in the db connection info
-    dbkwargs = {k: auth.get(f'db-{k}') for k in ('user', 'host', 'port', 'database')}
-    dbkwargs['dbuser'] = dbkwargs.pop('user')
-    dbkwargs['dbuser'] = 'quantdb-test-admin' if test else dbkwargs['dbuser']
     if test:
-        dbkwargs['database'] = auth.get('test-db-database') or 'quantdb_test'
+        # For testing, ALWAYS use local postgres instance regardless of main db config
+        dbkwargs = {
+            "dbuser": "quantdb-test-admin",
+            "host": "localhost",  # FORCE localhost for all testing
+            "port": 5432,
+            "database": auth.get("test-db-database") or "quantdb_test",
+            "password": "tom-is-cool",  # Use hardcoded password for test database
+        }
+    else:
+        # For non-test, use regular database configuration
+        dbkwargs = {k: auth.get(f"db-{k}") for k in ("user", "host", "port", "database")}
+        dbkwargs["dbuser"] = dbkwargs.pop("user")
     print(dbkwargs)
     engine = create_engine(dbUri(**dbkwargs))  # type: ignore
     engine.echo = echo
@@ -36,6 +44,6 @@ def get_session(echo: bool = True, test: bool = False) -> Session:
     return session
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     session = get_session(echo=False)
     print(session.execute(text("SELECT * FROM information_schema.tables")).fetchall())
