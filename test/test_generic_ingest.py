@@ -82,3 +82,81 @@ def test_print_first_row_of_each_entity(test_session):
                 print(f'Could not query {name}: {e}')
     if not printed:
         print('No rows found in any entity.')
+
+
+def test_f006_table_to_table_ingestion(test_session):
+    """
+    Test the complete f006 ingestion process using the ORM approach.
+    This demonstrates table-to-table ingestion with the generic_ingest functions.
+    """
+    import sys
+    import pathlib
+    
+    # Add the ingestion directory to the path so we can import f006
+    ingestion_path = pathlib.Path(__file__).parent.parent / 'ingestion'
+    sys.path.insert(0, str(ingestion_path))
+    
+    try:
+        # Import the f006 ingestion module
+        import f006
+        
+        # Run the ingestion without committing (dry run)
+        result = f006.run_f006_ingestion(session=test_session, commit=False)
+        
+        # Verify the results
+        assert result is not None
+        assert 'dataset_obj' in result
+        assert 'package_objects' in result
+        assert 'instances' in result
+        
+        # Check dataset object
+        dataset_obj = result['dataset_obj']
+        assert dataset_obj.id == f006.DATASET_UUID
+        assert dataset_obj.id_type == 'dataset'
+        
+        # Check package objects
+        package_objects = result['package_objects']
+        assert len(package_objects) == 4  # Should have 4 files in our test data
+        for pkg in package_objects:
+            assert pkg.id_type == 'package'
+            assert pkg.id_file is not None
+        
+        # Check instances
+        instances = result['instances']
+        assert len(instances) >= 2  # Should have at least 1 subject + 1+ samples
+        
+        # Verify we have the right types of instances
+        instance_types = {inst.type for inst in instances}
+        assert 'subject' in instance_types
+        assert 'sample' in instance_types
+        
+        # Check subject instance
+        subject_instances = [inst for inst in instances if inst.type == 'subject']
+        assert len(subject_instances) == 1
+        subject = subject_instances[0]
+        assert subject.id_formal == 'sub-f006'
+        assert subject.id_sub == 'sub-f006'
+        assert subject.id_sam is None
+        
+        # Check sample instances  
+        sample_instances = [inst for inst in instances if inst.type == 'sample']
+        assert len(sample_instances) >= 2  # At least 2 samples based on our test data
+        for sample in sample_instances:
+            assert sample.id_formal.startswith('sam-')
+            assert sample.id_sub == 'sub-f006'
+            assert sample.id_sam == sample.id_formal
+        
+        print(f"✓ F006 ingestion test passed!")
+        print(f"  - Dataset: {dataset_obj.id}")
+        print(f"  - Packages: {len(package_objects)}")
+        print(f"  - Instances: {len(instances)} ({len(subject_instances)} subjects, {len(sample_instances)} samples)")
+        
+    except ImportError as e:
+        pytest.skip(f"Could not import f006 module: {e}")
+    except Exception as e:
+        print(f"F006 ingestion test failed: {e}")
+        raise
+    finally:
+        # Clean up the path
+        if str(ingestion_path) in sys.path:
+            sys.path.remove(str(ingestion_path))
