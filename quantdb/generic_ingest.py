@@ -2,7 +2,7 @@ import ast
 import uuid
 
 import pandas as pd
-from sqlalchemy import UniqueConstraint, inspect
+from sqlalchemy import PrimaryKeyConstraint, UniqueConstraint, inspect
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ClauseElement
@@ -30,8 +30,18 @@ def object_as_dict(obj):
     -------
     dict
         Dictionary containing non-null column attributes of the object.
+        UUID objects are converted to strings for consistency.
     """
-    return {c.key: getattr(obj, c.key) for c in inspect(obj).mapper.column_attrs if getattr(obj, c.key) is not None}
+    result = {}
+    for c in inspect(obj).mapper.column_attrs:
+        value = getattr(obj, c.key)
+        if value is not None:
+            # Convert UUID objects to strings for consistency
+            if hasattr(value, 'hex') and hasattr(value, 'version'):  # Check if it's a UUID object
+                result[c.key] = str(value)
+            else:
+                result[c.key] = value
+    return result
 
 
 def get_or_create(session, obj, back_populate=None):
@@ -50,7 +60,7 @@ def get_or_create(session, obj, back_populate=None):
     Returns
     -------
     instance : SQLAlchemy model instance
-        The retrieved or newly created instance.
+        The retrieved or newly created instance with UUID attributes converted to strings.
 
     Notes
     -----
@@ -61,6 +71,8 @@ def get_or_create(session, obj, back_populate=None):
     data = object_as_dict(obj)
     instance = session.query(model).filter_by(**data).one_or_none()
     if instance:
+        # Convert UUID attributes to strings for consistency
+        _convert_uuids_to_strings(instance)
         return instance
     else:
         params = {k: v for k, v in data.items() if not isinstance(v, ClauseElement)}
@@ -72,17 +84,35 @@ def get_or_create(session, obj, back_populate=None):
                 for attr, value in back_populate.items():
                     setattr(instance, attr, value)
                 session.commit()
+            # Convert UUID attributes to strings for consistency
+            _convert_uuids_to_strings(instance)
         except Exception:
             session.rollback()
             instance = session.query(model).filter_by(**data).one()
+            _convert_uuids_to_strings(instance)
             return instance
         else:
             return instance
 
 
+def _convert_uuids_to_strings(obj):
+    """
+    Convert UUID attributes to strings in-place for an ORM object.
+
+    Parameters
+    ----------
+    obj : SQLAlchemy ORM object
+        The object to modify.
+    """
+    for c in inspect(obj).mapper.column_attrs:
+        value = getattr(obj, c.key)
+        if value is not None and hasattr(value, 'hex') and hasattr(value, 'version'):
+            setattr(obj, c.key, str(value))
+
+
 def get_constraint_columns(model):
     """
-    Returns the columns of the unique constraints for a SQLAlchemy model.
+    Returns the columns of the unique constraints and primary key constraints for a SQLAlchemy model.
 
     Parameters
     ----------
@@ -93,10 +123,12 @@ def get_constraint_columns(model):
     -------
     list of list of str
         A list of lists, where each inner list contains the column names
-        that form a unique constraint.
+        that form a unique constraint or primary key constraint.
     """
     constraints = [
-        constraint for constraint in model.__mapper__.tables[0].constraints if isinstance(constraint, UniqueConstraint)
+        constraint
+        for constraint in model.__mapper__.tables[0].constraints
+        if isinstance(constraint, (UniqueConstraint, PrimaryKeyConstraint))
     ]
 
     return [[c.name for c in list(constraint.columns)] for constraint in constraints]
@@ -116,7 +148,7 @@ def query_by_constraints(db, obj):
     Returns
     -------
     SQLAlchemy model instance or None
-        The existing instance if found, None otherwise.
+        The existing instance if found with UUID attributes converted to strings, None otherwise.
     """
     filter_criteria = object_as_dict(obj)
 
@@ -129,6 +161,8 @@ def query_by_constraints(db, obj):
 
         existing_obj = db.query(type(obj)).filter_by(**constraint_filter).first()
         if existing_obj:
+            # Convert UUID attributes to strings for consistency
+            _convert_uuids_to_strings(existing_obj)
             return existing_obj
 
 
@@ -147,7 +181,7 @@ def back_populate_tables(db: Session, obj) -> object:
     Returns
     -------
     object
-        The ORM model object, with its related objects back-populated.
+        The ORM model object, with its related objects back-populated and UUID attributes converted to strings.
 
     Notes
     -----
@@ -157,6 +191,7 @@ def back_populate_tables(db: Session, obj) -> object:
     - Performs a complete rollback if any commit fails
     - Filters by all primary key columns of the object
     - Handles cases where the child object is not a valid ORM instance
+    - Converts UUID attributes to strings for consistency
     """
     mapper = obj.__mapper__  # Get the mapper for the object
     # print(obj)
@@ -169,6 +204,7 @@ def back_populate_tables(db: Session, obj) -> object:
                     filter_criteria = object_as_dict(parent)
                     existing_obj = db.query(type(parent)).filter_by(**filter_criteria).first()
                     if existing_obj:
+                        _convert_uuids_to_strings(existing_obj)
                         for key, value in object_as_dict(existing_obj).items():
                             if hasattr(parent, key):
                                 setattr(parent, key, value)
@@ -200,6 +236,7 @@ def back_populate_tables(db: Session, obj) -> object:
             # db.refresh(obj)
             print('added new')
         else:
+            _convert_uuids_to_strings(existing_obj)
             db.merge(obj)
             db.commit()
             for key, value in object_as_dict(existing_obj).items():
@@ -213,6 +250,8 @@ def back_populate_tables(db: Session, obj) -> object:
         # print(f"Error during commit: {e}")
         raise  # Re-raise the exception to indicate failure
 
+    # Convert UUID attributes to strings for consistency in the returned object
+    _convert_uuids_to_strings(obj)
     return obj  # Return the object with its related objects back-populated
 
 

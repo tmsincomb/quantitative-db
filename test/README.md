@@ -73,7 +73,7 @@ pytest test/test_database_setup.py::TestDatabaseSetup::test_tables_created -v
 
 The tests verify these core tables exist:
 - `objects` - Main object table
-- `units` - Unit definitions  
+- `units` - Unit definitions
 - `aspects` - Aspect definitions
 - `descriptors_inst` - Instance descriptors
 - `descriptors_cat` - Categorical descriptors
@@ -82,4 +82,4 @@ The tests verify these core tables exist:
 - `values_cat` - Categorical values
 - `values_quant` - Quantitative values
 - `addresses` - Address mappings
-- `controlled_terms` - Controlled vocabulary 
+- `controlled_terms` - Controlled vocabulary
