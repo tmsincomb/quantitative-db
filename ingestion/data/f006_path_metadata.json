@@ -1,0 +1,48 @@
+{
+  "data": [
+    {
+      "type": "pathmeta",
+      "dataset_id": "2a3d01c0-39d3-464a-8746-54c9d67ebe0f",
+      "remote_id": "2a3d01c0-39d3-464a-8746-54c9d67ebe0f",
+      "basename": "dataset-2a3d01c0-39d3-464a-8746-54c9d67ebe0f-f006",
+      "dataset_relative_path": "sub-f006/sam-l-seg-c1/microct/image001.jpx",
+      "file_id": 2001,
+      "uri_api": "https://api.pennsieve.io/packages/2001",
+      "mimetype": "image/jpx",
+      "timestamp_updated": "2024-01-15T10:30:00.000Z"
+    },
+    {
+      "type": "pathmeta",
+      "dataset_id": "2a3d01c0-39d3-464a-8746-54c9d67ebe0f",
+      "remote_id": "2a3d01c0-39d3-464a-8746-54c9d67ebe0f",
+      "basename": "dataset-2a3d01c0-39d3-464a-8746-54c9d67ebe0f-f006",
+      "dataset_relative_path": "sub-f006/sam-r-seg-c1/microct/image002.jpx",
+      "file_id": 2002,
+      "uri_api": "https://api.pennsieve.io/packages/2002",
+      "mimetype": "image/jpx",
+      "timestamp_updated": "2024-01-15T10:30:00.000Z"
+    },
+    {
+      "type": "pathmeta",
+      "dataset_id": "2a3d01c0-39d3-464a-8746-54c9d67ebe0f",
+      "remote_id": "2a3d01c0-39d3-464a-8746-54c9d67ebe0f",
+      "basename": "dataset-2a3d01c0-39d3-464a-8746-54c9d67ebe0f-f006",
+      "dataset_relative_path": "sub-f006/sam-l-seg-c2/microct/image003.jpx",
+      "file_id": 2003,
+      "uri_api": "https://api.pennsieve.io/packages/2003",
+      "mimetype": "image/jpx",
+      "timestamp_updated": "2024-01-15T10:30:00.000Z"
+    },
+    {
+      "type": "pathmeta",
+      "dataset_id": "2a3d01c0-39d3-464a-8746-54c9d67ebe0f",
+      "remote_id": "2a3d01c0-39d3-464a-8746-54c9d67ebe0f",
+      "basename": "dataset-2a3d01c0-39d3-464a-8746-54c9d67ebe0f-f006",
+      "dataset_relative_path": "sub-f006/sam-r-seg-c2/microct/image004.jpx",
+      "file_id": 2004,
+      "uri_api": "https://api.pennsieve.io/packages/2004",
+      "mimetype": "image/jpx",
+      "timestamp_updated": "2024-01-15T10:30:00.000Z"
+    }
+  ]
+}
