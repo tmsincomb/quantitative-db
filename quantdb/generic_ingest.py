@@ -69,30 +69,50 @@ def get_or_create(session, obj, back_populate=None):
     """
     model = obj.__class__
     data = object_as_dict(obj)
+
+    # First, try to find existing object by all attributes
     instance = session.query(model).filter_by(**data).one_or_none()
     if instance:
         # Convert UUID attributes to strings for consistency
         _convert_uuids_to_strings(instance)
         return instance
-    else:
-        params = {k: v for k, v in data.items() if not isinstance(v, ClauseElement)}
-        instance = model(**params)
-        try:
-            session.add(instance)
+
+    # If not found by all attributes, try constraint-based query
+    instance = query_by_constraints(session, obj)
+    if instance:
+        # Convert UUID attributes to strings for consistency
+        _convert_uuids_to_strings(instance)
+        return instance
+
+    # No existing instance found, create new one
+    params = {k: v for k, v in data.items() if not isinstance(v, ClauseElement)}
+    instance = model(**params)
+    try:
+        session.add(instance)
+        session.commit()
+        if back_populate:
+            for attr, value in back_populate.items():
+                setattr(instance, attr, value)
             session.commit()
-            if back_populate:
-                for attr, value in back_populate.items():
-                    setattr(instance, attr, value)
-                session.commit()
-            # Convert UUID attributes to strings for consistency
-            _convert_uuids_to_strings(instance)
-        except Exception:
-            session.rollback()
-            instance = session.query(model).filter_by(**data).one()
+        # Convert UUID attributes to strings for consistency
+        _convert_uuids_to_strings(instance)
+        return instance
+    except Exception:
+        # Creation failed, likely due to unique constraint violation
+        # Rollback and try to find the existing record again
+        session.rollback()
+
+        # Try both approaches to find the existing record
+        instance = session.query(model).filter_by(**data).one_or_none()
+        if not instance:
+            instance = query_by_constraints(session, obj)
+
+        if instance:
             _convert_uuids_to_strings(instance)
             return instance
         else:
-            return instance
+            # This shouldn't happen, but if it does, re-raise the original error
+            raise
 
 
 def _convert_uuids_to_strings(obj):

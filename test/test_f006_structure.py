@@ -522,8 +522,8 @@ def check_f006_dataset_status(session):
                 """
             SELECT o.id, o.id_file
             FROM objects o
-            JOIN dataset_object do ON o.id = do.object
-            WHERE do.dataset = :dataset_id AND o.id_type = 'package'
+            JOIN dataset_object dobj ON o.id = dobj.object
+            WHERE dobj.dataset = :dataset_id AND o.id_type = 'package'
         """
             ),
             {'dataset_id': f006_uuid},

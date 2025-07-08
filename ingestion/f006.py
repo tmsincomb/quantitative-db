@@ -90,15 +90,19 @@ def create_basic_descriptors(session):
     modality_desc.descriptors_inst = created_descriptors['nerve-volume']
     created_modality_desc = get_or_create(session, modality_desc)
 
-    # Create address for constant values
-    const_addr = Addresses(addr_type='constant', addr_field=None, value_type='single')
-    created_addr = get_or_create(session, const_addr)
+    # Create address for constant values - just use any existing constant address
+    const_addr = session.query(Addresses).filter_by(addr_type='constant', value_type='single').first()
+    if not const_addr:
+        # If no constant address exists, create one
+        const_addr = Addresses(addr_type='constant', addr_field=None, value_type='single')
+        session.add(const_addr)
+        session.commit()
 
     return {
         'descriptors': created_descriptors,
         'terms': created_terms,
         'modality_desc': created_modality_desc,
-        'const_addr': created_addr,
+        'const_addr': const_addr,
     }
 
 
