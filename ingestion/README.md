@@ -155,3 +155,36 @@ The F006 ingestion script is correctly structured and ready for testing.
 ```
 
 This implementation proves that the generic_ingest approach can significantly simplify data ingestion while maintaining full functionality and improving maintainability.
+
+## 🔄 Refactored Implementation (Recommended)
+
+**New**: The F006 ingestion has been refactored into a two-stage pipeline for improved maintainability and debugging:
+
+### Files
+- **`f006_data_extraction.py`** - Pulls data from Cassava APIs, processes, and saves organized CSVs
+- **`f006_database_ingestion.py`** - Reads CSVs and ingests into PostgreSQL database
+- **`run_f006_pipeline.py`** - Complete pipeline runner for both stages
+- **`README_refactored.md`** - Comprehensive documentation
+
+### Quick Start
+```bash
+# Complete pipeline (dry run first, recommended)
+python run_f006_pipeline.py --source-local
+
+# Complete pipeline with database commit
+python run_f006_pipeline.py --source-local --commit
+
+# Or run stages separately:
+python f006_data_extraction.py --source-local
+python f006_database_ingestion.py --commit
+```
+
+### Benefits
+- ✅ **Separation of concerns**: API extraction vs database ingestion
+- ✅ **Better debugging**: CSV inspection between stages
+- ✅ **Data preservation**: Timestamped CSV snapshots
+- ✅ **Graceful fallback**: Auto-fallback from API to local data
+- ✅ **Enhanced validation**: Multi-level data quality checks
+- ✅ **Dry run support**: Validate before committing to database
+
+See **`README_refactored.md`** for complete documentation of the new approach.
