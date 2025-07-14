@@ -18,7 +18,7 @@ else
     PORT=$1
 fi
 
-TEST_DATABASE=$(python -c 'from quantdb.config import auth; print(auth.get("test-db-database"))')
+TEST_DATABASE=$(python3 -c 'from quantdb.config import auth; print(auth.get("test-db-database"))')
 if [ -z $2 ]; then
     DATABASE=${TEST_DATABASE}
 else

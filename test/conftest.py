@@ -50,10 +50,24 @@ def setup_test_database(project_root, test_database_config):
     # Make sure the script is executable
     os.chmod(dbsetup_script, 0o755)
 
+    # Skip running dbsetup since database is already set up
+    # Just verify the connection works
+    import psycopg2
     try:
-        # Set up environment with hardcoded test password
+        conn = psycopg2.connect(
+            host=test_database_config['host'],
+            port=test_database_config['port'],
+            database=test_database_config['database'],
+            user=test_database_config['user'],
+            password='tom-is-cool'
+        )
+        conn.close()
+        print("Database connection successful!")
+    except Exception as e:
+        print(f"Database connection failed: {e}")
+        # Try to run dbsetup if connection fails
         test_env = os.environ.copy()
-        test_env['PGPASSWORD'] = 'tom-is-cool'  # Hardcoded test password
+        test_env['PGPASSWORD'] = 'postgres'  # Use postgres password for setup scripts
 
         # Run dbsetup with test database parameters
         cmd = [
@@ -64,7 +78,6 @@ def setup_test_database(project_root, test_database_config):
         ]
 
         print(f"Running command: {' '.join(cmd)}")
-        print(f'Using hardcoded test password: tom-is-cool')
 
         # Run the dbsetup script with the password environment variable
         result = subprocess.run(
