@@ -7,7 +7,7 @@ This guide explains the correct order for populating tables in the QuantDB schem
 The QuantDB schema consists of four levels of tables:
 
 1. **Root Tables** - No dependencies on other tables
-2. **Intermediate Tables** - Depend on root tables  
+2. **Intermediate Tables** - Depend on root tables
 3. **Leaf Tables** - Depend on many other tables
 4. **Self-Referencing Tables** - Reference themselves for hierarchical relationships
 
@@ -64,7 +64,7 @@ These tables have no foreign key dependencies and must be populated first:
 ### Objects
 - **Purpose**: Data objects (datasets, packages)
 - **Key Fields**: `id`, `id_type`, `id_file`
-- **Constraints**: 
+- **Constraints**:
   - `id_type='package'` requires `id_file` to be set
   - `id_type='quantdb'` requires `id_internal` to be set
 - **Example Values**:
@@ -123,7 +123,7 @@ These tables depend on root tables:
       id_sub='sub-001',
       id_sam=None
   )
-  
+
   # Sample
   ValuesInst(
       type='sample',
@@ -189,7 +189,7 @@ These tables depend on many other tables and should use `back_populate_tables`:
       desc_cat=desc_cat_id,
       instance=instance_id
   )
-  
+
   # Set relationships
   values_cat.controlled_terms = controlled_term_obj
   values_cat.descriptors_cat = desc_cat_obj
@@ -198,7 +198,7 @@ These tables depend on many other tables and should use `back_populate_tables`:
   values_cat.obj_desc_cat = obj_desc_cat_obj
   values_cat.obj_desc_inst = obj_desc_inst_obj
   values_cat.objects = objects_obj
-  
+
   # Use back_populate_tables to handle all relationships
   result = back_populate_tables(session, values_cat)
   ```
@@ -217,7 +217,7 @@ These tables depend on many other tables and should use `back_populate_tables`:
       instance=instance_id,
       value_blob={'value': 42.5, 'unit': 'mm'}
   )
-  
+
   # Set relationships
   values_quant.descriptors_inst = desc_inst_obj
   values_quant.descriptors_quant = desc_quant_obj
@@ -225,7 +225,7 @@ These tables depend on many other tables and should use `back_populate_tables`:
   values_quant.obj_desc_inst = obj_desc_inst_obj
   values_quant.obj_desc_quant = obj_desc_quant_obj
   values_quant.objects = objects_obj
-  
+
   # Use back_populate_tables to handle all relationships
   result = back_populate_tables(session, values_quant)
   ```
@@ -235,7 +235,7 @@ These tables depend on many other tables and should use `back_populate_tables`:
 These tables can be populated after their base records exist:
 
 - **instance_parent**: Parent-child relationships for ValuesInst
-- **class_parent**: Parent-child relationships for DescriptorsInst  
+- **class_parent**: Parent-child relationships for DescriptorsInst
 - **aspect_parent**: Parent-child relationships for Aspects
 - **dataset_object**: Links datasets to their objects
 - **equiv_inst**: Equivalent instances
@@ -303,7 +303,7 @@ desc_cat = get_or_create(session, DescriptorsCat(
     domain=desc_inst.id, range='controlled', label='modality'
 ))
 desc_quant = get_or_create(session, DescriptorsQuant(
-    unit=unit.id, aspect=aspect.id, domain=desc_inst.id, 
+    unit=unit.id, aspect=aspect.id, domain=desc_inst.id,
     label='sample-diameter', aggregation_type='instance'
 ))
 instance = get_or_create(session, ValuesInst(

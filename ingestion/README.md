@@ -81,7 +81,7 @@ sub-f006/sam-r-seg-c2/microct/image004.jpx
 #### Supporting Tables Created
 - **Root Tables**: All 6 root tables (Addresses, Aspects, Units, ControlledTerms, DescriptorsInst, Objects)
 - **Intermediate Tables**: DescriptorsCat, DescriptorsQuant, ValuesInst
-- **Quantitative Descriptors**: 
+- **Quantitative Descriptors**:
   - nerve-volume-mm3 (uses volume aspect and mm3 unit)
   - nerve-cross-section-diameter-um (uses diameter aspect and um unit)
 

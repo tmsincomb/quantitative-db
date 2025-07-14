@@ -84,4 +84,4 @@ The implementation has been verified by:
 
 ## Conclusion
 
-The `f006.py` script now fully complies with the QuantDB table population guide, creating all necessary tables in the correct order and properly using `back_populate_tables` for complex relationship management in leaf tables. 
+The `f006.py` script now fully complies with the QuantDB table population guide, creating all necessary tables in the correct order and properly using `back_populate_tables` for complex relationship management in leaf tables.

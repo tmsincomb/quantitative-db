@@ -1442,7 +1442,13 @@ def update_foreign_key(target, value, oldvalue, initiator):
 
         # Set the foreign key field if it exists on the target
         if foreign_key_field and hasattr(target, foreign_key_field):
-            setattr(target, foreign_key_field, value.id)
+            # Handle models with composite primary keys that don't have a single 'id' field
+            if hasattr(value, 'id'):
+                setattr(target, foreign_key_field, value.id)
+            else:
+                # Skip setting foreign key for models with composite primary keys
+                # These relationships will be handled through other means
+                pass
 
 
 # Function to attach the listener to all relationships in a given model

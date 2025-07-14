@@ -37,10 +37,10 @@ instance_parent, class_parent, aspect_parent, dataset_object, equiv_inst
 - Sample IDs: Must start with `'sam-'` (e.g., `'sam-001'`)
 
 ### Critical Constraints
-1. **Objects**: 
+1. **Objects**:
    - `id_type='package'` requires `id_file` to be set
    - `id_type='dataset'` cannot be used in `obj_desc_*` tables
-   
+
 2. **ValuesInst**:
    - `type='subject'`: `id_formal` = `id_sub`, `id_sam` = NULL
    - `type='sample'`: `id_formal` = `id_sam`
