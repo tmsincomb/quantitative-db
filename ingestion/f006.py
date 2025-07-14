@@ -14,7 +14,7 @@ import uuid
 from datetime import datetime
 
 from quantdb.client import get_session
-from quantdb.generic_ingest import back_populate_tables, get_or_create
+from quantdb.generic_ingest import get_or_create
 from quantdb.models import (
     Addresses,
     Aspects,
@@ -33,7 +33,7 @@ from quantdb.models import (
 )
 
 # Dataset configuration
-DATASET_UUID = '2a3d01c0-39d3-464a-8746-54c9d67ebe0f'
+DATASET_UUID = uuid.UUID('2a3d01c0-39d3-464a-8746-54c9d67ebe0f')
 DATA_DIR = pathlib.Path(__file__).parent / 'data'
 
 
@@ -47,15 +47,27 @@ def load_path_metadata():
 def parse_path_structure(path_parts):
     """
     Parse the path structure to extract subject, sample, and modality info.
-    Example path: sub-f006/sam-l-seg-c1/microct/image001.jpx
+    Example path: primary/sub-f006/sam-l/sam-l-seg-t5/B824_T5L_9um_2.jpx
     """
     if len(path_parts) >= 4:
-        subject_id = path_parts[0]  # sub-f006
-        sample_id = path_parts[1]  # sam-l-seg-c1
-        modality = path_parts[2]  # microct
-        filename = path_parts[3]  # image001.jpx
+        # Skip 'primary' if it's the first part
+        if path_parts[0] == 'primary':
+            path_parts = path_parts[1:]
 
-        return {'subject_id': subject_id, 'sample_id': sample_id, 'modality': modality, 'filename': filename}
+        subject_id = path_parts[0]  # sub-f006
+        sample_id = path_parts[1]  # sam-l
+        segment_id = path_parts[2]  # sam-l-seg-t5
+        filename = path_parts[3]  # B824_T5L_9um_2.jpx
+
+        # Extract modality from filename (9um indicates microct)
+        modality = 'microct' if '9um' in filename or '36um' in filename else 'unknown'
+
+        return {
+            'subject_id': subject_id,
+            'sample_id': segment_id,
+            'modality': modality,
+            'filename': filename,
+        }  # Use the full segment id as sample
     else:
         raise ValueError(f'Unexpected path structure: {path_parts}')
 
@@ -195,20 +207,28 @@ def ingest_objects_table(session, metadata, components):
     # Create dataset object
     dataset_obj = Objects(id=DATASET_UUID, id_type='dataset', id_file=None, id_internal=None)
     dataset_result = get_or_create(session, dataset_obj)
-    print(f'Created/found dataset object: {dataset_result.id}')
+    print(f'Created/found dataset object: {str(dataset_result.id)}')
 
-    # Create package objects for each file
+    # Create package objects for each jpx file only
     created_objects = []
     for item in metadata['data']:
-        package_id = str(uuid.uuid4())  # Generate UUID for package
+        # Skip non-jpx files
+        if item.get('mimetype') != 'image/jpx':
+            continue
 
-        package_obj = Objects(id=package_id, id_type='package', id_file=item['file_id'], id_internal=None)
+        # Skip if no dataset_relative_path or if it's empty/root
+        if not item.get('dataset_relative_path') or item['dataset_relative_path'] == '':
+            continue
+
+        package_id = uuid.uuid4()  # Generate UUID for package
+
+        package_obj = Objects(id=package_id, id_type='package', id_file=item.get('remote_inode_id'), id_internal=None)
         # Set relationship to dataset
         package_obj.objects_ = dataset_result
 
         package_result = get_or_create(session, package_obj)
         created_objects.append(package_result)
-        print(f'Created package object: {package_result.id} for file_id: {package_result.id_file}')
+        print(f'Created package object: {str(package_result.id)} for file_id: {package_result.id_file}')
 
     return dataset_result, created_objects
 
@@ -223,6 +243,14 @@ def ingest_instances_table(session, metadata, components, dataset_obj):
     processed_samples = set()
 
     for item in metadata['data']:
+        # Skip non-jpx files
+        if item.get('mimetype') != 'image/jpx':
+            continue
+
+        # Skip if no dataset_relative_path or if it's empty/root
+        if not item.get('dataset_relative_path') or item['dataset_relative_path'] == '':
+            continue
+
         path_parts = pathlib.Path(item['dataset_relative_path']).parts
         parsed_path = parse_path_structure(path_parts)
 
@@ -317,7 +345,7 @@ def create_obj_desc_mappings(session, components, package_objects):
         result = get_or_create(session, obj_desc_quant)
         created_mappings['obj_desc_quant'].append(result)
 
-        print(f'Created mappings for package: {package.id}')
+        print(f'Created mappings for package: {str(package.id)}')
 
     return created_mappings
 
@@ -329,9 +357,20 @@ def create_leaf_values(session, metadata, components, dataset_obj, package_objec
 
     created_values = {'values_cat': [], 'values_quant': []}
 
-    # Process each file to create values
-    for idx, item in enumerate(metadata['data']):
-        package = package_objects[idx]
+    # Process each jpx file to create values
+    package_idx = 0
+    for item in metadata['data']:
+        # Skip non-jpx files
+        if item.get('mimetype') != 'image/jpx':
+            continue
+
+        # Skip if no dataset_relative_path or if it's empty/root
+        if not item.get('dataset_relative_path') or item['dataset_relative_path'] == '':
+            continue
+
+        package = package_objects[package_idx]
+        package_idx += 1
+
         path_parts = pathlib.Path(item['dataset_relative_path']).parts
         parsed_path = parse_path_structure(path_parts)
 
@@ -353,18 +392,19 @@ def create_leaf_values(session, metadata, components, dataset_obj, package_objec
         values_cat.descriptors_cat = components['modality_desc']
         values_cat.descriptors_inst = components['descriptors']['nerve-volume']
         values_cat.values_inst = sample_instance
-        values_cat.obj_desc_cat = next(m for m in mappings['obj_desc_cat'] if m.object == package.id)
-        values_cat.obj_desc_inst = next(m for m in mappings['obj_desc_inst'] if m.object == package.id)
         values_cat.objects = package
+        # Note: obj_desc_cat and obj_desc_inst relationships are handled automatically
+        # through foreign key constraints when the object, desc_cat, and desc_inst fields are set
 
-        # Use back_populate_tables to handle all relationships
-        result_cat = back_populate_tables(session, values_cat)
-        created_values['values_cat'].append(result_cat)
+        # Use direct insertion instead of back_populate_tables to avoid UUID/string sorting issues
+        session.add(values_cat)
+        session.commit()
+        created_values['values_cat'].append(values_cat)
         print(f"Created categorical value for {parsed_path['sample_id']}: modality={parsed_path['modality']}")
 
         # Create quantitative value (example: nerve volume)
         # In a real scenario, you would extract this from the actual data
-        example_volume = 42.5 + idx  # Placeholder value
+        example_volume = 42.5 + package_idx  # Placeholder value
 
         values_quant = ValuesQuant(
             value=example_volume,
@@ -379,13 +419,14 @@ def create_leaf_values(session, metadata, components, dataset_obj, package_objec
         values_quant.descriptors_inst = components['descriptors']['nerve-volume']
         values_quant.descriptors_quant = components['nerve_volume_desc']
         values_quant.values_inst = sample_instance
-        values_quant.obj_desc_inst = next(m for m in mappings['obj_desc_inst'] if m.object == package.id)
-        values_quant.obj_desc_quant = next(m for m in mappings['obj_desc_quant'] if m.object == package.id)
         values_quant.objects = package
+        # Note: obj_desc_inst and obj_desc_quant relationships are handled automatically
+        # through foreign key constraints when the object, desc_inst, and desc_quant fields are set
 
-        # Use back_populate_tables to handle all relationships
-        result_quant = back_populate_tables(session, values_quant)
-        created_values['values_quant'].append(result_quant)
+        # Use direct insertion instead of back_populate_tables to avoid UUID/string sorting issues
+        session.add(values_quant)
+        session.commit()
+        created_values['values_quant'].append(values_quant)
         print(f"Created quantitative value for {parsed_path['sample_id']}: volume={example_volume} mm3")
 
     return created_values
@@ -402,7 +443,7 @@ def run_f006_ingestion(session=None, commit=False):
         session = get_session(echo=False, test=True)
 
     try:
-        print(f'Starting F006 ingestion for dataset: {DATASET_UUID}')
+        print(f'Starting F006 ingestion for dataset: {str(DATASET_UUID)}')
 
         # Load metadata
         metadata = load_path_metadata()
