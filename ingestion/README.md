@@ -28,10 +28,19 @@ Unlike the raw SQL approach in `ingest.py`, this implementation uses:
 
 #### 2. Table-to-Table Ingestion
 The script demonstrates complete ingestion into multiple tables:
-- **Objects table**: Dataset and package objects
-- **Values Instance table**: Subject and sample instances
-- **Descriptors tables**: Basic descriptors for the dataset
-- **Controlled Terms**: Modality terms
+
+**Root Tables (No dependencies):**
+- **Addresses**: Data source locations (constant and tabular-header types)
+- **Aspects**: Measurement aspects (volume, length, diameter)
+- **Units**: Measurement units (mm3, mm, um)
+- **ControlledTerms**: Controlled vocabulary (microct)
+- **DescriptorsInst**: Instance descriptors (human, nerve-volume, nerve-cross-section)
+- **Objects**: Dataset and package objects
+
+**Intermediate Tables (Depend on root tables):**
+- **DescriptorsCat**: Categorical descriptors (hasDataAboutItModality)
+- **DescriptorsQuant**: Quantitative descriptors (nerve-volume-mm3, nerve-cross-section-diameter-um)
+- **ValuesInst**: Subject and sample instances
 
 #### 3. Structured Data Pipeline
 ```python
@@ -69,10 +78,12 @@ sub-f006/sam-r-seg-c2/microct/image004.jpx
 - 1 subject instance (`sub-f006`)
 - 4 sample instances (`sam-l-seg-c1`, `sam-r-seg-c1`, `sam-l-seg-c2`, `sam-r-seg-c2`)
 
-#### Supporting Tables
-- Instance descriptors (human, nerve-volume)
-- Controlled terms (microct)
-- Addresses (constant values)
+#### Supporting Tables Created
+- **Root Tables**: All 6 root tables (Addresses, Aspects, Units, ControlledTerms, DescriptorsInst, Objects)
+- **Intermediate Tables**: DescriptorsCat, DescriptorsQuant, ValuesInst
+- **Quantitative Descriptors**: 
+  - nerve-volume-mm3 (uses volume aspect and mm3 unit)
+  - nerve-cross-section-diameter-um (uses diameter aspect and um unit)
 
 ## Testing
 
