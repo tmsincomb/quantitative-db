@@ -15,3 +15,5 @@ host:port:*:quantdb-test-user:password
 
 * Notes
 macOS will need the config.yaml in `Library/Application Support/quantdb/config.yaml`
+
+`brew install emacs`

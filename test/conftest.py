@@ -33,13 +33,21 @@ def test_database_config():
 def setup_test_database(project_root, test_database_config):
     """
     Set up the test database using the dbsetup script.
-    This fixture runs once per test session.
+    This fixture runs once per test session and ALWAYS:
+    1. Deletes the existing test database (if it exists)
+    2. Creates a fresh test database with all tables
+
+    This ensures a clean state for every test run.
     """
     print(f'\n=== Setting up test database ===')
     print(f"Database: {test_database_config['database']}")
     print(f"Host: {test_database_config['host']}")
     print(f"Port: {test_database_config['port']}")
     print(f"User: {test_database_config['user']}")
+
+    # Safety check: ONLY work with localhost
+    if test_database_config['host'] != 'localhost':
+        pytest.fail(f"Refusing to delete database on non-localhost host: {test_database_config['host']}")
 
     # Path to dbsetup script
     dbsetup_script = project_root / 'bin' / 'dbsetup'
@@ -50,36 +58,24 @@ def setup_test_database(project_root, test_database_config):
     # Make sure the script is executable
     os.chmod(dbsetup_script, 0o755)
 
-    # Skip running dbsetup since database is already set up
-    # Just verify the connection works
-    import psycopg2
+    print(f"Deleting and recreating test database: {test_database_config['database']}")
+
+    # Always run dbsetup to ensure fresh database
+    # The dbsetup script will handle dropping and recreating the database
+    test_env = os.environ.copy()
+    test_env['PGPASSWORD'] = 'postgres'  # Use postgres password for setup scripts
+
+    # Run dbsetup with test database parameters
+    cmd = [
+        str(dbsetup_script),
+        str(test_database_config['port']),
+        test_database_config['database'],
+        test_database_config['host'],
+    ]
+
+    print(f"Running command: {' '.join(cmd)}")
 
     try:
-        conn = psycopg2.connect(
-            host=test_database_config['host'],
-            port=test_database_config['port'],
-            database=test_database_config['database'],
-            user=test_database_config['user'],
-            password='tom-is-cool',
-        )
-        conn.close()
-        print('Database connection successful!')
-    except Exception as e:
-        print(f'Database connection failed: {e}')
-        # Try to run dbsetup if connection fails
-        test_env = os.environ.copy()
-        test_env['PGPASSWORD'] = 'postgres'  # Use postgres password for setup scripts
-
-        # Run dbsetup with test database parameters
-        cmd = [
-            str(dbsetup_script),
-            str(test_database_config['port']),
-            test_database_config['database'],
-            test_database_config['host'],
-        ]
-
-        print(f"Running command: {' '.join(cmd)}")
-
         # Run the dbsetup script with the password environment variable
         result = subprocess.run(
             cmd, cwd=project_root, capture_output=True, text=True, timeout=120, env=test_env
@@ -92,6 +88,22 @@ def setup_test_database(project_root, test_database_config):
 
         print(f'dbsetup completed successfully')
         print(f'STDOUT: {result.stdout}')
+
+        # Verify the database was created by attempting a connection
+        import psycopg2
+
+        try:
+            conn = psycopg2.connect(
+                host=test_database_config['host'],
+                port=test_database_config['port'],
+                database=test_database_config['database'],
+                user=test_database_config['user'],
+                password='tom-is-cool',
+            )
+            conn.close()
+            print('Database connection verification successful!')
+        except Exception as e:
+            pytest.fail(f'Failed to connect to newly created database: {e}')
 
         # Return the configuration for use by other fixtures
         return test_database_config
@@ -113,6 +125,31 @@ def test_session(setup_test_database):
         yield session
         session.close()
     except Exception as e:
+        pytest.fail(f'Failed to create test database session: {e}')
+
+
+@pytest.fixture(scope='function')
+def test_session_with_rollback(setup_test_database):
+    """
+    Get a fresh SQLAlchemy session for each test with automatic rollback.
+    This ensures test isolation by rolling back all changes after each test.
+    """
+    try:
+        session = get_session(echo=False, test=True)
+        # Start a savepoint that will be rolled back after the test
+        trans = session.begin()
+        yield session
+        # Always rollback the transaction to ensure test isolation
+        if trans.is_active:
+            trans.rollback()
+        session.close()
+    except Exception as e:
+        # If there's an error, make sure we still close the session
+        try:
+            if 'session' in locals():
+                session.close()
+        except:
+            pass
         pytest.fail(f'Failed to create test database session: {e}')
 
 

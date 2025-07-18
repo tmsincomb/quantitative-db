@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Static analysis test for f006.py to verify it implements the table population guide.
+Static analysis test for f006_csv_with_export.py to verify it implements the table population guide.
 
 This test analyzes the source code without importing it, avoiding Python 3.13/SQLAlchemy compatibility issues.
 """
@@ -11,10 +11,10 @@ import re
 
 
 def analyze_f006_implementation():
-    """Analyze f006.py to verify it follows the table population guide."""
+    """Analyze f006_csv_with_export.py to verify it follows the table population guide."""
 
-    # Read the f006.py file
-    f006_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'ingestion', 'f006.py')
+    # Read the f006_csv_with_export.py file
+    f006_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'ingestion', 'f006_csv_with_export.py')
     with open(f006_path, 'r') as f:
         content = f.read()
 

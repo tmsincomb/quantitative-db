@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test that f006.py properly implements the table population guide without importing models.
+Test that f006_csv_with_export.py properly implements the table population guide without importing models.
 """
 
 import ast
@@ -8,10 +8,10 @@ import os
 
 
 def analyze_f006_implementation():
-    """Analyze f006.py to verify it follows the table population guide."""
+    """Analyze f006_csv_with_export.py to verify it follows the table population guide."""
 
-    # Read the f006.py file
-    f006_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'ingestion', 'f006.py')
+    # Read the f006_csv_with_export.py file
+    f006_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'ingestion', 'f006_csv_with_export.py')
     with open(f006_path, 'r') as f:
         content = f.read()
 
@@ -65,9 +65,9 @@ def analyze_f006_implementation():
 
 
 def verify_implementation():
-    """Verify that f006.py properly implements the table population guide."""
+    """Verify that f006_csv_with_export.py properly implements the table population guide."""
 
-    print('Analyzing f006.py implementation...')
+    print('Analyzing f006_csv_with_export.py implementation...')
     results = analyze_f006_implementation()
 
     print('\n=== Root Tables (Must be populated first) ===')
@@ -153,13 +153,13 @@ def verify_implementation():
         issues.append('Some required models are not imported')
 
     if issues:
-        print('✗ FAILED: f006.py does NOT properly implement the table population guide')
+        print('✗ FAILED: f006_csv_with_export.py does NOT properly implement the table population guide')
         print('\nIssues found:')
         for issue in issues:
             print(f'  - {issue}')
         return False
     else:
-        print('✅ SUCCESS: f006.py properly implements the table population guide!')
+        print('✅ SUCCESS: f006_csv_with_export.py properly implements the table population guide!')
         print('\nKey achievements:')
         print('  - All root tables are created (Addresses, Aspects, Units, etc.)')
         print('  - All intermediate tables are created')

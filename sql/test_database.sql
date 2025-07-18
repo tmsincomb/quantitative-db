@@ -4,6 +4,11 @@ GRANT "quantdb-test-admin" TO CURRENT_USER;
 
 -- postgres postgres
 
+-- Terminate all connections to the test database before dropping it
+SELECT pg_terminate_backend(pid)
+FROM pg_stat_activity
+WHERE datname = :'test_database' AND pid <> pg_backend_pid();
+
 DROP DATABASE IF EXISTS :test_database;
 
 -- rds needs this https://stackoverflow.com/a/34898033

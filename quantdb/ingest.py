@@ -4,7 +4,6 @@ import sys
 from collections import defaultdict
 
 import requests
-from sparcur import objects as sparcur_objects  # register pathmeta type
 from sparcur.paths import Path
 from sparcur.utils import PennsieveId as RemoteId
 from sparcur.utils import fromJson
@@ -15,11 +14,6 @@ from sqlalchemy.sql import bindparam
 from sqlalchemy.sql import text as sql_text
 
 from quantdb.utils import dbUri, isoformat, log
-
-# FIXME sparcur dependencies, or keep ingest separate
-
-######### start database interaction section
-
 
 log = log.getChild('ingest')
 
@@ -730,8 +724,8 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
     values_objects = [
         (i, o['id_type'], o['id_file'] if 'id_file' in o else None)
         for i, o in objects.items()
-        if o['id_type'] != 'dataset'  # already did it above
-    ]
+        if o['id_type'] != 'dataset'
+    ]  # already did it above
     values_dataset_object = dataset_object
 
     def make_values_instances(i):
@@ -790,9 +784,9 @@ def extract_reva_ft(dataset_uuid, source_local=False, visualize=True):
             # figuring out how to turn that around is going to take a bit of thinking
             (this_dataset_updated_uuid, i.cd_mod, i.addr_jpmod),
         ] + [
-            (o, i.cd_obj, i.addr_const_null)  # XXX FIXME this is the only way I can think to do this right now ?
+            (o, i.cd_obj, i.addr_const_null)
             for o, b in objects.items()
-            if b['id_type'] == 'package'
+            if b['id_type'] == 'package'  # XXX FIXME this is the only way I can think to do this right now ?
         ]
 
         return vocd
@@ -879,8 +873,8 @@ def values_objects_from_objects(objects):
     return [
         (i, o['id_type'], o['id_file'] if 'id_file' in o else None)
         for i, o in objects.items()
-        if o['id_type'] != 'dataset'  # already did it above
-    ]
+        if o['id_type'] != 'dataset'
+    ]  # already did it above
 
 
 def ext_values(exts):

@@ -236,10 +236,10 @@ def back_populate_tables(db: Session, obj) -> object:
 
         # print("object", type(obj))
         filter_criteria = object_as_dict(obj)
-        print(type(obj), filter_criteria)
+        # print(type(obj), filter_criteria)
         existing_obj = db.query(type(obj)).filter_by(**filter_criteria).first()
-        print('filter criteria', filter_criteria)
-        print('found:', existing_obj)
+        # print('filter criteria', filter_criteria)
+        # print('found:', existing_obj)
 
         if not existing_obj:
             existing_obj = query_by_constraints(db, obj)
@@ -254,7 +254,7 @@ def back_populate_tables(db: Session, obj) -> object:
             # db.flush()
             db.commit()
             # db.refresh(obj)
-            print('added new')
+            # print('added new')
         else:
             _convert_uuids_to_strings(existing_obj)
             db.merge(obj)
@@ -262,7 +262,7 @@ def back_populate_tables(db: Session, obj) -> object:
             for key, value in object_as_dict(existing_obj).items():
                 if hasattr(obj, key):
                     setattr(obj, key, value)
-            print('updated existing')
+            # print('updated existing')
             # print("after update", object_as_dict(existing_obj))
 
     except IntegrityError:
