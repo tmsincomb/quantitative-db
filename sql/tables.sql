@@ -451,13 +451,15 @@ addr_desc_inst integer references addresses(id),
 expect integer
 );
 
-CREATE FUNCTION object_is_not_dataset() RETURNS trigger as $$
+CREATE OR REPLACE FUNCTION object_is_not_dataset() RETURNS trigger as $$
        BEGIN
        IF EXISTS (SELECT id_type FROM objects WHERE id = NEW.object AND id_type != 'dataset') THEN
           RETURN NEW;
+       ELSIF NOT EXISTS (SELECT * FROM objects WHERE id = NEW.object) THEN
+        RAISE EXCEPTION 'object is not in the objects table: %', NEW.object;
        ELSE
         RAISE EXCEPTION 'object is of type dataset: %', NEW.object
-       USING HINT = 'object uuids must not refer to objects of type dataset';
+        USING HINT = 'object uuids must not refer to objects of type dataset';
        END IF;
        END;
 $$ language plpgsql;
