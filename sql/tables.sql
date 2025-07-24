@@ -591,8 +591,8 @@ instance integer references values_inst(id), -- values_inst id -- links simliar 
 
 UNIQUE (object, instance, desc_quant), -- TODO for repeated measures we need to fully reify performances, which are the fully lifted version of this and are the primary axis
 
-orig_value varchar,
-orig_units varchar,
+orig_value text,
+orig_units text,
 -- FIXME TODO may also need original_type if such information was tracked
 value_blob jsonb NOT NULL -- a full json represntation that may have weird shapes
 -- UNIQUE (desc_quant, prov, instance), -- FIXME issues with repeated measures? issues with values
