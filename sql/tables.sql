@@ -410,6 +410,9 @@ CREATE TYPE address_type AS ENUM (
 'constant',
 --'curator', -- i.e. it came from the head of someone, will be very common for units and aspects FIXME TODO figure out how to document
 -- "this came from tgbugs looking at a column header named thus_and_such_mm, maybe it is sufficient to just list the header itself but the type needs to be a bit different, tabular-header-value or json-path-with-types-property or something?
+
+'record-index', -- there are many cases where all we have is the implicit record id based on counter e.g. a line of a file or an array index
+
 'tabular-header',
 'tabular-alt-header',
 
