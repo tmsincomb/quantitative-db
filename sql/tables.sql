@@ -589,6 +589,8 @@ FOREIGN KEY (object, desc_quant) REFERENCES obj_desc_quant (object, desc_quant),
 
 instance integer references values_inst(id), -- values_inst id -- links simliar measures on the same input (row)
 
+UNIQUE (object, instance, desc_quant), -- TODO for repeated measures we need to fully reify performances, which are the fully lifted version of this and are the primary axis
+
 orig_value varchar,
 orig_units varchar,
 -- FIXME TODO may also need original_type if such information was tracked
@@ -629,6 +631,8 @@ FOREIGN KEY (object, desc_inst) REFERENCES obj_desc_inst (object, desc_inst),
 FOREIGN KEY (object, desc_cat) REFERENCES obj_desc_cat (object, desc_cat),
 
 instance integer references values_inst(id), -- values_inst id -- links simliar measures on the same input (row)
+
+UNIQUE (object, instance, desc_cat), -- see note about needing performances if a single object includes repeated measures
 
 constraint constraint_values_cat_some_value check (value_open is not null or value_controlled is not null)
 
