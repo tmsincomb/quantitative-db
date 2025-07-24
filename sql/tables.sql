@@ -183,6 +183,7 @@ CREATE TYPE instance_type AS ENUM (
 -- and sample) without having to parse ids or guess
 'subject',
 'sample',
+'site', -- too much for right now probably ...
 'below' -- entities that might be part of a sample but were not derived from it during the experiment
 --'performance',
 --'lifted-type' -- something below the sds ontology level but lifted, e.g. a gene id implying the rna transcribed for that gene that was extracted from/isolated form in a specific sample inevitably along with the rna for other genes as well
@@ -217,7 +218,7 @@ id_sam text check (id_sam ~ '^sam-'), -- alternative to instance_sample
 --id_sub integer references sds_specimen(id) NOT NULL, -- usually, edge cases are pools/pops XXX not null this for now and see what happens
 --id_sam integer references sds_specimen(id), -- sometimes
 UNIQUE (dataset, id_formal),
-constraint constraint_values_inst_type_id_formal check (type = 'below' and not (id_formal ~ '^(sub|sam)-') or type = 'subject' and id_formal ~ '^sub-' or type = 'sample' and id_formal ~ '^sam-'),
+constraint constraint_values_inst_type_id_formal check (type = 'below' and not (id_formal ~ '^(sub|sam|site)-') or type = 'subject' and id_formal ~ '^sub-' or type = 'sample' and id_formal ~ '^sam-' or type = 'site' and id_formal ~ '^site-'),
 constraint constraint_values_inst_type_id_sub check (type != 'subject' or (id_sub = id_formal and id_sam is null)),
 constraint constraint_values_inst_type_id_sam check (type != 'sample' or (id_sam is not null and id_sam = id_formal)),
 constraint constraint_values_inst_type_below check (type != 'below' or (id_sub is not null or id_sam is not null)) -- XXX there is not a general way to enforce that there must be a sample, e.g. a mri experiment can have virtual of sections of the brain without there being samples in the dataset at all, only subjects and performances
