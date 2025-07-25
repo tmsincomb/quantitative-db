@@ -160,7 +160,7 @@ def main_query(endpoint, kwargs):
             'qd.label, '
             'id.label AS domain, '
             'qd.shape, '
-            'qd.aggregation_type as agg_type, '
+            'qd.aggregation_type AS agg_type, '
             'a.label AS aspect, '
             'u.label AS unit, '
             'qd.description '
@@ -226,47 +226,47 @@ LEFT OUTER JOIN aspects AS aspar ON aspar.id = ap.parent
     s_prov_objs = """
 ,
 im.dataset as prov_source_dataset, -- FIXME dataset_object maybe? or what?
-o.id as prov_source_id,
-o.id_type as prov_source_id_type,
-oi.updated_transitive as prov_source_updated_transitive,
+o.id AS prov_source_id,
+o.id_type AS prov_source_id_type,
+oi.updated_transitive AS prov_source_updated_transitive,
 """
 
     s_prov_i = """
-adi.addr_type  as prov_inst_addr_type,
-adi.addr_field as prov_inst_addr_field,
-adi.value_type as prov_inst_type,
+adi.addr_type  AS prov_inst_addr_type,
+adi.addr_field AS prov_inst_addr_field,
+adi.value_type AS prov_inst_type,
 
-add.addr_type  as prov_desc_inst_addr_type,
-add.addr_field as prov_desc_inst_addr_field,
-add.value_type as prov_desc_inst_type
+add.addr_type  AS prov_desc_inst_addr_type,
+add.addr_field AS prov_desc_inst_addr_field,
+add.value_type AS prov_desc_inst_type
 """
 
     s_prov_c = """
-adc.addr_type  as prov_value_addr_type,
-adc.addr_field as prov_value_addr_field,
-adc.value_type as prov_value_type
+adc.addr_type  AS prov_value_addr_type,
+adc.addr_field AS prov_value_addr_field,
+adc.value_type AS prov_value_type
 """ + (""",
-NULL::address_type     as prov_unit_addr_type,
-NULL                   as prov_unit_addr_field,
-NULL::field_value_type as prov_unit_type,
+NULL::address_type     AS prov_unit_addr_type,
+NULL                   AS prov_unit_addr_field,
+NULL::field_value_type AS prov_unit_type,
 
-NULL::address_type     as prov_aspect_addr_type,
-NULL                   as prov_aspect_addr_field,
-NULL::field_value_type as prov_aspect_type
+NULL::address_type     AS prov_aspect_addr_type,
+NULL                   AS prov_aspect_addr_field,
+NULL::field_value_type AS prov_aspect_type
 """ if sn.unit or endpoint == 'values/inst' else '')
 
     s_prov_q = """
-adq.addr_type  as prov_value_addr_type,
-adq.addr_field as prov_value_addr_field,
-adq.value_type as prov_value_type,
+adq.addr_type  AS prov_value_addr_type,
+adq.addr_field AS prov_value_addr_field,
+adq.value_type AS prov_value_type,
 
-adu.addr_type  as prov_unit_addr_type,
-adu.addr_field as prov_unit_addr_field,
-adu.value_type as prov_unit_type,
+adu.addr_type  AS prov_unit_addr_type,
+adu.addr_field AS prov_unit_addr_field,
+adu.value_type AS prov_unit_type,
 
-ada.addr_type  as prov_aspect_addr_type,
-ada.addr_field as prov_aspect_addr_field,
-ada.value_type as prov_aspect_type
+ada.addr_type  AS prov_aspect_addr_type,
+ada.addr_field AS prov_aspect_addr_field,
+ada.value_type AS prov_aspect_type
 """
 
     q_prov_i = """
@@ -282,7 +282,7 @@ JOIN addresses AS adc ON adc.id = odc.addr_field
 
     q_prov_q = """
 JOIN obj_desc_quant AS odq ON odq.object = o.id AND odq.desc_quant = qv.desc_quant
-JOIN addresses as adq on adq.id = odq.addr_field
+JOIN addresses AS adq on adq.id = odq.addr_field
 LEFT OUTER JOIN addresses AS adu ON adu.id = odq.addr_unit
 LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
 """
@@ -722,7 +722,7 @@ def make_app(db=None, name='quantdb-api-server', dev=False):
 
                     'id.iri, '
                     'id.label, '
-                    'idpar.label as subclassof'
+                    'idpar.label AS subclassof'
 
                     """
 FROM descriptors_inst AS id
@@ -744,8 +744,8 @@ LEFT OUTER JOIN descriptors_inst AS idpar ON idpar.id = clp.parent
                     'cd.range, '
                     'cd.description '
 
-                    'from descriptors_cat as cd '
-                    'left outer join descriptors_inst as cdid on cdid.id = cd.domain'
+                    'from descriptors_cat AS cd '
+                    'left outer join descriptors_inst AS cdid ON cdid.id = cd.domain'
                     ), {}
 
         return default_flow('desc/cat', 'desc-cat', main_query, to_json, alt_query_fun=query)  # TODO likely need different args e.g. to filter by desc_inst
@@ -759,15 +759,15 @@ LEFT OUTER JOIN descriptors_inst AS idpar ON idpar.id = clp.parent
                     'qd.label, '
                     'id.label AS domain, '
                     'qd.shape, '
-                    'qd.aggregation_type as agg_type, '
+                    'qd.aggregation_type AS agg_type, '
                     'a.label AS aspect, '
                     'u.label AS unit, '
                     'qd.description '
 
-                    'from descriptors_quant as qd '
-                    'left outer join descriptors_inst as id on id.id = qd.domain '
-                    'left outer join units as u on u.id = qd.unit '
-                    'join aspects as a on a.id = qd.aspect'
+                    'from descriptors_quant AS qd '
+                    'left outer join descriptors_inst AS id ON id.id = qd.domain '
+                    'left outer join units AS u on u.id = qd.unit '
+                    'join aspects AS a ON a.id = qd.aspect'
                     ), {}
 
         return default_flow('desc/quant', 'desc-quant', main_query, to_json, alt_query_fun=query)  # TODO likely need different args e.g. to filter by desc_inst
