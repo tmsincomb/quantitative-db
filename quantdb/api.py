@@ -345,8 +345,8 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
           'ON oi.id = o.id\n')
          if kw.source_only else
          ('\n'  # have to use LEFT OUTER because object might have only one of cat or quant
-          'LEFT OUTER JOIN values_quant AS qv ON qv.instance = im.id\n'
-          'JOIN objects AS o ON cv.object = o.id OR qv.object = o.id\n'
+          #'LEFT OUTER JOIN values_quant AS qv ON qv.instance = im.id\n'  # FIXME redundant ? also another reason why union for objects?
+          'JOIN objects AS o ON cv.object = o.id --OR qv.object = o.id\n'
           'LEFT OUTER JOIN objects_internal AS oi\n'
           'ON oi.id = o.id\n')
          ) if sn.objects or kw.prov else '',
@@ -380,8 +380,8 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
           'LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id\n')
          if kw.source_only else
          ('\n'  # have to use LEFT OUTER because object might have only one of cat or quant
-          'LEFT OUTER JOIN values_cat AS cv ON cv.instance = im.id\n'
-          'JOIN objects AS o ON qv.object = o.id OR cv.object = o.id\n'
+          #'LEFT OUTER JOIN values_cat AS cv ON cv.instance = im.id\n'
+          'JOIN objects AS o ON qv.object = o.id --OR cv.object = o.id\n'
           'LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id\n')
          ) if sn.objects or kw.prov else '',
         (q_prov_i + q_prov_q) if kw.prov else '',
