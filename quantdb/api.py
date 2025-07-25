@@ -598,7 +598,7 @@ def getArgs(request, endpoint, dev=False):
     elif endpoint == 'values/quant':
         [default.pop(k) for k in list(default) if k in ('desc-cat', 'value-cat', 'value-cat-open')]
 
-    if (endpoint == 'values/inst') or (endpoint == 'objects'):
+    if endpoint.startswith('desc/') or (endpoint == 'values/inst') or (endpoint == 'objects'):
         # prevent getting no results if only cat or quant
         # FIXME not quite sure how this interacts when other query parameters are provided
         # but I'm pretty sure union cat-quant=false is actually only desired when query
