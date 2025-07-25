@@ -86,6 +86,7 @@ to limit the results of a query to the =terms= endpoint by passing
 | value-quant-max    | numeric   |     1 |
 |--------------------+-----------+-------|
 | limit              | integer   |     1 |
+| count              | bool      |     1 |
 | union-cat-quant    | bool      |     1 |
 | source-only        | bool      |     1 |
 | include-unused     | bool      |     1 |
@@ -122,7 +123,8 @@ Not-implemented are marked with ni.
 | value-quant-min    |         |             | x          |              |           | q        |            | q     |       |         |
 | value-quant-max    |         |             | x          |              |           | q        |            | q     |       |         |
 |--------------------+---------+-------------+------------+--------------+-----------+----------+------------+-------+-------+---------|
-| limit              | ni      | ni          | ni         | ni           | ni        | ni       | ni         | ni    | ni    | ni      |
+| limit              |         |             |            |              |           |          |            |       |       |         |
+| count              | ni      |             |            |              | ni        | ni       | ni         | ni    | ni    | ni      |
 | union-cat-quant    |         |             |            |              |           |          |            |       |       |         |
 | source-only        |         | x           | x          | x            | x         | x        | x          | x     | x     | x       |
 | include-unused     | x       | x           | x          | x            |           |          |            |       |       |         |
