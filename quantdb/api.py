@@ -291,10 +291,26 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
         endpoint.startswith('desc/') or
         endpoint in ('terms', 'units', 'aspects') or
         (sn.objects or kw.prov) and not kw.source_only) else ''
+
     ep_select_cat, ep_select_quant = ep_select if isinstance(ep_select, tuple) else (ep_select, ep_select)
-    select_cat = f'SELECT {maybe_distinct}{ep_select_cat}' + (
+
+    if gkw('count'):
+        if maybe_distinct:
+            ep_select_count_cat = ', '.join([e.split(' AS ')[0].strip() for e in ep_select_cat.split(',')])
+            ep_select_count_quant = ', '.join([e.split(' AS ')[0].strip() for e in ep_select_quant.split(',')])
+            # FIXME TODO
+            q_count_cat = ''  #  f', count(distinct ({ep_select_count_cat})) AS total_count'
+            q_count_quant = ''  #  f', count(distinct ({ep_select_count_quant})) AS total_count'
+        else:
+            q_count_cat = ', count(*) OVER() AS total_count'
+            q_count_quant = ', count(*) OVER() AS total_count'
+    else:
+        q_count_cat = ''
+        q_count_quant = ''
+
+    select_cat = f'SELECT {maybe_distinct}{ep_select_cat}{q_count_cat}' + (
         (s_prov_objs + s_prov_i + ((',\n' + s_prov_c) if endpoint != 'values/inst' else '')) if kw.prov else '')
-    select_quant = f'SELECT {maybe_distinct}{ep_select_quant}' + (
+    select_quant = f'SELECT {maybe_distinct}{ep_select_quant}{q_count_quant}' + (
         (s_prov_objs + s_prov_i + ((',\n' + s_prov_q) if endpoint != 'values/inst' else '')) if kw.prov else '')
     _where_cat, _where_quant, params = get_where(kwargs)
     where_cat = f'WHERE {_where_cat}' if _where_cat else ''
@@ -382,6 +398,11 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
         query = f'{sw_cat}\n{operator}\n{sw_quant}'
 
     log.log(9, '\n' + query)
+    limit = gkw('limit')
+    if limit or limit == 0:
+        # TODO pagination and full sizes counts
+        query += f'\nLIMIT {limit}'
+
     return query, params
 
 
@@ -431,6 +452,9 @@ def to_json(record_type, res, prov=False):
             if record_type is not None:
                 r['type'] = record_type
 
+            if 'total_count' in r:
+                r.pop('total_count')
+
             for cull_none in ('subclassof',):
                 if cull_none in r and r[cull_none] is None:
                     r.pop(cull_none)
@@ -456,15 +480,16 @@ def to_json(record_type, res, prov=False):
                 provs['type'] = 'prov'
                 r['prov'] = provs
 
-        out = result
+        total_count = rows[0].total_count if hasattr(rows[0], 'total_count') else None
+        out = result, total_count
         #breakpoint()
     else:
-        out = []
+        out = [], 0
 
     return out
 
 
-def wrap_out(endpoint, kwargs, out):
+def wrap_out(endpoint, kwargs, out, total_count):
     # TODO limit and instructions on how to get consistent results
     # TODO we could filter out limit here as well if is the default
     # but it is probably better to just return that even if they
@@ -475,9 +500,15 @@ def wrap_out(endpoint, kwargs, out):
         'type': 'quantdb-query-result',
         'endpoint': endpoint,
         'parameters': parameters,
+        'total_records': total_count,
         'records': n_records,
         'result': out,
     }
+
+    if total_count is None:
+        # we do this to preserve insertion ordering
+        blob.pop('total_records')
+
     return blob
 
 
@@ -515,6 +546,7 @@ args_default = {
     'value-quant-max': None,
 
     'limit': 100,
+    'count': False,
     #'operator': 'INTERSECT',  # XXX ...
     'union-cat-quant': False,  # by default we intersect but sometimes you want the union instead e.g. if object is passed
     'source-only': False,
@@ -582,7 +614,7 @@ def getArgs(request, endpoint, dev=False):
     def convert(k, d):
         if k in request.args:
             # arity is determined here
-            if k in ('dataset', 'include-equivalent', 'union-cat-quant', 'include-unused', 'agg-type') or k.startswith('value-quant'):
+            if k in ('dataset', 'include-equivalent', 'union-cat-quant', 'include-unused', 'agg-type', 'limit', 'count') or k.startswith('value-quant'):
                 v = request.args[k]
                 if k in ('dataset',):
                     if not v:
@@ -619,11 +651,18 @@ def getArgs(request, endpoint, dev=False):
                 return False
             else:
                 raise TypeError(f'Expected a bool, got "{v}" instead.')
-        elif k.startswith('value-quant') or k in ('limit',):
+        elif k.startswith('value-quant'):  # or k in (,):
             try:
                 return float(v)
             except ValueError as e:
                 raise e
+        elif k == 'limit':
+            try:
+                return int(v)
+            except ValueError as e:
+                raise e
+        elif k == 'count':
+            return v.lower() == 'true'
         else:
             return v
 
@@ -700,8 +739,8 @@ def make_app(db=None, name='quantdb-api-server', dev=False):
             raise e
 
         try:
-            out = json_fun(record_type, res, prov=('prov' in kwargs and kwargs['prov']))
-            resp = json.dumps(wrap_out(endpoint, kwargs, out), cls=JEncode), 200, {'Content-Type': 'application/json'}
+            out, total_count = json_fun(record_type, res, prov=('prov' in kwargs and kwargs['prov']))
+            resp = json.dumps(wrap_out(endpoint, kwargs, out, total_count), cls=JEncode), 200, {'Content-Type': 'application/json'}
         except Exception as e:
             breakpoint()
             raise e
