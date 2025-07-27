@@ -1825,7 +1825,6 @@ def extract_fasc_fib(dataset_uuid, source_local=True):
     # FIXME ah the joys of metadata only specimens and my dumb hack to use just the paths
     ext_contents = {f['remote_id']: c for f, c in zip(fascs + fibs, facs + fics)}  # FIXME sort out fasc-n/*fibers.csv vs fibers.csv
 
-    breakpoint()
     debug_done = set()
     fasc_fib_id = defaultdict(lambda:0)
     def process_record(e, idx, record, header):
