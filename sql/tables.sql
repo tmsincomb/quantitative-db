@@ -233,20 +233,8 @@ CREATE INDEX IF NOT EXISTS idx_values_inst_dataset_id_sub ON values_inst (datase
 CREATE INDEX IF NOT EXISTS idx_values_inst_dataset_id_sam ON values_inst (dataset, id_sam);
 CREATE INDEX IF NOT EXISTS idx_values_inst_dataset_id_formal ON values_inst (dataset, id_formal);
 
-
 CREATE TRIGGER values_inst_dataset_is_dataset BEFORE INSERT
        ON values_inst FOR EACH ROW EXECUTE PROCEDURE dataset_is_dataset();
-
-CREATE FUNCTION values_desc_inst_matches_instance_desc_inst() RETURNS trigger as $$
-       BEGIN
-       IF EXISTS (SELECT id, desc_inst FROM values_inst WHERE desc_inst = NEW.desc_inst AND id = NEW.instance) THEN
-          RETURN NEW;
-       ELSE
-        RAISE EXCEPTION 'values desc_inst does not match instance desc_inst % % % %', NEW.desc_inst, (SELECT desc_inst FROM values_inst WHERE id = NEW.instance), (SELECT dataset FROM values_inst WHERE id = NEW.instance), (SELECT id_formal FROM values_inst WHERE id = NEW.instance)
-       USING HINT = 'values desc_inst must always match instance desc_inst';
-       END IF;
-       END;
-$$ language plpgsql;
 
 /*
 create table instance_subject(
@@ -603,8 +591,40 @@ CREATE INDEX IF NOT EXISTS idx_values_quant_desc_inst ON values_quant (desc_inst
 CREATE INDEX IF NOT EXISTS idx_values_quant_desc_quant ON values_quant (desc_quant);
 CREATE INDEX IF NOT EXISTS idx_values_quant_instance ON values_quant (instance);
 
+CREATE OR REPLACE FUNCTION values_quant_check_before() RETURNS trigger AS $$
+-- desc_inst matches instance desc_inst
+-- desc_inst matches or is subClassOf desc_quant domain
+-- in theory we could just not include desc_inst on the value record and assume that it always matches values_inst, but this provides additional sanity
+BEGIN
+IF EXISTS (SELECT id, desc_inst FROM values_inst WHERE desc_inst = NEW.desc_inst AND id = NEW.instance) THEN
+   IF EXISTS (SELECT dq.id, dq.domain FROM descriptors_quant AS dq WHERE dq.id = NEW.desc_quant AND (dq.domain IS NULL OR dq.domain = NEW.desc_inst)) THEN
+      -- exact equality case
+      RETURN NEW;
+   ELSIF EXISTS (SELECT dq.id, dq.domain FROM descriptors_quant AS dq WHERE dq.id = NEW.desc_quant AND dq.domain in (select parent from get_parent_desc_inst(NEW.desc_inst))) THEN
+      -- subClassOf case (XXX assuming our subClassOf hierarchy is correct ... which is not always a good assumption)
+      RETURN NEW;
+   ELSE
+    RAISE EXCEPTION 'values desc_inst is not subClassOf descriptor domain % % % % %',
+      (SELECT label FROM descriptors_inst WHERE id = NEW.desc_inst),
+      (SELECT di.label FROM descriptors_quant AS dq JOIN descriptors_inst AS di ON di.id = dq.domain WHERE dq.id = NEW.desc_quant),
+      (SELECT dq.label FROM descriptors_quant AS dq WHERE dq.id = NEW.desc_quant),
+      (SELECT dataset FROM values_inst WHERE id = NEW.instance),
+      (SELECT id_formal FROM values_inst WHERE id = NEW.instance)
+    USING HINT = 'values desc_inst must be subClassOf descriptor domain';
+   END IF;
+ELSE
+ RAISE EXCEPTION 'values desc_inst does not match instance desc_inst % % % %',
+   (SELECT label FROM descriptors_inst WHERE id = NEW.desc_inst),
+   (SELECT di.label FROM values_inst AS vi JOIN descriptors_inst AS di ON di.id = vi.desc_inst WHERE vi.id = NEW.instance),
+   (SELECT dataset FROM values_inst WHERE id = NEW.instance),
+   (SELECT id_formal FROM values_inst WHERE id = NEW.instance)
+ USING HINT = 'values desc_inst must always match instance desc_inst';
+END IF;
+END;
+$$ language plpgsql;
+
 CREATE TRIGGER values_quant_desc_inst BEFORE INSERT
-       ON values_quant FOR EACH ROW EXECUTE PROCEDURE values_desc_inst_matches_instance_desc_inst();
+       ON values_quant FOR EACH ROW EXECUTE PROCEDURE values_quant_check_before();
 
 -- TODO categorical values table over measured instances
 -- can we also use categorical values to store relations to transitive samples, subjects, datasets, etc.
@@ -644,8 +664,40 @@ CREATE INDEX IF NOT EXISTS idx_values_cat_desc_cat ON values_cat (desc_cat);
 CREATE INDEX IF NOT EXISTS idx_values_cat_instance ON values_cat (instance);
 CREATE INDEX IF NOT EXISTS idx_values_cat_value_controlled ON values_cat (value_controlled);
 
+CREATE OR REPLACE FUNCTION values_cat_check_before() RETURNS trigger AS $$
+-- desc_inst matches instance desc_inst
+-- desc_inst matches or is subClassOf desc_cat domain
+-- in theory we could just not include desc_inst on the value record and assume that it always matches values_inst, but this provides additional sanity
+BEGIN
+IF EXISTS (SELECT id, desc_inst FROM values_inst WHERE desc_inst = NEW.desc_inst AND id = NEW.instance) THEN
+   IF EXISTS (SELECT dc.id, dc.domain FROM descriptors_cat AS dc WHERE dc.id = NEW.desc_cat AND (dc.domain IS NULL OR dc.domain = NEW.desc_inst)) THEN
+      -- exact equality case
+      RETURN NEW;
+   ELSIF EXISTS (SELECT dc.id, dc.domain FROM descriptors_cat AS dc WHERE dc.id = NEW.desc_cat AND dc.domain in (select parent from get_parent_desc_inst(NEW.desc_inst))) THEN
+      -- subClassOf case (XXX assuming our subClassOf hierarchy is correct ... which is not always a good assumption)
+      RETURN NEW;
+   ELSE
+    RAISE EXCEPTION 'values desc_inst is not subClassOf descriptor domain % % % % %',
+      (SELECT label FROM descriptors_inst WHERE id = NEW.desc_inst),
+      (SELECT di.label FROM descriptors_cat AS dc JOIN descriptors_inst AS di ON di.id = dc.domain WHERE dc.id = NEW.desc_cat),
+      (SELECT dc.label FROM descriptors_cat AS dc WHERE dc.id = NEW.desc_cat),
+      (SELECT dataset FROM values_inst WHERE id = NEW.instance),
+      (SELECT id_formal FROM values_inst WHERE id = NEW.instance)
+    USING HINT = 'values desc_inst must be subClassOf descriptor domain';
+   END IF;
+ELSE
+ RAISE EXCEPTION 'values desc_inst does not match instance desc_inst % % % %',
+   (SELECT label FROM descriptors_inst WHERE id = NEW.desc_inst),
+   (SELECT di.label FROM values_inst AS vi JOIN descriptors_inst AS di ON di.id = vi.desc_inst WHERE vi.id = NEW.instance),
+   (SELECT dataset FROM values_inst WHERE id = NEW.instance),
+   (SELECT id_formal FROM values_inst WHERE id = NEW.instance)
+ USING HINT = 'values desc_inst must always match instance desc_inst';
+END IF;
+END;
+$$ language plpgsql;
+
 CREATE TRIGGER values_cat_desc_inst BEFORE INSERT
-       ON values_cat FOR EACH ROW EXECUTE PROCEDURE values_desc_inst_matches_instance_desc_inst();
+       ON values_cat FOR EACH ROW EXECUTE PROCEDURE values_cat_check_before();
 
 ------------------- convenience functions
 
