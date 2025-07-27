@@ -277,37 +277,37 @@ unit_from_label('unitless'),
 */
 
 ('reva ft sample anatomical location distance index normalized v1',
-desc_inst_from_label('nerve-volume'),
+desc_inst_from_label('nerve'),
 aspect_from_label('distance-via-reva-ft-sample-id-normalized-v1'),
 unit_from_label('unitless'),
 'instance'),  -- FIXME this isn't really instance, it is normalized across a whole population, which we might want to indicate here
 
 ('reva ft sample anatomical location distance index normalized v1 min',
-desc_inst_from_label('nerve-volume'),
+desc_inst_from_label('nerve'),
 aspect_from_label('distance-via-reva-ft-sample-id-normalized-v1'),
 unit_from_label('unitless'),
 'min'),
 
 ('reva ft sample anatomical location distance index normalized v1 max',
-desc_inst_from_label('nerve-volume'),
+desc_inst_from_label('nerve'),
 aspect_from_label('distance-via-reva-ft-sample-id-normalized-v1'),
 unit_from_label('unitless'),
 'max'),
 
 ('reva ft sample anatomical location distance index normalized v2',
-desc_inst_from_label('nerve-volume'),
+desc_inst_from_label('nerve'),
 aspect_from_label('distance-via-reva-ft-sample-id-normalized-v2'),
 unit_from_label('unitless'),
 'instance'),  -- FIXME this isn't really instance, it is normalized across a whole population, which we might want to indicate here
 
 ('reva ft sample anatomical location distance index normalized v2 min',
-desc_inst_from_label('nerve-volume'),
+desc_inst_from_label('nerve'),
 aspect_from_label('distance-via-reva-ft-sample-id-normalized-v2'),
 unit_from_label('unitless'),
 'min'),
 
 ('reva ft sample anatomical location distance index normalized v2 max',
-desc_inst_from_label('nerve-volume'),
+desc_inst_from_label('nerve'),
 aspect_from_label('distance-via-reva-ft-sample-id-normalized-v2'),
 unit_from_label('unitless'),
 'max'),
