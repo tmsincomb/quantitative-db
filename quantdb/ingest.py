@@ -484,7 +484,9 @@ def pps123(path_structure, dataset_metadata=None):
         'parents': (p1,),
         'subject': subject,
         'sample': sample,
-        'sample_type': 'nerve-cross-section'
+        'sample_type': 'nerve-cross-section',
+        'site': None,
+        'site_type': None,
     }
 
 
@@ -594,7 +596,30 @@ class Queries:
 
 
 class InternalIds:
+
+    def reg_qd(self, qd_label):
+        if qd_label not in self._qdmap:
+            qd = self._q.desc_quant_from_label(qd_label)
+            if qd is None:
+                raise KeyError(qd_label)
+
+            self._qdmap[qd_label] =  qd
+
+        return self._qdmap[qd_label]
+
+    def reg_addr(self, addr_label, addr_type='tabular-header'):
+        if addr_label not in self._addrmap:
+            addr = self._q.address_from_fadd_type_fadd(addr_type, addr_label)
+            if addr is None:
+                raise KeyError(addr_label)
+
+            self._addrmap[addr_label] = addr
+
+        return self._addrmap[addr_label]
+
     def __init__(self, queries):
+        self._qdmap = {}
+        self._addrmap = {}
         q = queries
         self._q = queries
 
@@ -1477,13 +1502,25 @@ def extract_demo(dataset_uuid, source_local=True):
         '/mnt/str/tom/sparc-datasets/55c5b69c-a5b8-4881-a105-e4048af26fa5/SPARC/'
         'Quantified morphology of the human vagus nerve with anti-claudin-1/'
     )
-    p = _dsp + 'derivative/CadaverVNMorphology_OutputMetrics.mat'
+    drp = 'derivative/CadaverVNMorphology_OutputMetrics.mat'
+    p = _dsp + drp
     _p = aug.AugmentedPath(_dsp + 'samples.xlsx')
     sp = SamplesFilePath(_p)
     ap = Path(p)
-    obj_uuid = ap.cache.meta.id.split(':')[-1]
-    obj_file_id = ap.cache.meta.file_id
-    m = scipy.io.loadmat(p)
+    obj_uuid = ap.cache_id.split(':')[-1]
+    obj_file_id = ap.cache_file_id
+    if ap.is_broken_symlink():
+        cp = ap.cache.local_object_cache_path
+        if not cp.exists():
+            pb = {'dataset_id': dataset_id,
+                  'remote_id': RemoteId(ap.cache_id, file_id=ap.cache_file_id),
+                  'dataset_relative_path': drp,}
+            cp = path_from_blob(pb)
+
+        m = scipy.io.loadmat(cp)
+    else:
+        m = scipy.io.loadmat(p)
+
     m.keys()
     ks = 'NFasc', 'dFasc_um', 'dNerve_um', 'laterality', 'level', 'sex', 'sub_sam'
     # so insanely dFasc_um and dNerve_um claim dtype('<f8') but store float64 internally ???
@@ -1559,7 +1596,13 @@ def extract_demo(dataset_uuid, source_local=True):
             }
             fasc_qvs.append(
                 {
-                    **vdd,
+                    #**vdd,  # FIXME desc quant domain issues here, technically the fascicles are data signatures
+                    # also as predicted this will happen, the issue is that we would have to traverse the instance
+                    # partonomy when returning anything, probably would have to be an option which is "match instance children"
+                    # or something like that, except that that can expand to millions of values ... and technically
+                    # all these instances do have the location and they _are_ technically subClassOf part of nerve which
+                    # is what our "nerve" desc_inst means ... i guess below things might be rather large in number so
+                    # maybe not coordinating them directly is ok for now ... ?
                     'id_formal': id_formal,
                     'desc_inst': 'fascicle-cross-section',
                     'diameter-um': fdum,
@@ -1685,6 +1728,7 @@ def extract_demo(dataset_uuid, source_local=True):
                     ('vd-max', i.qd_nvlaix1),
                 )
             ]
+            if k in e  # handle vd out for fasc for now
         ]
         return values_qv
 
@@ -1850,7 +1894,37 @@ def extract_fasc_fib(dataset_uuid, source_local=True):
             # FIXME obvs sync with voqd somehow, probably top down though since mapping the header names
             # is the core of voqd, but we don't want to access the db yet ... the fact that we also need
             # things like unit and aspect addresses etc. means we really want voqd not just this
-            addresses = ('area', 'longest_diameter', 'shortest_diameter', 'eff_diam')  # XXX keep in sync with voqd for now
+            addresses = (
+                'area',
+                'longest_diameter',
+                'shortest_diameter',
+                'eff_diam',
+
+                'c_estimate_nav',
+                'c_estimate_nf',
+                'nfibers_all',
+
+                'n_a_alpha',
+                'n_a_beta',
+                'n_a_gamma',
+                'n_a_delta',
+                'n_b',
+                'n_unmyel_nf',
+                'n_nav',
+                'n_chat',
+                'n_myelinated',
+
+                'area_a_alpha',
+                'area_a_beta',
+                'area_a_gamma',
+                'area_a_delta',
+                'area_b',
+                'area_unmyel_nf',
+                'area_nav',
+                'area_chat',
+                'area_myelinated',
+
+                         )  # XXX keep in sync with voqd for now
             vsq = []
             for address in addresses:
                 idx_v = header.index(address)  # technically correct but if schema is same we don't have to recompute ... ah well
@@ -1912,7 +1986,13 @@ def extract_fasc_fib(dataset_uuid, source_local=True):
             parent_rec = e['dataset'], id_formal, fbase
 
             # values q
-            addresses = ('fiber_area', 'longest_diameter', 'shortest_diameter', 'eff_fib_diam')  # XXX keep in sync with voqd for now
+            addresses = (
+                'fiber_area',
+                'longest_diameter',
+                'shortest_diameter',
+                'eff_fib_diam',
+
+            )  # XXX keep in sync with voqd for now
             vsq = []
             for address in addresses:
                 idx_v = header.index(address)  # technically correct but if schema is same we don't have to recompute ... ah well
@@ -1998,16 +2078,41 @@ def extract_fasc_fib(dataset_uuid, source_local=True):
         inv_vocd.update(inv)
         return vocd
 
+    voqd_mapping = (
+        ('fascicle cross section area um2', 'area'),
+        ('fascicle cross section diameter um max', 'longest_diameter'),
+        ('fascicle cross section diameter um min', 'shortest_diameter'),
+        ('fascicle cross section diameter um', 'eff_diam'),
+        ('nav fiber count in fascicle cross section estimated', 'c_estimate_nav'),
+        ('fiber count in fascicle cross section estimated', 'c_estimate_nf'),
+        ('fiber count in fascicle cross section', 'nfibers_all'),
+        ('alpha a fiber count in fascicle cross section', 'n_a_alpha'),
+        ('beta a fiber count in fascicle cross section', 'n_a_beta'),
+        ('gamma a fiber count in fascicle cross section', 'n_a_gamma'),
+        ('delta a fiber count in fascicle cross section', 'n_a_delta'),
+        ('b fiber count in fascicle cross section', 'n_b'),
+        ('unmyelinated fiber count in fascicle cross section', 'n_unmyel_nf'),
+        ('nav fiber count in fascicle cross section', 'n_nav'),
+        ('chat fiber count in fascicle cross section', 'n_chat'),
+        ('myelinated fiber count in fascicle cross section', 'n_myelinated'),
+        ('alpha a fiber area in fascicle cross section um2', 'area_a_alpha'),
+        ('beta a fiber area in fascicle cross section um2', 'area_a_beta'),
+        ('gamma a fiber area in fascicle cross section um2', 'area_a_gamma'),
+        ('delta a fiber area in fascicle cross section um2', 'area_a_delta'),
+        ('b fiber area in fascicle cross section um2', 'area_b'),
+        ('unmyelinated fiber area in fascicle cross section um2', 'area_unmyel_nf'),
+        ('nav fiber area in fascicle cross section um2', 'area_nav'),
+        ('chat fiber area in fascicle cross section um2', 'area_chat'),
+        ('myelinated fiber area in fascicle cross section um2', 'area_myelinated'),
+    )
     inv_voqd = {}
     def make_voqd(this_dataset_updated_uuid, i):
         voqd = []
         for obj_uuid in fau:
-            voqd.extend((
-                (obj_uuid, i.qd_fasc_cs_area_um2, i.addr_area),
-                (obj_uuid, i.qd_fasc_cs_diameter_um_max, i.addr_long_diam),
-                (obj_uuid, i.qd_fasc_cs_diameter_um_min, i.addr_short_diam),
-                (obj_uuid, i.qd_fasc_cs_diameter_um, i.addr_eff_diam),
-            ))
+            for qd, a in voqd_mapping:
+                iqd, ia = i.reg_qd(qd), i.reg_addr(a)  # FIXME caching is nice but we should be able to reg once and not have to hit the cache at all
+                voqd.append((obj_uuid, iqd, ia))
+
         # FIXME likely need to deal with cases where there are missing columns :/
         for obj_uuid in fiu:
             voqd.extend((
@@ -2174,10 +2279,11 @@ def main(source_local=False, commit=False, echo=False):
     engine.echo = echo
     session = Session(engine)
 
-    do_fasc_fib = False
-    do_reva_ft = False
-    do_demo_jp2 = False
-    do_demo = False
+    do_all = False
+    do_fasc_fib = False or do_all
+    do_reva_ft = False or do_all
+    do_demo_jp2 = False or do_all
+    do_demo = False or do_all
 
     if do_fasc_fib:
         try:
