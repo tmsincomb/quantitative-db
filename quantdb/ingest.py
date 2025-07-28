@@ -1507,8 +1507,6 @@ def extract_demo(dataset_uuid, source_local=True):
     _p = aug.AugmentedPath(_dsp + 'samples.xlsx').expanduser().resolve()
     sp = SamplesFilePath(_p)
     ap = Path(p).expanduser()
-    obj_uuid = ap.cache_id.split(':')[-1]
-    obj_file_id = ap.cache_file_id
     if ap.is_broken_symlink():
         cp = ap.cache.local_object_cache_path
         if not cp.exists():
@@ -1520,6 +1518,9 @@ def extract_demo(dataset_uuid, source_local=True):
         m = scipy.io.loadmat(cp)
     else:
         m = scipy.io.loadmat(p)
+
+    obj_uuid = ap.cache_id.split(':')[-1]
+    obj_file_id = ap.cache_file_id
 
     m.keys()
     ks = 'NFasc', 'dFasc_um', 'dNerve_um', 'laterality', 'level', 'sex', 'sub_sam'
