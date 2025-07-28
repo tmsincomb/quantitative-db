@@ -1499,14 +1499,14 @@ from sparcur.datasets import SamplesFilePath
 def extract_demo(dataset_uuid, source_local=True):
     dataset_id = RemoteId('dataset:' + dataset_uuid)
     _dsp = (
-        '/mnt/str/tom/sparc-datasets/55c5b69c-a5b8-4881-a105-e4048af26fa5/SPARC/'
+        '~/files/sparc-datasets/55c5b69c-a5b8-4881-a105-e4048af26fa5/SPARC/'
         'Quantified morphology of the human vagus nerve with anti-claudin-1/'
     )
     drp = 'derivative/CadaverVNMorphology_OutputMetrics.mat'
     p = _dsp + drp
-    _p = aug.AugmentedPath(_dsp + 'samples.xlsx')
+    _p = aug.AugmentedPath(_dsp + 'samples.xlsx').expanduser().resolve()
     sp = SamplesFilePath(_p)
-    ap = Path(p)
+    ap = Path(p).expanduser()
     obj_uuid = ap.cache_id.split(':')[-1]
     obj_file_id = ap.cache_file_id
     if ap.is_broken_symlink():
