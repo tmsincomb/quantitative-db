@@ -183,6 +183,7 @@ CREATE TYPE instance_type AS ENUM (
 -- and sample) without having to parse ids or guess
 'subject',
 'sample',
+'site', -- too much for right now probably ...
 'below' -- entities that might be part of a sample but were not derived from it during the experiment
 --'performance',
 --'lifted-type' -- something below the sds ontology level but lifted, e.g. a gene id implying the rna transcribed for that gene that was extracted from/isolated form in a specific sample inevitably along with the rna for other genes as well
@@ -217,7 +218,7 @@ id_sam text check (id_sam ~ '^sam-'), -- alternative to instance_sample
 --id_sub integer references sds_specimen(id) NOT NULL, -- usually, edge cases are pools/pops XXX not null this for now and see what happens
 --id_sam integer references sds_specimen(id), -- sometimes
 UNIQUE (dataset, id_formal),
-constraint constraint_values_inst_type_id_formal check (type = 'below' and not (id_formal ~ '^(sub|sam)-') or type = 'subject' and id_formal ~ '^sub-' or type = 'sample' and id_formal ~ '^sam-'),
+constraint constraint_values_inst_type_id_formal check (type = 'below' and not (id_formal ~ '^(sub|sam|site)-') or type = 'subject' and id_formal ~ '^sub-' or type = 'sample' and id_formal ~ '^sam-' or type = 'site' and id_formal ~ '^site-'),
 constraint constraint_values_inst_type_id_sub check (type != 'subject' or (id_sub = id_formal and id_sam is null)),
 constraint constraint_values_inst_type_id_sam check (type != 'sample' or (id_sam is not null and id_sam = id_formal)),
 constraint constraint_values_inst_type_below check (type != 'below' or (id_sub is not null or id_sam is not null)) -- XXX there is not a general way to enforce that there must be a sample, e.g. a mri experiment can have virtual of sections of the brain without there being samples in the dataset at all, only subjects and performances
@@ -232,20 +233,8 @@ CREATE INDEX IF NOT EXISTS idx_values_inst_dataset_id_sub ON values_inst (datase
 CREATE INDEX IF NOT EXISTS idx_values_inst_dataset_id_sam ON values_inst (dataset, id_sam);
 CREATE INDEX IF NOT EXISTS idx_values_inst_dataset_id_formal ON values_inst (dataset, id_formal);
 
-
 CREATE TRIGGER values_inst_dataset_is_dataset BEFORE INSERT
        ON values_inst FOR EACH ROW EXECUTE PROCEDURE dataset_is_dataset();
-
-CREATE FUNCTION values_desc_inst_matches_instance_desc_inst() RETURNS trigger as $$
-       BEGIN
-       IF EXISTS (SELECT id, desc_inst FROM values_inst WHERE desc_inst = NEW.desc_inst AND id = NEW.instance) THEN
-          RETURN NEW;
-       ELSE
-        RAISE EXCEPTION 'values desc_inst does not match instance desc_inst % % % %', NEW.desc_inst, (SELECT desc_inst FROM values_inst WHERE id = NEW.instance), (SELECT dataset FROM values_inst WHERE id = NEW.instance), (SELECT id_formal FROM values_inst WHERE id = NEW.instance)
-       USING HINT = 'values desc_inst must always match instance desc_inst';
-       END IF;
-       END;
-$$ language plpgsql;
 
 /*
 create table instance_subject(
@@ -409,6 +398,9 @@ CREATE TYPE address_type AS ENUM (
 'constant',
 --'curator', -- i.e. it came from the head of someone, will be very common for units and aspects FIXME TODO figure out how to document
 -- "this came from tgbugs looking at a column header named thus_and_such_mm, maybe it is sufficient to just list the header itself but the type needs to be a bit different, tabular-header-value or json-path-with-types-property or something?
+
+'record-index', -- there are many cases where all we have is the implicit record id based on counter e.g. a line of a file or an array index
+
 'tabular-header',
 'tabular-alt-header',
 
@@ -447,13 +439,15 @@ addr_desc_inst integer references addresses(id),
 expect integer
 );
 
-CREATE FUNCTION object_is_not_dataset() RETURNS trigger as $$
+CREATE OR REPLACE FUNCTION object_is_not_dataset() RETURNS trigger as $$
        BEGIN
        IF EXISTS (SELECT id_type FROM objects WHERE id = NEW.object AND id_type != 'dataset') THEN
           RETURN NEW;
+       ELSIF NOT EXISTS (SELECT * FROM objects WHERE id = NEW.object) THEN
+        RAISE EXCEPTION 'object is not in the objects table: %', NEW.object;
        ELSE
         RAISE EXCEPTION 'object is of type dataset: %', NEW.object
-       USING HINT = 'object uuids must not refer to objects of type dataset';
+        USING HINT = 'object uuids must not refer to objects of type dataset';
        END IF;
        END;
 $$ language plpgsql;
@@ -583,8 +577,10 @@ FOREIGN KEY (object, desc_quant) REFERENCES obj_desc_quant (object, desc_quant),
 
 instance integer references values_inst(id), -- values_inst id -- links simliar measures on the same input (row)
 
-orig_value varchar,
-orig_units varchar,
+UNIQUE (object, instance, desc_quant), -- TODO for repeated measures we need to fully reify performances, which are the fully lifted version of this and are the primary axis
+
+orig_value text,
+orig_units text,
 -- FIXME TODO may also need original_type if such information was tracked
 value_blob jsonb NOT NULL -- a full json represntation that may have weird shapes
 -- UNIQUE (desc_quant, prov, instance), -- FIXME issues with repeated measures? issues with values
@@ -595,8 +591,40 @@ CREATE INDEX IF NOT EXISTS idx_values_quant_desc_inst ON values_quant (desc_inst
 CREATE INDEX IF NOT EXISTS idx_values_quant_desc_quant ON values_quant (desc_quant);
 CREATE INDEX IF NOT EXISTS idx_values_quant_instance ON values_quant (instance);
 
+CREATE OR REPLACE FUNCTION values_quant_check_before() RETURNS trigger AS $$
+-- desc_inst matches instance desc_inst
+-- desc_inst matches or is subClassOf desc_quant domain
+-- in theory we could just not include desc_inst on the value record and assume that it always matches values_inst, but this provides additional sanity
+BEGIN
+IF EXISTS (SELECT id, desc_inst FROM values_inst WHERE desc_inst = NEW.desc_inst AND id = NEW.instance) THEN
+   IF EXISTS (SELECT dq.id, dq.domain FROM descriptors_quant AS dq WHERE dq.id = NEW.desc_quant AND (dq.domain IS NULL OR dq.domain = NEW.desc_inst)) THEN
+      -- exact equality case
+      RETURN NEW;
+   ELSIF EXISTS (SELECT dq.id, dq.domain FROM descriptors_quant AS dq WHERE dq.id = NEW.desc_quant AND dq.domain in (select parent from get_parent_desc_inst(NEW.desc_inst))) THEN
+      -- subClassOf case (XXX assuming our subClassOf hierarchy is correct ... which is not always a good assumption)
+      RETURN NEW;
+   ELSE
+    RAISE EXCEPTION 'values desc_inst is not subClassOf descriptor domain % % % % %',
+      (SELECT label FROM descriptors_inst WHERE id = NEW.desc_inst),
+      (SELECT di.label FROM descriptors_quant AS dq JOIN descriptors_inst AS di ON di.id = dq.domain WHERE dq.id = NEW.desc_quant),
+      (SELECT dq.label FROM descriptors_quant AS dq WHERE dq.id = NEW.desc_quant),
+      (SELECT dataset FROM values_inst WHERE id = NEW.instance),
+      (SELECT id_formal FROM values_inst WHERE id = NEW.instance)
+    USING HINT = 'values desc_inst must be subClassOf descriptor domain';
+   END IF;
+ELSE
+ RAISE EXCEPTION 'values desc_inst does not match instance desc_inst % % % %',
+   (SELECT label FROM descriptors_inst WHERE id = NEW.desc_inst),
+   (SELECT di.label FROM values_inst AS vi JOIN descriptors_inst AS di ON di.id = vi.desc_inst WHERE vi.id = NEW.instance),
+   (SELECT dataset FROM values_inst WHERE id = NEW.instance),
+   (SELECT id_formal FROM values_inst WHERE id = NEW.instance)
+ USING HINT = 'values desc_inst must always match instance desc_inst';
+END IF;
+END;
+$$ language plpgsql;
+
 CREATE TRIGGER values_quant_desc_inst BEFORE INSERT
-       ON values_quant FOR EACH ROW EXECUTE PROCEDURE values_desc_inst_matches_instance_desc_inst();
+       ON values_quant FOR EACH ROW EXECUTE PROCEDURE values_quant_check_before();
 
 -- TODO categorical values table over measured instances
 -- can we also use categorical values to store relations to transitive samples, subjects, datasets, etc.
@@ -624,6 +652,8 @@ FOREIGN KEY (object, desc_cat) REFERENCES obj_desc_cat (object, desc_cat),
 
 instance integer references values_inst(id), -- values_inst id -- links simliar measures on the same input (row)
 
+UNIQUE (object, instance, desc_cat), -- see note about needing performances if a single object includes repeated measures
+
 constraint constraint_values_cat_some_value check (value_open is not null or value_controlled is not null)
 
 );
@@ -634,8 +664,40 @@ CREATE INDEX IF NOT EXISTS idx_values_cat_desc_cat ON values_cat (desc_cat);
 CREATE INDEX IF NOT EXISTS idx_values_cat_instance ON values_cat (instance);
 CREATE INDEX IF NOT EXISTS idx_values_cat_value_controlled ON values_cat (value_controlled);
 
+CREATE OR REPLACE FUNCTION values_cat_check_before() RETURNS trigger AS $$
+-- desc_inst matches instance desc_inst
+-- desc_inst matches or is subClassOf desc_cat domain
+-- in theory we could just not include desc_inst on the value record and assume that it always matches values_inst, but this provides additional sanity
+BEGIN
+IF EXISTS (SELECT id, desc_inst FROM values_inst WHERE desc_inst = NEW.desc_inst AND id = NEW.instance) THEN
+   IF EXISTS (SELECT dc.id, dc.domain FROM descriptors_cat AS dc WHERE dc.id = NEW.desc_cat AND (dc.domain IS NULL OR dc.domain = NEW.desc_inst)) THEN
+      -- exact equality case
+      RETURN NEW;
+   ELSIF EXISTS (SELECT dc.id, dc.domain FROM descriptors_cat AS dc WHERE dc.id = NEW.desc_cat AND dc.domain in (select parent from get_parent_desc_inst(NEW.desc_inst))) THEN
+      -- subClassOf case (XXX assuming our subClassOf hierarchy is correct ... which is not always a good assumption)
+      RETURN NEW;
+   ELSE
+    RAISE EXCEPTION 'values desc_inst is not subClassOf descriptor domain % % % % %',
+      (SELECT label FROM descriptors_inst WHERE id = NEW.desc_inst),
+      (SELECT di.label FROM descriptors_cat AS dc JOIN descriptors_inst AS di ON di.id = dc.domain WHERE dc.id = NEW.desc_cat),
+      (SELECT dc.label FROM descriptors_cat AS dc WHERE dc.id = NEW.desc_cat),
+      (SELECT dataset FROM values_inst WHERE id = NEW.instance),
+      (SELECT id_formal FROM values_inst WHERE id = NEW.instance)
+    USING HINT = 'values desc_inst must be subClassOf descriptor domain';
+   END IF;
+ELSE
+ RAISE EXCEPTION 'values desc_inst does not match instance desc_inst % % % %',
+   (SELECT label FROM descriptors_inst WHERE id = NEW.desc_inst),
+   (SELECT di.label FROM values_inst AS vi JOIN descriptors_inst AS di ON di.id = vi.desc_inst WHERE vi.id = NEW.instance),
+   (SELECT dataset FROM values_inst WHERE id = NEW.instance),
+   (SELECT id_formal FROM values_inst WHERE id = NEW.instance)
+ USING HINT = 'values desc_inst must always match instance desc_inst';
+END IF;
+END;
+$$ language plpgsql;
+
 CREATE TRIGGER values_cat_desc_inst BEFORE INSERT
-       ON values_cat FOR EACH ROW EXECUTE PROCEDURE values_desc_inst_matches_instance_desc_inst();
+       ON values_cat FOR EACH ROW EXECUTE PROCEDURE values_cat_check_before();
 
 ------------------- convenience functions
 
