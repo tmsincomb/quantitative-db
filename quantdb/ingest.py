@@ -1761,13 +1761,16 @@ def path_from_blob(pb):
     # if none exist anywhere, who knows ... maybe we just hardlink these somewhere common or something e.g. ~/files/sparc-objects
     # and follow the objects database cache approach or something, unfortunately there isn't any easy way to get back to the dataset
     # from the package or even the metadata ... but that's probably ok ???? sigh
-    dofetch = []
-    for p in bases:
-        if p is None:
-            continue
+    def getstuff():
+        dofetch = []
+        for p in bases:
+            if p is None:
+                continue
 
-        db = p / dataset_id.uuid
-        if db.exists():
+            db = p / dataset_id.uuid
+            if not db.exists():
+                continue
+
             u = remote_id.uuid
             # FIXME we probably want to derive this from cache path or something in case it drifts ...
             rdp = (db / 'dataset').resolve()
@@ -1784,9 +1787,28 @@ def path_from_blob(pb):
 
             locp = cache.local_object_cache_path
             if locp.exists():
-                return locp
+                return None, locp
             else:
                 dofetch.append((cache, locp))
+
+        return dofetch, None
+
+    dofetch, locp = getstuff()
+    if locp is not None:
+        return locp
+
+    if not dofetch:
+        from sparcur.simple.retrieve import main as retrieve
+        p = Path(bases[0])
+        if not p.exists():
+            p.mkdir(parents=True)
+
+        db = p / dataset_id.uuid
+        project_id = RemoteId('N:organization:618e8dd9-f8d2-4dc4-9abb-c6aaab2e78a0')  # FIXME sigh
+        retrieve(dataset_id, dataset_id, project_id=project_id, parent_parent_path=p)
+        dofetch, locp = getstuff()
+        if locp is not None:
+            return locp
 
     if dofetch:
         cache, locp = dofetch[0]
