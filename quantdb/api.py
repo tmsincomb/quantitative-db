@@ -188,10 +188,11 @@ def main_query(endpoint, kwargs):
         desc_inst = endpoint not in ('objects', 'terms', 'units', 'aspects',)
         desc_cat = endpoint in ('values/cat', 'values/cat-quant', 'desc/cat')
         value_cat = endpoint in ('values/cat', 'values/cat-quant', 'terms')
-        aspect = endpoint in ('values/quant', 'values/cat-quant', 'desc/quant', 'aspects')
-        unit = endpoint in ('values/quant', 'values/cat-quant', 'desc/quant', 'units')
+        aspect = endpoint in ('values/quant', 'values/cat-quant', 'desc/quant', 'aspects')  # FIXME conflict between descriptor level and new inst level
+        unit = endpoint in ('values/quant', 'values/cat-quant', 'desc/quant', 'units')  # FIXME conflict between descriptor level and new inst level
         agg_type = endpoint in ('values/quant', 'values/cat-quant')
         desc_quant = (aspect or unit or agg_type)
+        value_quant = endpoint in ('values/quant', 'values/cat-quant')
         parent_aspect = endpoint == 'aspects'
         parent_desc_inst = endpoint == 'desc/inst'
 
@@ -207,8 +208,14 @@ def main_query(endpoint, kwargs):
         agg_type = gkw('agg-type')
         desc_quant = (aspect or unit or agg_type)
 
+        _value_quant = gkw('value-quant')
+        value_quant_min = gkw('value-quant-min')
+        value_quant_max = gkw('value-quant-max')
+        value_quant_margin = gkw('value-quant-margin')
+        value_quant = (_value_quant or value_quant_min or value_quant_max or value_quant_margin)
+
     q_par_desc_inst = """
-JOIN descriptors_inst AS idstart ON idstart.id = {join_to}.desc_inst
+JOIN descriptors_inst AS idstart ON idstart.id = {join_to}
 JOIN descriptors_inst AS id
 CROSS JOIN LATERAL get_parent_closed_desc_inst(idstart.id) AS idp ON idp.parent = id.id
 LEFT OUTER JOIN class_parent AS clp ON clp.id = id.id
@@ -321,18 +328,43 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
         'CROSS JOIN LATERAL get_child_closed_inst(icin.id) AS ic ON im.id = ic.child',
     )) if kw.parent_inst else ''
 
+    _q_all_objects = (
+        # TODO this is retained for legacy purposes, the proper approach is to
+        # find all instances and then use the subquery to find objects
+        # but the performance here is ok when there are additional constraints
+        # XXX not using LEFT OUTER JOIN so make sure all instances have both
+        # both value cat/quant otherwise prov results can be weird
+        # FIXME do the right thing for prov ...
+        'JOIN values_quant AS qvo ON qvo.instance = im.id\n'
+        'JOIN values_cat AS cvo ON cvo.instance = im.id\n'
+        'JOIN objects AS o ON o.id = qvo.object OR cvo.object = o.id\n'
+    )
+    # these are still used in prov for now
+    q_all_objects_cat = (
+        _q_all_objects if _where_cat else
+        (
+        'JOIN values_cat AS cvo ON cvo.instance = im.id\n'
+        'JOIN objects AS o ON cvo.object = o.id\n'
+        ))
+    q_all_objects_quant = (
+        _q_all_objects if _where_quant else
+        (
+        'JOIN values_quant AS qvo ON qvo.instance = im.id\n'
+        'JOIN objects AS o ON o.id = qvo.object\n'
+        ))
+
     # FIXME even trying to be smart here about which joins to pull just papers over the underlying perf issue
     # shaves about 140ms off but the underlying issue remains
+    _need_cv = sn.value_cat or kw.value_cat or sn.desc_cat or kw.desc_cat or kw.desc_inst or gkw('object') or kw.prov
     q_cat = '\n'.join((
-        'FROM values_cat AS cv',
+        'FROM values_inst AS im',
+        'JOIN values_cat AS cv ON cv.instance = im.id' if _need_cv else '',
         '\n'.join((
             'JOIN descriptors_inst AS idin',
-            'CROSS JOIN LATERAL get_child_closed_desc_inst(idin.id) AS idc ON cv.desc_inst = idc.child -- FIXME',
+            'CROSS JOIN LATERAL get_child_closed_desc_inst(idin.id) AS idc ON im.desc_inst = idc.child -- FIXME',
         )) if kw.desc_inst else '',
-        (q_par_desc_inst.format(join_to='cv') if sn.parent_desc_inst else
-         'JOIN descriptors_inst AS id ON cv.desc_inst = id.id'
-         ) if sn.desc_inst or kw.desc_inst else '',  # FIXME handle parents case
-        'JOIN values_inst AS im ON cv.instance = im.id',
+        (q_par_desc_inst.format(join_to='im.desc_inst') if sn.parent_desc_inst else
+         'JOIN descriptors_inst AS id ON im.desc_inst = id.id') if sn.desc_inst or kw.desc_inst else '',  # FIXME handle parents case
         q_inst_parent,
         '\n'.join((
             'JOIN descriptors_cat AS cd ON cv.desc_cat = cd.id',
@@ -344,61 +376,228 @@ LEFT OUTER JOIN addresses AS ada ON ada.id = odq.addr_aspect
           'LEFT OUTER JOIN objects_internal AS oi\n'
           'ON oi.id = o.id\n')
          if kw.source_only else
-         ('\n'  # have to use LEFT OUTER because object might have only one of cat or quant
-          #'LEFT OUTER JOIN values_quant AS qv ON qv.instance = im.id\n'  # FIXME redundant ? also another reason why union for objects?
-          'JOIN objects AS o ON cv.object = o.id --OR qv.object = o.id\n'
+         ('\n'
+          f'{q_all_objects_cat}'
           'LEFT OUTER JOIN objects_internal AS oi\n'
           'ON oi.id = o.id\n')
-         ) if sn.objects or kw.prov else '',
+         ) if kw.prov else '',
         (q_prov_i + q_prov_c) if kw.prov else '',
     ))
 
-    q_quant = '\n'.join((
-        'FROM values_quant AS qv',
+    _aspects = '\n'.join((
+        'JOIN aspects AS ain',
+        'CROSS JOIN LATERAL get_child_closed_aspect(ain.id) AS ac ON qd.aspect = ac.child',
+        'JOIN aspects AS a ON ac.child = a.id',
+    )) if kw.aspect else (
+        (q_par_aspect if sn.parent_aspect else
+         'JOIN aspects AS a ON qd.aspect = a.id'
+         ) if sn.aspect else '')
+    _units = 'LEFT OUTER JOIN units AS u ON qd.unit = u.id' if sn.unit or kw.unit else ''
+
+    _need_qv = sn.value_quant or kw.value_quant or sn.desc_quant or kw.desc_quant or kw.desc_inst or gkw('object') or kw.prov
+    _q_quant = (
+        'FROM values_inst AS im',
+        'JOIN values_quant AS qv ON qv.instance = im.id' if _need_qv else '',
         '\n'.join((
             'JOIN descriptors_inst AS idin',
-            'CROSS JOIN LATERAL get_child_closed_desc_inst(idin.id) AS idc ON qv.desc_inst = idc.child -- FIXME',
+            'CROSS JOIN LATERAL get_child_closed_desc_inst(idin.id) AS idc ON im.desc_inst = idc.child -- FIXME',
         )) if kw.desc_inst else '',
-        (q_par_desc_inst.format(join_to='qv') if sn.parent_desc_inst else
-         'JOIN descriptors_inst AS id ON qv.desc_inst = id.id'
-         ) if sn.desc_inst or kw.desc_inst else '',  # FIXME handle parents case
-        'JOIN values_inst AS im ON qv.instance = im.id',
+        (q_par_desc_inst.format(join_to='im.desc_inst') if sn.parent_desc_inst else
+         'JOIN descriptors_inst AS id ON im.desc_inst = id.id') if sn.desc_inst or kw.desc_inst else '',  # FIXME handle parents case
         q_inst_parent,
         'JOIN descriptors_quant AS qd ON qv.desc_quant = qd.id' if (
             sn.desc_quant or kw.desc_quant) else '',
-        '\n'.join((
-            'JOIN aspects AS ain',
-            'CROSS JOIN LATERAL get_child_closed_aspect(ain.id) AS ac ON qd.aspect = ac.child',
-            'JOIN aspects AS a ON ac.child = a.id',
-        )) if kw.aspect else (
-            (q_par_aspect if sn.parent_aspect else
-             'JOIN aspects AS a ON qd.aspect = a.id'
-             ) if sn.aspect else ''),  # FIXME handle parents case
-        'LEFT OUTER JOIN units AS u ON qd.unit = u.id' if sn.unit or kw.unit else '',
+        _aspects,  # FIXME handle parents case
+        _units,
         (('\n'
           'JOIN objects AS o ON qv.object = o.id\n'
           'LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id\n')
          if kw.source_only else
          ('\n'  # have to use LEFT OUTER because object might have only one of cat or quant
-          #'LEFT OUTER JOIN values_cat AS cv ON cv.instance = im.id\n'
-          'JOIN objects AS o ON qv.object = o.id --OR cv.object = o.id\n'
+          f'{q_all_objects_quant}'
           'LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id\n')
-         ) if sn.objects or kw.prov else '',
+         ) if kw.prov else '',
         (q_prov_i + q_prov_q) if kw.prov else '',
+    )
+    q_quant = '\n'.join(_q_quant)
+
+    # descriptor level queries
+    descriptor_level = not (
+        gkw('force-inst')
+        or gkw('subject') or gkw('sample')  # by definition have to go to instance level
+        or sn.value_cat or sn.value_quant
+        or kw.value_quant or kw.value_cat or kw.parent_inst
+        or kw.desc_cat  # if these are included assume we want instances by default, if you want qd cd make it explicit
+        #or kw.desc_quant  # this doesn't actually exist because we don't let people query by composite quant descirptors
+    )
+
+    _objects_c = (
+        'JOIN obj_desc_cat AS odc ON odc.desc_cat = cd.id\n'
+        'JOIN objects AS o ON o.id = odc.object\n'
+        'JOIN dataset_object AS im ON im.object = o.id\n'
+        'LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id\n'
+    ) if sn.objects or gkw('dataset') else ''
+
+    _dl_desc_inst_in_c = (
+        'JOIN descriptors_inst AS idin\n'
+        'CROSS JOIN LATERAL get_child_closed_desc_inst(idin.id) AS idc ON cd.domain = idc.child -- FIXME\n'
+    ) if kw.desc_inst else ''
+
+    _dl_desc_inst_c = (
+        q_par_desc_inst.format(join_to='cd.domain') if sn.parent_desc_inst else
+        'JOIN descriptors_inst AS id ON cd.domain = id.id'
+    ) if sn.desc_inst or kw.desc_inst else ''
+
+    desc_level_cat = '\n'.join((
+        'FROM descriptors_cat AS cd',
+        _dl_desc_inst_in_c,
+        _dl_desc_inst_c,
+        _objects_c,
     ))
 
+    _objects_q = (
+        'JOIN obj_desc_quant AS odq ON odq.desc_quant = qd.id\n'
+        'JOIN objects AS o ON o.id = odq.object\n'
+        'JOIN dataset_object AS im ON im.object = o.id\n'
+        'LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id\n'
+    ) if sn.objects or gkw('dataset') else ''
+
+    _dl_desc_inst_in_q = (
+        'JOIN descriptors_inst AS idin\n'
+        'CROSS JOIN LATERAL get_child_closed_desc_inst(idin.id) AS idc ON qd.domain = idc.child -- FIXME\n'
+    ) if kw.desc_inst else ''
+
+    _dl_desc_inst_q = (
+        q_par_desc_inst.format(join_to='qd.domain') if sn.parent_desc_inst else  # XXX can't easily query the null domain case which is all valid
+        'JOIN descriptors_inst AS id ON qd.domain = id.id'
+    ) if sn.desc_inst or kw.desc_inst else ''
+
+    desc_level_quant = '\n'.join((
+        'FROM descriptors_quant AS qd',
+        _aspects,
+        _units,
+        _dl_desc_inst_in_q,
+        _dl_desc_inst_q,
+        _objects_q,
+    ))
+
+    limit = gkw('limit')
     sw_cat = f'{select_cat}\n{q_cat}\n{where_cat}'  # XXX yes this can be malformed in some cases
     sw_quant = f'{select_quant}\n{q_quant}\n{where_quant}'  # XXX yes this can be malformed in some cases
     if endpoint in ('values/cat', 'terms', 'desc/cat'):
         query = sw_cat
-    elif endpoint in ('values/quant', 'units', 'aspects', 'desc/quant'):  # FIXME TODO make it possible to cross query terms, units, aspects
+    elif endpoint == 'values/quant':
         query = sw_quant
+    #elif endpoint in ('terms', 'desc/cat'):  # TODO ? these seem pretty fast ...
+        #pass
+    elif endpoint in ('objects', 'units', 'aspects', 'desc/quant'):  # FIXME TODO make it possible to cross query terms, units, aspects
+        # TODO desc/inst desc/cat should be in here too
+        # aspect unit desc_quant agg_type desc_inst
+        q_dl_cat = (
+            f'{select_cat}\n'
+            f'{desc_level_cat}\n{where_cat}'
+        )
+        q_dl_quant = (
+            f'{select_quant}\n'
+            f'{desc_level_quant}\n{where_quant}'
+        )
+        if endpoint == 'objects':
+            oq_rest = (
+                'JOIN dataset_object AS im ON im.object = o.id\n'
+                'LEFT OUTER JOIN objects_internal AS oi ON oi.id = o.id\n')
+            else_query = (
+                f'{select_cat or select_quant}\n'
+                'FROM objects AS o\n'
+                f'{oq_rest}'
+            )
+            results_query = (
+                f'({select_cat or select_quant}\n'
+                'FROM values_cat AS cv\n'
+                'JOIN objects AS o ON o.id = cv.object\n'
+                f'{oq_rest}'
+                'WHERE cv.instance in (select * from siq)\n'
+                'UNION\n'
+                f'{select_cat or select_quant}\n'
+                'FROM values_quant AS qv\n'
+                'JOIN objects AS o ON o.id = qv.object\n'
+                f'{oq_rest}'
+                'WHERE qv.instance in (select * from siq))\n'
+            )
+        elif endpoint == 'aspects':
+            # FIXME this one will surely cause confusing results
+            # because siq uses children to find instances and
+            # then this uses parents so it pulls in the whole tree
+            else_query = (
+                f'{select_cat or select_quant}\n'
+                'FROM aspects AS a\n'
+                'JOIN aspect_parent AS ap ON ap.id = a.id\n'
+                'JOIN aspects AS aspar ON aspar.id = ap.parent\n'
+            )
+            results_query = (
+                f'{select_cat or select_quant}\n'
+                'FROM values_quant AS qv\n'
+                'JOIN descriptors_quant AS qd ON qd.id = qv.desc_quant\n'
+                'JOIN aspects AS a ON qd.aspect = a.id\n'
+                'JOIN aspect_parent AS ap ON ap.id = a.id\n'
+                'JOIN aspects AS aspar ON aspar.id = ap.parent\n'
+                'WHERE qv.instance in (select * from siq)\n'
+            )
+        elif endpoint == 'units':
+            else_query = f'{select_cat or select_quant} FROM units AS u'
+            results_query = (
+                f'{select_cat or select_quant}\n'
+                'FROM values_quant AS qv\n'
+                'JOIN descriptors_quant AS qd ON qd.id = qv.desc_quant\n'
+                'JOIN units AS u ON qd.unit = u.id\n'
+                'WHERE qv.instance in (select * from siq)\n')
+
+        elif endpoint == 'desc/quant':
+            else_query = (
+                f'{select_cat or select_quant}\n'
+                'FROM descriptors_quant AS qd\n'
+                'JOIN units AS u ON qd.unit = u.id\n'
+                'JOIN aspects AS a ON qd.aspect = a.id\n'
+                'JOIN descriptors_inst AS id ON qd.domain = id.id\n'
+            )
+            results_query = (
+                f'{select_cat or select_quant}\n'
+                'FROM values_quant AS qv\n'
+                'JOIN descriptors_quant AS qd ON qd.id = qv.desc_quant\n'
+                'JOIN units AS u ON qd.unit = u.id\n'
+                'JOIN aspects AS a ON qd.aspect = a.id\n'
+                'JOIN descriptors_inst AS id ON qd.domain = id.id\n'
+                'WHERE qv.instance in (select * from siq)\n')
+        else:
+            raise NotImplementedError('oops')
+
+        query = cons_query(_where_cat, _where_quant, q_cat, q_quant,
+                           where_cat, where_quant, q_dl_cat, q_dl_quant,
+                           else_query, results_query,
+                           descriptor_level, gkw('union-cat-quant'))
     else:
-        operator = 'UNION' if 'union-cat-quant' in kwargs and kwargs['union-cat-quant'] else 'INTERSECT'
-        query = f'{sw_cat}\n{operator}\n{sw_quant}'
+        #operator = 'UNION' if 'union-cat-quant' in kwargs and kwargs['union-cat-quant'] else 'INTERSECT'
+        #operator = 'UNION' if force_union or gkw('union-cat-quant') else 'INTERSECT'
+        # FIXME this seems wrong because we alternate defaults ??? or no we always put union-cat-quant in
+        if _where_cat and _where_quant:
+            #operator = 'INTERSECT'
+            operator = 'UNION' if gkw('union-cat-quant') else 'INTERSECT'
+            if limit or limit == 0:
+                query = f'({sw_cat} LIMIT {limit})\n{operator}\n({sw_quant} LIMIT {limit})'
+            else:
+                query = f'{sw_cat}\n{operator}\n{sw_quant}'
+        elif _where_cat:
+            query = sw_cat
+        elif _where_quant:
+            query = sw_quant
+        else:
+            # force union case
+            operator = 'UNION'
+            if limit or limit == 0:
+                query = f'({sw_cat} LIMIT {limit})\n{operator}\n({sw_quant} LIMIT {limit})'
+            else:
+                query = f'{sw_cat}\n{operator}\n{sw_quant}'
 
     log.log(9, '\n' + query)
-    limit = gkw('limit')
     if limit or limit == 0:
         # TODO pagination and full sizes counts
         query += f'\nLIMIT {limit}'
@@ -549,6 +748,7 @@ args_default = {
     'count': False,
     #'operator': 'INTERSECT',  # XXX ...
     'union-cat-quant': False,  # by default we intersect but sometimes you want the union instead e.g. if object is passed
+    'force-inst': False,  # use to force default descriptor level queries to use the instance graph
     'source-only': False,
     'include-unused': False,
     'prov': False,
@@ -566,6 +766,55 @@ args_default = {
 }
 
 
+def cons_query(_where_cat, _where_quant, q_cat, q_quant, where_cat, where_quant,
+               q_dl_cat, q_dl_quant, else_query, results_query,
+               descriptor_level, union_cat_quant):
+    if descriptor_level:
+        _odi = 'idin.label = any(:desc_inst)'
+        _odd = 'im.dataset = :dataset'
+        only_di_cat = _where_cat == _odi or _where_cat == _odd
+        only_di_quant = _where_quant == _odi or _where_quant == _odd
+        #breakpoint()
+        if only_di_cat and only_di_quant:
+            if False:  # FIXME TODO need to figure out how to give priority based on endpoint here
+                query = f'{q_dl_cat}\nUNION\n{q_dl_quant}'
+            else:
+                query = f'{q_dl_quant}'
+        elif _where_cat and _where_quant and not only_di_cat and not only_di_quant:
+            operator = 'UNION' if union_cat_quant else 'INTERSECT'
+            query = f'{q_dl_cat}\n{operator}\n{q_dl_quant}'
+        elif _where_cat and not only_di_cat:
+            query = q_dl_cat
+        elif _where_quant and not only_di_quant:
+            query = q_dl_quant
+        else:
+            query = else_query
+
+        return query
+
+    r_query = None
+    if _where_cat and _where_quant:
+        operator = 'UNION' if union_cat_quant else 'INTERSECT'
+        select_instances_query = (
+            f'SELECT DISTINCT im.id\n{q_cat}\n{where_cat}\n{operator}\n'
+            f'SELECT DISTINCT im.id\n{q_quant}\n{where_quant}'
+        )
+    elif _where_cat:
+        select_instances_query = (
+            f'SELECT DISTINCT im.id\n{q_cat}\n{where_cat}'
+        )
+    elif _where_quant:
+        select_instances_query = (
+            f'SELECT DISTINCT im.id\n{q_quant}\n{where_quant}'
+        )
+    else:
+        select_instances_query = "SELECT 'WOO'"
+        results_query = else_query
+
+    query = f'WITH siq AS ({select_instances_query}) {results_query}'
+    return query
+
+
 def getArgs(request, endpoint, dev=False):
     default = copy.deepcopy(args_default)
 
@@ -575,6 +824,10 @@ def getArgs(request, endpoint, dev=False):
     # modify defaults by endpoint
     if endpoint != 'objects':
         default.pop('source-only')
+
+    if endpoint not in ('objects', 'units', 'aspects', 'desc/quant'):
+        # FIXME check in or desc/cat here
+        default.pop('force-inst')
 
     if not (endpoint.startswith('desc/') or endpoint in ('terms', 'units', 'aspects')):
         default.pop('include-unused')
@@ -614,7 +867,8 @@ def getArgs(request, endpoint, dev=False):
     def convert(k, d):
         if k in request.args:
             # arity is determined here
-            if k in ('dataset', 'include-equivalent', 'union-cat-quant', 'include-unused', 'agg-type', 'limit', 'count') or k.startswith('value-quant'):
+            if k in ('dataset', 'include-equivalent', 'union-cat-quant', 'include-unused', 'force-inst',
+                     'agg-type', 'limit', 'count') or k.startswith('value-quant'):
                 v = request.args[k]
                 if k in ('dataset',):
                     if not v:
@@ -624,10 +878,12 @@ def getArgs(request, endpoint, dev=False):
                             v = uuid.UUID(v)
                         except ValueError as e:
                             raise exc.BadValue(f'malformed value {k}={v}') from e
+                elif not v:
+                    raise exc.ArgMissingValue(f'parameter {k}= missing a value')
             else:
                 v = request.args.getlist(k)
                 if k in ('object',):
-                    # caste to uuid to simplify sqlalchemy type mapping
+                    # cast to uuid to simplify sqlalchemy type mapping
                     _v = []
                     for _o in v:
                         if not _o:
@@ -644,7 +900,7 @@ def getArgs(request, endpoint, dev=False):
         else:
             return d
 
-        if k in ('include-equivalent', 'union-cat-quant', 'include-unused'):
+        if k in ('include-equivalent', 'union-cat-quant', 'include-unused', 'force-inst'):
             if v.lower() == 'true':
                 return True
             elif v.lower() == 'false':
