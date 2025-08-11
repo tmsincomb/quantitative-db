@@ -88,6 +88,7 @@ to limit the results of a query to the =terms= endpoint by passing
 | limit              | integer   |     1 |
 | count              | bool      |     1 |
 | union-cat-quant    | bool      |     1 |
+| force-inst         | bool      |     1 |
 | source-only        | bool      |     1 |
 | include-unused     | bool      |     1 |
 | prov               | bool      |     1 |
@@ -126,6 +127,7 @@ Not-implemented are marked with =ni=.
 |--------------------+---------+-------------+------------+--------------+-----------+----------+------------+-------+-------+---------|
 | limit              |         |             |            |              |           |          |            |       |       |         |
 | count              | ni      |             |            |              | ni        | ni       | ni         | ni    | ni    | ni      |
+| force-inst         |         | x           | x          | x            | ni        | ni       |            | ni    |       |         |
 | union-cat-quant    | t       | t           |            |              | t         | t        | t          |       |       |         |
 | source-only        |         | x           | x          | x            | x         | x        | x          | x     | x     | x       |
 | include-unused     | x       | x           | x          | x            |           |          |            |       |       |         |
