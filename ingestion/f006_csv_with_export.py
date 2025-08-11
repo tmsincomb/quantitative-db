@@ -200,7 +200,7 @@ def get_table_category(table_name):
         return '6_other_tables'
 
 
-def run_f006_csv_with_export(test=True, csv_limit=10):
+def run_f006_csv_with_export(test=True, csv_limit=1):
     """Run F006 CSV ingestion with database reset and CSV export."""
 
     # Override the CSV limit

@@ -279,12 +279,13 @@ def run_f006_with_export(test=True):
 
             # List sample IDs
             sample_records = session.query(ValuesInst).filter_by(type='sample').order_by(ValuesInst.id_sam).all()
+            number_of_samples_to_run = 1
             if sample_records:
                 f.write(f'\nSample IDs:\n')
-                for sample in sample_records[:10]:  # Show first 10
+                for sample in sample_records[:number_of_samples_to_run]:  # Show first 10
                     f.write(f'  - {sample.id_sam}\n')
-                if len(sample_records) > 10:
-                    f.write(f'  ... and {len(sample_records) - 10} more\n')
+                if len(sample_records) > number_of_samples_to_run:
+                    f.write(f'  ... and {len(sample_records) - number_of_samples_to_run} more\n')
 
             f.write(f'\n=== Schema Components ===\n')
             f.write(f'Instance Descriptors: {unique_desc_inst}\n')
