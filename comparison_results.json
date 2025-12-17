@@ -1,0 +1,233 @@
+{
+  "production_dir": "production_f006_export_20250826_114423",
+  "local_dir": "f006_export_20250826_080720",
+  "comparisons": [
+    {
+      "table": "addresses",
+      "prod_rows": 2,
+      "local_rows": 2,
+      "row_diff": 0,
+      "prod_columns": [
+        "id",
+        "addr_type",
+        "value_type",
+        "addr_field",
+        "curator_note"
+      ],
+      "local_columns": [
+        "id",
+        "addr_type",
+        "value_type",
+        "addr_field",
+        "curator_note"
+      ],
+      "missing_columns": [],
+      "extra_columns": [],
+      "ids_only_in_prod": 0,
+      "ids_only_in_local": 0,
+      "ids_in_both": 2
+    },
+    {
+      "table": "aspects",
+      "prod_rows": 7,
+      "local_rows": 7,
+      "row_diff": 0,
+      "prod_columns": [
+        "id",
+        "label",
+        "iri",
+        "description"
+      ],
+      "local_columns": [
+        "id",
+        "label",
+        "iri",
+        "description"
+      ],
+      "missing_columns": [],
+      "extra_columns": [],
+      "ids_only_in_prod": 0,
+      "ids_only_in_local": 0,
+      "ids_in_both": 7
+    },
+    {
+      "table": "controlled_terms",
+      "prod_rows": 1,
+      "local_rows": 1,
+      "row_diff": 0,
+      "prod_columns": [
+        "id",
+        "label",
+        "iri"
+      ],
+      "local_columns": [
+        "id",
+        "label",
+        "iri"
+      ],
+      "missing_columns": [],
+      "extra_columns": [],
+      "ids_only_in_prod": 0,
+      "ids_only_in_local": 0,
+      "ids_in_both": 1
+    },
+    {
+      "table": "descriptors_cat",
+      "prod_rows": 1,
+      "local_rows": 1,
+      "row_diff": 0,
+      "prod_columns": [
+        "id",
+        "domain",
+        "range",
+        "label",
+        "description",
+        "curator_note"
+      ],
+      "local_columns": [
+        "id",
+        "domain",
+        "range",
+        "label",
+        "description",
+        "curator_note"
+      ],
+      "missing_columns": [],
+      "extra_columns": [],
+      "ids_only_in_prod": 0,
+      "ids_only_in_local": 0,
+      "ids_in_both": 1
+    },
+    {
+      "table": "descriptors_inst",
+      "prod_rows": 5,
+      "local_rows": 5,
+      "row_diff": 0,
+      "prod_columns": [
+        "id",
+        "label",
+        "iri",
+        "description"
+      ],
+      "local_columns": [
+        "id",
+        "label",
+        "iri",
+        "description"
+      ],
+      "missing_columns": [],
+      "extra_columns": [],
+      "ids_only_in_prod": 0,
+      "ids_only_in_local": 0,
+      "ids_in_both": 5
+    },
+    {
+      "table": "descriptors_quant",
+      "prod_rows": 5,
+      "local_rows": 5,
+      "row_diff": 0,
+      "prod_columns": [
+        "id",
+        "shape",
+        "label",
+        "aggregation_type",
+        "unit",
+        "aspect",
+        "domain",
+        "description",
+        "curator_note"
+      ],
+      "local_columns": [
+        "id",
+        "shape",
+        "label",
+        "aggregation_type",
+        "unit",
+        "aspect",
+        "domain",
+        "description",
+        "curator_note"
+      ],
+      "missing_columns": [],
+      "extra_columns": [],
+      "ids_only_in_prod": 0,
+      "ids_only_in_local": 0,
+      "ids_in_both": 5
+    },
+    {
+      "table": "objects",
+      "prod_rows": 1,
+      "local_rows": 542,
+      "row_diff": 541,
+      "prod_columns": [
+        "id",
+        "id_type",
+        "id_file",
+        "id_internal"
+      ],
+      "local_columns": [
+        "id",
+        "id_type",
+        "id_file",
+        "id_internal"
+      ],
+      "missing_columns": [],
+      "extra_columns": [],
+      "ids_only_in_prod": 0,
+      "ids_only_in_local": 541,
+      "ids_in_both": 1
+    },
+    {
+      "table": "units",
+      "prod_rows": 5,
+      "local_rows": 5,
+      "row_diff": 0,
+      "prod_columns": [
+        "id",
+        "label",
+        "iri"
+      ],
+      "local_columns": [
+        "id",
+        "label",
+        "iri"
+      ],
+      "missing_columns": [],
+      "extra_columns": [],
+      "ids_only_in_prod": 0,
+      "ids_only_in_local": 0,
+      "ids_in_both": 5
+    },
+    {
+      "table": "values_inst",
+      "prod_rows": 18687,
+      "local_rows": 18687,
+      "row_diff": 0,
+      "prod_columns": [
+        "id",
+        "type",
+        "id_sub",
+        "desc_inst",
+        "dataset",
+        "id_formal",
+        "local_identifier",
+        "id_sam"
+      ],
+      "local_columns": [
+        "id",
+        "type",
+        "id_sub",
+        "desc_inst",
+        "dataset",
+        "id_formal",
+        "local_identifier",
+        "id_sam"
+      ],
+      "missing_columns": [],
+      "extra_columns": [],
+      "ids_only_in_prod": 0,
+      "ids_only_in_local": 0,
+      "ids_in_both": 18687
+    }
+  ]
+}

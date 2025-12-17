@@ -183,3 +183,4 @@ production_*/
 !README.md
 README.pdf
 .DS_STORE
+.vscode/
