@@ -1,5 +1,14 @@
 # F006 Dataset Specific Mappings
 # This file defines the mappings specific to the F006 nerve dataset
+# Aligned with quantdb/ingest.py logic for path metadata and CSV ingestion
+
+# Dataset configuration
+dataset:
+  uuid: '2a3d01c0-39d3-464a-8746-54c9d67ebe0f'
+  name: 'F006 Pig Nerve Dataset'
+  metadata_urls:
+    curation_export: 'https://cassava.ucsd.edu/sparc/datasets/{uuid}/LATEST/curation-export.json'
+    path_metadata: 'https://cassava.ucsd.edu/sparc/datasets/{uuid}/LATEST/path-metadata.json'
 
 # Dataset-specific aspects
 aspects:
@@ -28,6 +37,9 @@ aspects:
     label: angle
   - iri: http://uri.interlex.org/tgbugs/uris/readable/aspect/angle/from/parent/centroid
     label: angle-from-parent-centroid
+  - iri: http://uri.interlex.org/tgbugs/uris/readable/aspect/diameter
+    label: diameter
+    description: Diameter measurement
 
   # Fiber count aspects
   - iri: http://uri.interlex.org/tgbugs/uris/readable/aspect/count/fiber

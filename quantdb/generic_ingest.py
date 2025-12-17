@@ -8,7 +8,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ClauseElement
 
 from quantdb.client import get_session
-from quantdb.models import Objects
+
+# Objects model will be imported dynamically when needed
+Objects = None
 
 # df = pd.read_csv("data/CadaverVNMorphology_OutputMetrics.csv", index_col=0)
 # df = df.T.reset_index(drop=True)
