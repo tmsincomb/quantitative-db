@@ -277,6 +277,276 @@ def back_populate_tables(db: Session, obj) -> object:
     return obj  # Return the object with its related objects back-populated
 
 
+def get_or_create_dynamic(session, model_class, data: dict, unique_keys: list = None):
+    """
+    Get or create a record using dynamically reflected models.
+
+    Parameters
+    ----------
+    session : sqlalchemy.orm.Session
+        The database session.
+    model_class : class
+        The automap model class.
+    data : dict
+        Dictionary of column values.
+    unique_keys : list, optional
+        List of column names that form the unique constraint.
+        If None, tries to find by all provided data.
+
+    Returns
+    -------
+    tuple
+        (instance, created) where instance is the model instance
+        and created is True if a new record was created.
+    """
+    # Convert UUIDs to strings for consistency
+    clean_data = {}
+    for k, v in data.items():
+        if v is not None and hasattr(v, 'hex') and hasattr(v, 'version'):
+            clean_data[k] = str(v)
+        else:
+            clean_data[k] = v
+
+    # Try to find by unique keys if provided
+    if unique_keys:
+        filter_dict = {k: clean_data[k] for k in unique_keys if k in clean_data}
+        instance = session.query(model_class).filter_by(**filter_dict).first()
+        if instance:
+            return instance, False
+
+    # Try to find by all data
+    instance = session.query(model_class).filter_by(**clean_data).first()
+    if instance:
+        return instance, False
+
+    # Create new instance
+    instance = model_class(**clean_data)
+    try:
+        session.add(instance)
+        session.flush()
+        return instance, True
+    except IntegrityError:
+        session.rollback()
+        # Race condition - try to find again
+        if unique_keys:
+            filter_dict = {k: clean_data[k] for k in unique_keys if k in clean_data}
+            instance = session.query(model_class).filter_by(**filter_dict).first()
+        else:
+            instance = session.query(model_class).filter_by(**clean_data).first()
+        if instance:
+            return instance, False
+        raise
+
+
+def back_populate_with_dependencies(
+    session, records: list, models: dict, table_order: list = None, commit_batch: int = 1000
+) -> dict:
+    """
+    Insert records respecting foreign key dependencies.
+
+    This function handles bulk insertion of records across multiple tables,
+    automatically resolving foreign key dependencies and using get-or-create
+    semantics for idempotent operations.
+
+    Parameters
+    ----------
+    session : sqlalchemy.orm.Session
+        The database session.
+    records : list
+        List of dicts with 'table' and 'data' keys, where 'table' is the
+        table name and 'data' is a dict of column values.
+    models : dict
+        Dictionary mapping table names to model classes (from automap).
+    table_order : list, optional
+        Pre-computed table insertion order. If None, records are processed
+        in the order provided.
+    commit_batch : int
+        Number of records to process before committing (default: 1000).
+
+    Returns
+    -------
+    dict
+        Dictionary mapping (table_name, unique_key_tuple) to created instances.
+
+    Example
+    -------
+    >>> records = [
+    ...     {'table': 'objects', 'data': {'id': uuid, 'id_type': 'dataset'}},
+    ...     {'table': 'values_inst', 'data': {'dataset': uuid, 'id_formal': 'sub-1', ...}},
+    ... ]
+    >>> results = back_populate_with_dependencies(session, records, models)
+    """
+    # Group records by table
+    by_table = {}
+    for rec in records:
+        table = rec['table']
+        if table not in by_table:
+            by_table[table] = []
+        by_table[table].append(rec['data'])
+
+    # Determine insertion order
+    if table_order:
+        ordered_tables = [t for t in table_order if t in by_table]
+    else:
+        ordered_tables = list(by_table.keys())
+
+    # Track created instances
+    created = {}
+    count = 0
+
+    for table_name in ordered_tables:
+        model = models.get(table_name)
+        if model is None:
+            continue
+
+        # Get unique constraint columns for this table
+        unique_keys = None
+        if hasattr(model, '__table__'):
+            for constraint in model.__table__.constraints:
+                if isinstance(constraint, (UniqueConstraint, PrimaryKeyConstraint)):
+                    unique_keys = [c.name for c in constraint.columns]
+                    break
+
+        for data in by_table[table_name]:
+            instance, is_new = get_or_create_dynamic(session, model, data, unique_keys)
+
+            # Create a key for tracking
+            if unique_keys:
+                key_vals = tuple(getattr(instance, k, None) for k in unique_keys)
+                created[(table_name, key_vals)] = instance
+            else:
+                created[(table_name, id(data))] = instance
+
+            count += 1
+            if count % commit_batch == 0:
+                session.commit()
+
+    session.commit()
+    return created
+
+
+def create_all_descriptors_from_yaml(session, models: dict, yaml_config: dict) -> dict:
+    """
+    Create all descriptors (aspects, units, descriptors_inst, etc.) from YAML config.
+
+    Parameters
+    ----------
+    session : sqlalchemy.orm.Session
+        The database session.
+    models : dict
+        Dictionary mapping table names to model classes.
+    yaml_config : dict
+        Parsed YAML configuration with aspects, units, descriptors, etc.
+
+    Returns
+    -------
+    dict
+        Dictionary mapping descriptor labels to their database IDs.
+    """
+    created_ids = {
+        'aspects': {},
+        'units': {},
+        'descriptors_inst': {},
+        'descriptors_quant': {},
+        'descriptors_cat': {},
+        'controlled_terms': {},
+        'addresses': {},
+    }
+
+    # Create aspects
+    Aspects = models.get('aspects')
+    if Aspects and 'aspects' in yaml_config:
+        for aspect_data in yaml_config['aspects']:
+            instance, _ = get_or_create_dynamic(
+                session, Aspects, {'label': aspect_data['label'], 'iri': aspect_data['iri']}, unique_keys=['label']
+            )
+            created_ids['aspects'][aspect_data['label']] = instance.id
+
+    # Create units
+    Units = models.get('units')
+    if Units and 'units' in yaml_config:
+        for unit_data in yaml_config['units']:
+            instance, _ = get_or_create_dynamic(
+                session, Units, {'label': unit_data['label'], 'iri': unit_data['iri']}, unique_keys=['label']
+            )
+            created_ids['units'][unit_data['label']] = instance.id
+
+    # Create controlled terms
+    ControlledTerms = models.get('controlled_terms')
+    if ControlledTerms and 'controlled_terms' in yaml_config:
+        for term_data in yaml_config['controlled_terms']:
+            instance, _ = get_or_create_dynamic(
+                session, ControlledTerms, {'label': term_data['label'], 'iri': term_data['iri']}, unique_keys=['label']
+            )
+            created_ids['controlled_terms'][term_data['label']] = instance.id
+
+    # Create instance descriptors
+    DescriptorsInst = models.get('descriptors_inst')
+    if DescriptorsInst and 'descriptors' in yaml_config:
+        inst_types = yaml_config['descriptors'].get('instance_types', [])
+        for desc_data in inst_types:
+            instance, _ = get_or_create_dynamic(
+                session, DescriptorsInst, {'label': desc_data['label'], 'iri': desc_data['iri']}, unique_keys=['label']
+            )
+            created_ids['descriptors_inst'][desc_data['label']] = instance.id
+
+    # Create addresses
+    Addresses = models.get('addresses')
+    if Addresses and 'addresses' in yaml_config:
+        for addr_name, addr_data in yaml_config['addresses'].items():
+            instance, _ = get_or_create_dynamic(
+                session,
+                Addresses,
+                {
+                    'addr_type': addr_data['addr_type'],
+                    'addr_field': addr_data.get('addr_field'),
+                    'value_type': addr_data.get('value_type', 'single'),
+                },
+                unique_keys=['addr_type', 'addr_field', 'value_type'],
+            )
+            created_ids['addresses'][addr_name] = instance.id
+
+    session.commit()
+
+    # Create quantitative descriptors (depends on aspects, units, descriptors_inst)
+    DescriptorsQuant = models.get('descriptors_quant')
+    if DescriptorsQuant and 'descriptors' in yaml_config:
+        quant_descs = yaml_config['descriptors'].get('quantitative', [])
+        for desc_data in quant_descs:
+            data = {
+                'label': desc_data['label'],
+                'shape': desc_data.get('shape', 'scalar'),
+                'aggregation_type': desc_data.get('aggregation_type', 'instance'),
+            }
+            if desc_data.get('domain'):
+                data['domain'] = created_ids['descriptors_inst'].get(desc_data['domain'])
+            if desc_data.get('aspect'):
+                data['aspect'] = created_ids['aspects'].get(desc_data['aspect'])
+            if desc_data.get('unit'):
+                data['unit'] = created_ids['units'].get(desc_data['unit'])
+
+            instance, _ = get_or_create_dynamic(session, DescriptorsQuant, data, unique_keys=['label'])
+            created_ids['descriptors_quant'][desc_data['label']] = instance.id
+
+    # Create categorical descriptors
+    DescriptorsCat = models.get('descriptors_cat')
+    if DescriptorsCat and 'descriptors' in yaml_config:
+        cat_descs = yaml_config['descriptors'].get('categorical', [])
+        for desc_data in cat_descs:
+            data = {
+                'label': desc_data['label'],
+                'range': desc_data.get('range', 'controlled'),
+            }
+            if desc_data.get('domain'):
+                data['domain'] = created_ids['descriptors_inst'].get(desc_data['domain'])
+
+            instance, _ = get_or_create_dynamic(session, DescriptorsCat, data, unique_keys=['domain', 'range', 'label'])
+            created_ids['descriptors_cat'][desc_data['label']] = instance.id
+
+    session.commit()
+    return created_ids
+
+
 if __name__ == '__main__':
 
     session = get_session(echo=False)

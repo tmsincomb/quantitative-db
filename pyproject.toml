@@ -21,6 +21,7 @@ dependencies = [
     "augpathlib>=0.0.25",
     "requests",
     "beautifulsoup4",
+    "pyyaml>=6.0",
 ]
 name = "quantdb"
 version = "0.1.0"

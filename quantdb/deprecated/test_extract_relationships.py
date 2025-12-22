@@ -5,9 +5,9 @@ This simulates what extract_schema.py would do if the database had tables.
 """
 
 from rich.console import Console
-from rich.table import Table
 from rich.panel import Panel
 from rich.syntax import Syntax
+from rich.table import Table
 
 console = Console()
 
@@ -85,7 +85,7 @@ class DescriptorsInst(Base):
 '''
 
 # Association table example
-association_table = '''
+association_table = """
 # Association table: instance_parent
 t_instance_parent = Table(
     'instance_parent',
@@ -107,85 +107,66 @@ t_dataset_object = Table(
     ForeignKeyConstraint(['object'], ['objects.id'], name='dataset_object_object_fkey'),
     PrimaryKeyConstraint('dataset', 'object', name='dataset_object_pkey'),
 )
-'''
+"""
+
 
 def main():
-    console.print(Panel.fit(
-        "[bold cyan]Demonstration: Enhanced Schema Extraction with Relationships[/bold cyan]",
-        border_style="cyan"
-    ))
-    
-    console.print("\n[yellow]The extract_schema.py script now generates:[/yellow]\n")
-    
-    features = Table(show_header=True, header_style="bold magenta")
-    features.add_column("Feature", style="cyan")
-    features.add_column("Description", style="white")
-    
-    features.add_row(
-        "Foreign Key Analysis",
-        "Automatically detects foreign keys and generates appropriate relationships"
+    console.print(
+        Panel.fit(
+            '[bold cyan]Demonstration: Enhanced Schema Extraction with Relationships[/bold cyan]', border_style='cyan'
+        )
     )
+
+    console.print('\n[yellow]The extract_schema.py script now generates:[/yellow]\n')
+
+    features = Table(show_header=True, header_style='bold magenta')
+    features.add_column('Feature', style='cyan')
+    features.add_column('Description', style='white')
+
     features.add_row(
-        "Relationship Types",
-        "Creates Many-to-One, One-to-Many, and One-to-One relationships"
+        'Foreign Key Analysis', 'Automatically detects foreign keys and generates appropriate relationships'
     )
-    features.add_row(
-        "Back References",
-        "Generates reverse relationships for collections (e.g., parent.children)"
-    )
-    features.add_row(
-        "Smart Naming",
-        "Removes '_id' suffixes, pluralizes collections, handles conflicts"
-    )
-    features.add_row(
-        "Association Tables",
-        "Identifies and generates Table objects for many-to-many relationships"
-    )
-    
+    features.add_row('Relationship Types', 'Creates Many-to-One, One-to-Many, and One-to-One relationships')
+    features.add_row('Back References', 'Generates reverse relationships for collections (e.g., parent.children)')
+    features.add_row('Smart Naming', "Removes '_id' suffixes, pluralizes collections, handles conflicts")
+    features.add_row('Association Tables', 'Identifies and generates Table objects for many-to-many relationships')
+
     console.print(features)
-    
-    console.print("\n[cyan]Example Generated Model with Relationships:[/cyan]\n")
-    
-    syntax = Syntax(sample_model, "python", theme="monokai", line_numbers=True)
+
+    console.print('\n[cyan]Example Generated Model with Relationships:[/cyan]\n')
+
+    syntax = Syntax(sample_model, 'python', theme='monokai', line_numbers=True)
     console.print(syntax)
-    
-    console.print("\n[cyan]Example Association Tables:[/cyan]\n")
-    
-    syntax2 = Syntax(association_table, "python", theme="monokai", line_numbers=True)
+
+    console.print('\n[cyan]Example Association Tables:[/cyan]\n')
+
+    syntax2 = Syntax(association_table, 'python', theme='monokai', line_numbers=True)
     console.print(syntax2)
-    
+
     # Show relationship types
-    console.print("\n[yellow]Relationship Patterns Generated:[/yellow]\n")
-    
-    rel_table = Table(show_header=True, header_style="bold yellow")
-    rel_table.add_column("Pattern", style="cyan")
-    rel_table.add_column("SQLAlchemy Code", style="green")
-    
+    console.print('\n[yellow]Relationship Patterns Generated:[/yellow]\n')
+
+    rel_table = Table(show_header=True, header_style='bold yellow')
+    rel_table.add_column('Pattern', style='cyan')
+    rel_table.add_column('SQLAlchemy Code', style='green')
+
+    rel_table.add_row('Many-to-One (FK)', "relationship('OtherClass', foreign_keys=[fk_col])")
+    rel_table.add_row('One-to-Many (Reverse)', "relationship('OtherClass', uselist=True, viewonly=True)")
     rel_table.add_row(
-        "Many-to-One (FK)",
-        "relationship('OtherClass', foreign_keys=[fk_col])"
+        'Self-Referential', "relationship('SameClass', foreign_keys=[parent_id], remote_side='[SameClass.id]')"
     )
-    rel_table.add_row(
-        "One-to-Many (Reverse)",
-        "relationship('OtherClass', uselist=True, viewonly=True)"
-    )
-    rel_table.add_row(
-        "Self-Referential",
-        "relationship('SameClass', foreign_keys=[parent_id], remote_side='[SameClass.id]')"
-    )
-    rel_table.add_row(
-        "Composite FK",
-        "relationship('OtherClass', foreign_keys=['col1', 'col2'])"
-    )
-    
+    rel_table.add_row('Composite FK', "relationship('OtherClass', foreign_keys=['col1', 'col2'])")
+
     console.print(rel_table)
-    
-    console.print(Panel.fit(
-        "[green]✅ The enhanced extract_schema.py is ready![/green]\n"
-        "[yellow]It will generate complete models with relationships when the database has tables.[/yellow]",
-        border_style="green"
-    ))
+
+    console.print(
+        Panel.fit(
+            '[green]✅ The enhanced extract_schema.py is ready![/green]\n'
+            '[yellow]It will generate complete models with relationships when the database has tables.[/yellow]',
+            border_style='green',
+        )
+    )
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

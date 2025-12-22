@@ -62,16 +62,35 @@ class Addresses(Base):
     -------
     #/path-metadata/data/#int/dataset_relative_path
     """
+
     __tablename__ = 'addresses'
     __table_args__ = (
         PrimaryKeyConstraint('id', name='addresses_pkey'),
         UniqueConstraint('addr_type', 'addr_field', 'value_type', name='addresses_addr_type_addr_field_value_type_key'),
-        {'schema': 'quantdb'}
+        {'schema': 'quantdb'},
     )
 
     id = mapped_column(Integer, nullable=False)
-    addr_type = mapped_column(Enum('constant', 'record-index', 'tabular-header', 'tabular-alt-header', 'workbook-sheet-tabular-header', 'workbook-sheet-tabular-alt-header', 'json-path-with-types', 'file-system-extracted', 'arbitrary-function', name='address_type'), nullable=False)
-    value_type = mapped_column(Enum('single', 'multi', name='field_value_type'), nullable=False, server_default=text("'single'::field_value_type"))
+    addr_type = mapped_column(
+        Enum(
+            'constant',
+            'record-index',
+            'tabular-header',
+            'tabular-alt-header',
+            'workbook-sheet-tabular-header',
+            'workbook-sheet-tabular-alt-header',
+            'json-path-with-types',
+            'file-system-extracted',
+            'arbitrary-function',
+            name='address_type',
+        ),
+        nullable=False,
+    )
+    value_type = mapped_column(
+        Enum('single', 'multi', name='field_value_type'),
+        nullable=False,
+        server_default=text("'single'::field_value_type"),
+    )
     addr_field = mapped_column(Text)
     curator_note = mapped_column(Text)
 
@@ -84,7 +103,6 @@ class Addresses(Base):
     obj_desc_quants_1: Mapped[List['ObjDescQuant']] = relationship('ObjDescQuant', uselist=True, viewonly=True)
     obj_desc_quants_2: Mapped[List['ObjDescQuant']] = relationship('ObjDescQuant', uselist=True, viewonly=True)
     obj_desc_quants_3: Mapped[List['ObjDescQuant']] = relationship('ObjDescQuant', uselist=True, viewonly=True)
-
 
 
 class Aspects(Base):
@@ -106,12 +124,13 @@ class Aspects(Base):
     label: "distance"
     iri: "http://uri.interlex.org/tgbugs/uris/readable/aspect/distance"
     """
+
     __tablename__ = 'aspects'
     __table_args__ = (
         PrimaryKeyConstraint('id', name='aspects_pkey'),
         UniqueConstraint('iri', name='aspects_iri_key'),
         UniqueConstraint('label', name='aspects_label_key'),
-        {'schema': 'quantdb'}
+        {'schema': 'quantdb'},
     )
 
     id = mapped_column(Integer, nullable=False)
@@ -123,7 +142,6 @@ class Aspects(Base):
     aspect_parents: Mapped[List['AspectParent']] = relationship('AspectParent', uselist=True, viewonly=True)
     aspect_parents_1: Mapped[List['AspectParent']] = relationship('AspectParent', uselist=True, viewonly=True)
     descriptors_quants: Mapped[List['DescriptorsQuant']] = relationship('DescriptorsQuant', uselist=True, viewonly=True)
-
 
 
 class ControlledTerms(Base):
@@ -138,12 +156,13 @@ class ControlledTerms(Base):
     iri : str
         IRI of the controlled term.
     """
+
     __tablename__ = 'controlled_terms'
     __table_args__ = (
         PrimaryKeyConstraint('id', name='controlled_terms_pkey'),
         UniqueConstraint('iri', name='controlled_terms_iri_key'),
         UniqueConstraint('label', name='controlled_terms_label_key'),
-        {'schema': 'quantdb'}
+        {'schema': 'quantdb'},
     )
 
     id = mapped_column(Integer, nullable=False)
@@ -154,15 +173,15 @@ class ControlledTerms(Base):
     values_cats: Mapped[List['ValuesCat']] = relationship('ValuesCat', uselist=True, viewonly=True)
 
 
-
 class DescriptorsCat(Base):
     """Table: descriptors_cat"""
+
     __tablename__ = 'descriptors_cat'
     __table_args__ = (
         PrimaryKeyConstraint('id', name='descriptors_cat_pkey'),
         UniqueConstraint('domain', 'range', 'label', name='descriptors_cat_domain_range_label_key'),
         ForeignKeyConstraint(['domain'], ['descriptors_inst.id'], name='descriptors_cat_domain_fkey'),
-        {'schema': 'quantdb'}
+        {'schema': 'quantdb'},
     )
 
     id = mapped_column(Integer, nullable=False)
@@ -176,7 +195,6 @@ class DescriptorsCat(Base):
     domain_inst: Mapped[Optional['DescriptorsInst']] = relationship('DescriptorsInst', foreign_keys=[domain])
     values_cats: Mapped[List['ValuesCat']] = relationship('ValuesCat', uselist=True, viewonly=True)
     obj_desc_cats: Mapped[List['ObjDescCat']] = relationship('ObjDescCat', uselist=True, viewonly=True)
-
 
 
 class DescriptorsInst(Base):
@@ -194,12 +212,13 @@ class DescriptorsInst(Base):
         Description of the descriptor.
 
     """
+
     __tablename__ = 'descriptors_inst'
     __table_args__ = (
         PrimaryKeyConstraint('id', name='descriptors_inst_pkey'),
         UniqueConstraint('iri', name='descriptors_inst_iri_key'),
         UniqueConstraint('label', name='descriptors_inst_label_key'),
-        {'schema': 'quantdb'}
+        {'schema': 'quantdb'},
     )
 
     id = mapped_column(Integer, nullable=False)
@@ -216,7 +235,6 @@ class DescriptorsInst(Base):
     obj_desc_insts: Mapped[List['ObjDescInst']] = relationship('ObjDescInst', uselist=True, viewonly=True)
     descriptors_quants: Mapped[List['DescriptorsQuant']] = relationship('DescriptorsQuant', uselist=True, viewonly=True)
     descriptors_cats: Mapped[List['DescriptorsCat']] = relationship('DescriptorsCat', uselist=True, viewonly=True)
-
 
 
 class DescriptorsQuant(Base):
@@ -255,25 +273,39 @@ class DescriptorsQuant(Base):
     values_quant : List[ValuesQuant]
         Relationship to the ValuesQuant model.
     """
+
     __tablename__ = 'descriptors_quant'
     __table_args__ = (
         PrimaryKeyConstraint('id', name='descriptors_quant_pkey'),
         UniqueConstraint('label', name='descriptors_quant_label_key'),
-        UniqueConstraint('unit', 'aspect', 'domain', 'shape', 'aggregation_type', name='descriptors_quant_unit_aspect_domain_shape_aggregation_type_key'),
+        UniqueConstraint(
+            'unit',
+            'aspect',
+            'domain',
+            'shape',
+            'aggregation_type',
+            name='descriptors_quant_unit_aspect_domain_shape_aggregation_type_key',
+        ),
         ForeignKeyConstraint(['aspect'], ['aspects.id'], name='descriptors_quant_aspect_fkey'),
         ForeignKeyConstraint(['domain'], ['descriptors_inst.id'], name='descriptors_quant_domain_fkey'),
         ForeignKeyConstraint(['unit'], ['units.id'], name='descriptors_quant_unit_fkey'),
-        {'schema': 'quantdb'}
+        {'schema': 'quantdb'},
     )
 
     id = mapped_column(Integer, nullable=False)
-    shape = mapped_column(Enum('scalar', name='quant_shape'), nullable=False, server_default=text("'scalar'::quant_shape"))
+    shape = mapped_column(
+        Enum('scalar', name='quant_shape'), nullable=False, server_default=text("'scalar'::quant_shape")
+    )
     unit = mapped_column(Integer, ForeignKey('units.id'))
     aspect = mapped_column(Integer, ForeignKey('aspects.id'))
     domain = mapped_column(Integer, ForeignKey('descriptors_inst.id'))
     label = mapped_column(Text, nullable=False)
     description = mapped_column(Text)
-    aggregation_type = mapped_column(Enum('instance', 'function', 'summary', 'mean', 'media', 'mode', 'sum', 'min', 'max', name='quant_agg_type'), nullable=False, server_default=text("'instance'::quant_agg_type"))
+    aggregation_type = mapped_column(
+        Enum('instance', 'function', 'summary', 'mean', 'media', 'mode', 'sum', 'min', 'max', name='quant_agg_type'),
+        nullable=False,
+        server_default=text("'instance'::quant_agg_type"),
+    )
     curator_note = mapped_column(Text)
 
     # Relationships
@@ -282,7 +314,6 @@ class DescriptorsQuant(Base):
     units: Mapped[Optional['Units']] = relationship('Units', foreign_keys=[unit])
     values_quants: Mapped[List['ValuesQuant']] = relationship('ValuesQuant', uselist=True, viewonly=True)
     obj_desc_quants: Mapped[List['ObjDescQuant']] = relationship('ObjDescQuant', uselist=True, viewonly=True)
-
 
 
 class Objects(Base):
@@ -328,18 +359,27 @@ class Objects(Base):
         - PrimaryKeyConstraint on 'id'.
         - Index on 'id_internal'.
     """
+
     __tablename__ = 'objects'
     __table_args__ = (
         PrimaryKeyConstraint('id', name='objects_pkey'),
         ForeignKeyConstraint(['id_internal'], ['objects_internal.id'], name='objects_id_internal_fkey'),
-        CheckConstraint('id_type <> \'quantdb\'::remote_id_type OR id_internal IS NOT NULL AND id = id_internal', name='constraint_objects_remote_id_type_id_internal'),
-        CheckConstraint('id_type <> \'package\'::remote_id_type OR id_file IS NOT NULL', name='constraint_objects_remote_id_type_id_package'),
+        CheckConstraint(
+            "id_type <> 'quantdb'::remote_id_type OR id_internal IS NOT NULL AND id = id_internal",
+            name='constraint_objects_remote_id_type_id_internal',
+        ),
+        CheckConstraint(
+            "id_type <> 'package'::remote_id_type OR id_file IS NOT NULL",
+            name='constraint_objects_remote_id_type_id_package',
+        ),
         Index('idx_objects_id_internal', 'id_internal'),
-        {'schema': 'quantdb'}
+        {'schema': 'quantdb'},
     )
 
     id = mapped_column(Uuid, nullable=False)
-    id_type = mapped_column(Enum('organization', 'dataset', 'collection', 'package', 'quantdb', name='remote_id_type'), nullable=False)
+    id_type = mapped_column(
+        Enum('organization', 'dataset', 'collection', 'package', 'quantdb', name='remote_id_type'), nullable=False
+    )
     id_file = mapped_column(Integer)
     id_internal = mapped_column(Uuid, ForeignKey('objects_internal.id'))
 
@@ -354,7 +394,6 @@ class Objects(Base):
     obj_desc_quants: Mapped[List['ObjDescQuant']] = relationship('ObjDescQuant', uselist=True, viewonly=True)
     dataset_objects: Mapped[List['DatasetObject']] = relationship('DatasetObject', uselist=True, viewonly=True)
     dataset_objects_1: Mapped[List['DatasetObject']] = relationship('DatasetObject', uselist=True, viewonly=True)
-
 
     def __repr__(self):
         return f'<Objects(id={self.id}, id_type={self.id_type})>'
@@ -401,16 +440,19 @@ class Objects(Base):
         return self.preprocess_id(id_value)
 
 
-
 class ObjectsInternal(Base):
     """Table: objects_internal"""
+
     __tablename__ = 'objects_internal'
     __table_args__ = (
         PrimaryKeyConstraint('id', name='objects_internal_pkey'),
         UniqueConstraint('dataset', 'updated_transitive', name='objects_internal_dataset_updated_transitive_key'),
         ForeignKeyConstraint(['dataset'], ['objects.id'], name='constraint_oi_dataset_fk'),
-        CheckConstraint('type <> \'path-metadata\'::oi_type OR updated_transitive IS NOT NULL AND dataset IS NOT NULL', name='constraint_objects_internal_type_updated_transitive'),
-        {'schema': 'quantdb'}
+        CheckConstraint(
+            "type <> 'path-metadata'::oi_type OR updated_transitive IS NOT NULL AND dataset IS NOT NULL",
+            name='constraint_objects_internal_type_updated_transitive',
+        ),
+        {'schema': 'quantdb'},
     )
 
     id = mapped_column(Uuid, nullable=False, server_default=text('gen_random_uuid()'))
@@ -425,15 +467,15 @@ class ObjectsInternal(Base):
     objects: Mapped[List['Objects']] = relationship('Objects', uselist=True, viewonly=True)
 
 
-
 class Units(Base):
     """Table: units"""
+
     __tablename__ = 'units'
     __table_args__ = (
         PrimaryKeyConstraint('id', name='units_pkey'),
         UniqueConstraint('iri', name='units_iri_key'),
         UniqueConstraint('label', name='units_label_key'),
-        {'schema': 'quantdb'}
+        {'schema': 'quantdb'},
     )
 
     id = mapped_column(Integer, nullable=False)
@@ -444,9 +486,9 @@ class Units(Base):
     descriptors_quants: Mapped[List['DescriptorsQuant']] = relationship('DescriptorsQuant', uselist=True, viewonly=True)
 
 
-
 class ValuesCat(Base):
     """Table: values_cat"""
+
     __tablename__ = 'values_cat'
     __table_args__ = (
         PrimaryKeyConstraint('id', name='values_cat_pkey'),
@@ -454,18 +496,28 @@ class ValuesCat(Base):
         ForeignKeyConstraint(['desc_cat'], ['descriptors_cat.id'], name='values_cat_desc_cat_fkey'),
         ForeignKeyConstraint(['desc_inst'], ['descriptors_inst.id'], name='values_cat_desc_inst_fkey'),
         ForeignKeyConstraint(['instance'], ['values_inst.id'], name='values_cat_instance_fkey'),
-        ForeignKeyConstraint(['object', 'desc_cat'], ['obj_desc_cat.object', 'obj_desc_cat.desc_cat'], name='values_cat_object_desc_cat_fkey'),
-        ForeignKeyConstraint(['object', 'desc_inst'], ['obj_desc_inst.object', 'obj_desc_inst.desc_inst'], name='values_cat_object_desc_inst_fkey'),
+        ForeignKeyConstraint(
+            ['object', 'desc_cat'],
+            ['obj_desc_cat.object', 'obj_desc_cat.desc_cat'],
+            name='values_cat_object_desc_cat_fkey',
+        ),
+        ForeignKeyConstraint(
+            ['object', 'desc_inst'],
+            ['obj_desc_inst.object', 'obj_desc_inst.desc_inst'],
+            name='values_cat_object_desc_inst_fkey',
+        ),
         ForeignKeyConstraint(['object'], ['objects.id'], name='values_cat_object_fkey'),
         ForeignKeyConstraint(['value_controlled'], ['controlled_terms.id'], name='values_cat_value_controlled_fkey'),
-        CheckConstraint('value_open IS NOT NULL OR value_controlled IS NOT NULL', name='constraint_values_cat_some_value'),
+        CheckConstraint(
+            'value_open IS NOT NULL OR value_controlled IS NOT NULL', name='constraint_values_cat_some_value'
+        ),
         Index('idx_values_cat_desc_cat', 'desc_cat'),
         Index('idx_values_cat_desc_inst', 'desc_inst'),
         Index('idx_values_cat_instance', 'instance'),
         Index('idx_values_cat_object', 'object'),
         Index('idx_values_cat_object_instance', 'object', 'instance'),
         Index('idx_values_cat_value_controlled', 'value_controlled'),
-        {'schema': 'quantdb'}
+        {'schema': 'quantdb'},
     )
 
     id = mapped_column(Integer, nullable=False)
@@ -483,8 +535,9 @@ class ValuesCat(Base):
     objdesccat: Mapped[Optional['ObjDescCat']] = relationship('ObjDescCat', foreign_keys=['object', 'desc_cat'])
     objdescinst: Mapped[Optional['ObjDescInst']] = relationship('ObjDescInst', foreign_keys=['object', 'desc_inst'])
     objects: Mapped[Optional['Objects']] = relationship('Objects', foreign_keys=[object])
-    controlled_terms: Mapped[Optional['ControlledTerms']] = relationship('ControlledTerms', foreign_keys=[value_controlled])
-
+    controlled_terms: Mapped[Optional['ControlledTerms']] = relationship(
+        'ControlledTerms', foreign_keys=[value_controlled]
+    )
 
 
 class ValuesInst(Base):
@@ -545,18 +598,31 @@ class ValuesInst(Base):
     values_quant : relationship
         Relationship to the ValuesQuant table.
     """
+
     __tablename__ = 'values_inst'
     __table_args__ = (
         PrimaryKeyConstraint('id', name='values_inst_pkey'),
         UniqueConstraint('dataset', 'id_formal', name='values_inst_dataset_id_formal_key'),
         ForeignKeyConstraint(['dataset'], ['objects.id'], name='values_inst_dataset_fkey'),
         ForeignKeyConstraint(['desc_inst'], ['descriptors_inst.id'], name='values_inst_desc_inst_fkey'),
-        CheckConstraint('type <> \'below\'::instance_type OR id_sub IS NOT NULL OR id_sam IS NOT NULL', name='constraint_values_inst_type_below'),
-        CheckConstraint('type = \'below\'::instance_type AND NOT id_formal ~ \'^(sub|sam|site)-\'::text OR type = \'subject\'::instance_type AND id_formal ~ \'^sub-\'::text OR type = \'sample\'::instance_type AND id_formal ~ \'^sam-\'::text OR type = \'site\'::instance_type AND id_formal ~ \'^site-\'::text', name='constraint_values_inst_type_id_formal'),
-        CheckConstraint('type <> \'sample\'::instance_type OR id_sam IS NOT NULL AND id_sam = id_formal', name='constraint_values_inst_type_id_sam'),
-        CheckConstraint('type <> \'subject\'::instance_type OR id_sub = id_formal AND id_sam IS NULL', name='constraint_values_inst_type_id_sub'),
-        CheckConstraint('id_sam ~ \'^sam-\'::text', name='values_inst_id_sam_check'),
-        CheckConstraint('id_sub ~ \'^sub-\'::text', name='values_inst_id_sub_check'),
+        CheckConstraint(
+            "type <> 'below'::instance_type OR id_sub IS NOT NULL OR id_sam IS NOT NULL",
+            name='constraint_values_inst_type_below',
+        ),
+        CheckConstraint(
+            "type = 'below'::instance_type AND NOT id_formal ~ '^(sub|sam|site)-'::text OR type = 'subject'::instance_type AND id_formal ~ '^sub-'::text OR type = 'sample'::instance_type AND id_formal ~ '^sam-'::text OR type = 'site'::instance_type AND id_formal ~ '^site-'::text",
+            name='constraint_values_inst_type_id_formal',
+        ),
+        CheckConstraint(
+            "type <> 'sample'::instance_type OR id_sam IS NOT NULL AND id_sam = id_formal",
+            name='constraint_values_inst_type_id_sam',
+        ),
+        CheckConstraint(
+            "type <> 'subject'::instance_type OR id_sub = id_formal AND id_sam IS NULL",
+            name='constraint_values_inst_type_id_sub',
+        ),
+        CheckConstraint("id_sam ~ '^sam-'::text", name='values_inst_id_sam_check'),
+        CheckConstraint("id_sub ~ '^sub-'::text", name='values_inst_id_sub_check'),
         Index('idx_values_inst_dataset', 'dataset'),
         Index('idx_values_inst_dataset_id_formal', 'dataset', 'id_formal'),
         Index('idx_values_inst_dataset_id_sam', 'dataset', 'id_sam'),
@@ -565,7 +631,7 @@ class ValuesInst(Base):
         Index('idx_values_inst_id_formal', 'id_formal'),
         Index('idx_values_inst_id_sam', 'id_sam'),
         Index('idx_values_inst_id_sub', 'id_sub'),
-        {'schema': 'quantdb'}
+        {'schema': 'quantdb'},
     )
 
     id = mapped_column(Integer, nullable=False)
@@ -588,9 +654,9 @@ class ValuesInst(Base):
     equiv_insts_1: Mapped[List['EquivInst']] = relationship('EquivInst', uselist=True, viewonly=True)
 
 
-
 class ValuesQuant(Base):
     """Table: values_quant"""
+
     __tablename__ = 'values_quant'
     __table_args__ = (
         PrimaryKeyConstraint('id', name='values_quant_pkey'),
@@ -598,15 +664,23 @@ class ValuesQuant(Base):
         ForeignKeyConstraint(['desc_inst'], ['descriptors_inst.id'], name='values_quant_desc_inst_fkey'),
         ForeignKeyConstraint(['desc_quant'], ['descriptors_quant.id'], name='values_quant_desc_quant_fkey'),
         ForeignKeyConstraint(['instance'], ['values_inst.id'], name='values_quant_instance_fkey'),
-        ForeignKeyConstraint(['object', 'desc_inst'], ['obj_desc_inst.object', 'obj_desc_inst.desc_inst'], name='values_quant_object_desc_inst_fkey'),
-        ForeignKeyConstraint(['object', 'desc_quant'], ['obj_desc_quant.object', 'obj_desc_quant.desc_quant'], name='values_quant_object_desc_quant_fkey'),
+        ForeignKeyConstraint(
+            ['object', 'desc_inst'],
+            ['obj_desc_inst.object', 'obj_desc_inst.desc_inst'],
+            name='values_quant_object_desc_inst_fkey',
+        ),
+        ForeignKeyConstraint(
+            ['object', 'desc_quant'],
+            ['obj_desc_quant.object', 'obj_desc_quant.desc_quant'],
+            name='values_quant_object_desc_quant_fkey',
+        ),
         ForeignKeyConstraint(['object'], ['objects.id'], name='values_quant_object_fkey'),
         Index('idx_values_quant_desc_inst', 'desc_inst'),
         Index('idx_values_quant_desc_quant', 'desc_quant'),
         Index('idx_values_quant_instance', 'instance'),
         Index('idx_values_quant_object', 'object'),
         Index('idx_values_quant_object_instance', 'object', 'instance'),
-        {'schema': 'quantdb'}
+        {'schema': 'quantdb'},
     )
 
     id = mapped_column(Integer, nullable=False)
@@ -627,7 +701,6 @@ class ValuesQuant(Base):
     objdescquant: Mapped[Optional['ObjDescQuant']] = relationship('ObjDescQuant', foreign_keys=['object', 'desc_quant'])
     objects: Mapped[Optional['Objects']] = relationship('Objects', foreign_keys=[object])
 
-
     @staticmethod
     def update_desc_inst(target: 'ValuesQuant', value, oldvalue, initiator) -> None:
         """
@@ -644,7 +717,6 @@ class ValuesQuant(Base):
         event.listen(ValuesQuant.descriptors_inst, 'set', ValuesQuant.update_desc_inst)
 
 
-
 # Association table: aspect_parent
 t_aspect_parent = Table(
     'aspect_parent',
@@ -654,7 +726,7 @@ t_aspect_parent = Table(
     PrimaryKeyConstraint('id', 'parent', name='aspect_parent_pkey'),
     ForeignKeyConstraint(['id'], ['aspects.id'], name='aspect_parent_id_fkey'),
     ForeignKeyConstraint(['parent'], ['aspects.id'], name='aspect_parent_parent_fkey'),
-    schema='quantdb'
+    schema='quantdb',
 )
 
 
@@ -667,7 +739,7 @@ t_class_parent = Table(
     PrimaryKeyConstraint('id', 'parent', name='class_parent_pkey'),
     ForeignKeyConstraint(['id'], ['descriptors_inst.id'], name='class_parent_id_fkey'),
     ForeignKeyConstraint(['parent'], ['descriptors_inst.id'], name='class_parent_parent_fkey'),
-    schema='quantdb'
+    schema='quantdb',
 )
 
 
@@ -680,7 +752,7 @@ t_dataset_object = Table(
     PrimaryKeyConstraint('dataset', 'object', name='dataset_object_pkey'),
     ForeignKeyConstraint(['dataset'], ['objects.id'], name='dataset_object_dataset_fkey'),
     ForeignKeyConstraint(['object'], ['objects.id'], name='dataset_object_object_fkey'),
-    schema='quantdb'
+    schema='quantdb',
 )
 
 
@@ -693,7 +765,7 @@ t_equiv_inst = Table(
     PrimaryKeyConstraint('left_thing', 'right_thing', name='equiv_inst_pkey'),
     ForeignKeyConstraint(['left_thing'], ['values_inst.id'], name='equiv_inst_left_thing_fkey'),
     ForeignKeyConstraint(['right_thing'], ['values_inst.id'], name='equiv_inst_right_thing_fkey'),
-    schema='quantdb'
+    schema='quantdb',
 )
 
 
@@ -706,7 +778,7 @@ t_instance_parent = Table(
     PrimaryKeyConstraint('id', 'parent', name='instance_parent_pkey'),
     ForeignKeyConstraint(['id'], ['values_inst.id'], name='instance_parent_id_fkey'),
     ForeignKeyConstraint(['parent'], ['values_inst.id'], name='instance_parent_parent_fkey'),
-    schema='quantdb'
+    schema='quantdb',
 )
 
 
@@ -724,7 +796,7 @@ t_obj_desc_cat = Table(
     ForeignKeyConstraint(['addr_field'], ['addresses.id'], name='obj_desc_cat_addr_field_fkey'),
     ForeignKeyConstraint(['desc_cat'], ['descriptors_cat.id'], name='obj_desc_cat_desc_cat_fkey'),
     ForeignKeyConstraint(['object'], ['objects.id'], name='obj_desc_cat_object_fkey'),
-    schema='quantdb'
+    schema='quantdb',
 )
 
 
@@ -742,7 +814,7 @@ t_obj_desc_inst = Table(
     ForeignKeyConstraint(['addr_field'], ['addresses.id'], name='obj_desc_inst_addr_field_fkey'),
     ForeignKeyConstraint(['desc_inst'], ['descriptors_inst.id'], name='obj_desc_inst_desc_inst_fkey'),
     ForeignKeyConstraint(['object'], ['objects.id'], name='obj_desc_inst_object_fkey'),
-    schema='quantdb'
+    schema='quantdb',
 )
 
 
@@ -764,13 +836,12 @@ t_obj_desc_quant = Table(
     ForeignKeyConstraint(['addr_unit'], ['addresses.id'], name='obj_desc_quant_addr_unit_fkey'),
     ForeignKeyConstraint(['desc_quant'], ['descriptors_quant.id'], name='obj_desc_quant_desc_quant_fkey'),
     ForeignKeyConstraint(['object'], ['objects.id'], name='obj_desc_quant_object_fkey'),
-    schema='quantdb'
+    schema='quantdb',
 )
 
 
-
-
 # Helper functions for automatic foreign key updates
+
 
 def update_all_children(target, value, oldvalue, initiator):
     # Loop through all relationships of the target (parent) object

@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
 """
+DEPRECATED: This file is deprecated. Use ingestion/f006_ingest.py instead.
+
 F006 Dataset Ingestion following the new ingest.py pattern
 
 This script implements F006-specific logic using the value-generating function pattern
 from the main ingest.py module.
 
 Dataset ID: 2a3d01c0-39d3-464a-8746-54c9d67ebe0f
+
+NOTE: The new f006_ingest.py uses automap_base for dynamic model reflection.
 """
+import warnings
+
+warnings.warn(
+    'ingestion/f006_updated.py is deprecated. Use ingestion/f006_ingest.py instead.', DeprecationWarning, stacklevel=2
+)
 
 import csv
 import json

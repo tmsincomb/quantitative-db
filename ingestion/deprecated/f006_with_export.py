@@ -1,10 +1,21 @@
 #!/usr/bin/env python3
 """
-Enhanced F006 CSV ingestion that:
+DEPRECATED: This file is deprecated. Use ingestion/f006_ingest.py instead.
+
+Enhanced F006 ingestion that:
 1. Drops and recreates the test database
-2. Ingests F006 data including CSV files
+2. Ingests F006 data
 3. Exports all tables to CSV files for debugging
+
+NOTE: The new f006_ingest.py uses automap_base for dynamic model reflection.
 """
+import warnings
+
+warnings.warn(
+    'ingestion/f006_with_export.py is deprecated. Use ingestion/f006_ingest.py instead.',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 import csv
 import json
@@ -14,15 +25,11 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-# Add parent directory to path
-sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
-
 import pandas as pd
 import sqlalchemy
+from f006 import *
 from sqlalchemy import create_engine, inspect, text
 
-# Import everything from f006_csv.py instead of f006.py
-from ingestion.f006_csv import *
 from quantdb.client import get_session
 from quantdb.config import auth
 from quantdb.models import (
@@ -33,9 +40,6 @@ from quantdb.models import (
     DescriptorsCat,
     DescriptorsInst,
     DescriptorsQuant,
-    ObjDescCat,
-    ObjDescInst,
-    ObjDescQuant,
     Objects,
     Units,
     ValuesCat,
@@ -44,8 +48,10 @@ from quantdb.models import (
 )
 from quantdb.utils import dbUri
 
+# Add parent directory to path
+sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 
-# Copy the export functions from f006_with_export.py
+
 def drop_and_create_database(engine):
     """Drop all tables and recreate them."""
     print('\n=== Dropping existing tables ===')
@@ -200,19 +206,14 @@ def get_table_category(table_name):
         return '6_other_tables'
 
 
-def run_f006_csv_with_export(test=True, csv_limit=1):
-    """Run F006 CSV ingestion with database reset and CSV export."""
-
-    # Override the CSV limit
-    global CSV_LIMIT
-    CSV_LIMIT = csv_limit
+def run_f006_with_export(test=True):
+    """Run F006 ingestion with database reset and CSV export."""
 
     # Set up timestamp for output directory
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    output_dir = pathlib.Path(f'f006_csv_debug_{timestamp}')
+    output_dir = pathlib.Path(f'f006_debug_csvs_{timestamp}')
 
-    print(f'Starting F006 CSV ingestion with export at {timestamp}')
-    print(f'CSV processing limit: {CSV_LIMIT}')
+    print(f'Starting F006 ingestion with export at {timestamp}')
 
     # Create engine
     if test:
@@ -237,30 +238,9 @@ def run_f006_csv_with_export(test=True, csv_limit=1):
     session = get_session(echo=False, test=test)
 
     try:
-        # Load metadata
-        metadata = load_path_metadata()
-        print(f'Loaded metadata with {len(metadata["data"])} items')
-
-        # Count file types
-        jpx_count = sum(1 for item in metadata['data'] if item.get('mimetype') == 'image/jpx')
-        csv_count = sum(1 for item in metadata['data'] if item.get('mimetype') == 'text/csv')
-        print(f'Found {jpx_count} JPX files and {csv_count} CSV files')
-
-        # Create basic components
-        components = create_basic_descriptors(session)
-
-        # Ingest objects table
-        dataset_obj, package_objects = ingest_objects_table(session, metadata, components)
-
-        # Ingest instances table
-        instances = ingest_instances_table(session, metadata, components, dataset_obj)
-
-        # Ingest descriptor relationships and values
-        ingest_descriptors_and_values(session, metadata, components, dataset_obj, package_objects, instances)
-
-        # Commit all changes
-        session.commit()
-        print('\n=== Ingestion Complete ===')
+        # Run the original F006 ingestion
+        print('\n=== Running F006 ingestion ===')
+        result = run_f006_ingestion(session, commit=True)
 
         # Export all tables to CSV
         export_all_tables_to_csv(session, output_dir)
@@ -268,15 +248,28 @@ def run_f006_csv_with_export(test=True, csv_limit=1):
         # Create a detailed summary file
         summary_file = output_dir / 'summary.txt'
         with open(summary_file, 'w') as f:
-            f.write(f'F006 CSV Dataset Ingestion Summary\n')
-            f.write(f'==================================\n')
+            f.write(f'F006 Dataset Ingestion Summary\n')
+            f.write(f'==============================\n')
             f.write(f'Timestamp: {timestamp}\n')
             f.write(f'Dataset UUID: {DATASET_UUID}\n')
             f.write(f"Database: {'quantdb_test' if test else 'quantdb'}\n")
-            f.write(f'CSV Limit: {CSV_LIMIT}\n')
 
             # Get additional statistics from the database
             total_files = session.query(Objects).filter_by(id_type='package').count()
+            jpx_files = (
+                session.query(Objects)
+                .filter(
+                    Objects.id_type == 'package',
+                    Objects.id.in_(
+                        session.query(ValuesCat.object).filter(
+                            ValuesCat.value_controlled.in_(
+                                session.query(ControlledTerms.id).filter(ControlledTerms.label == 'microct')
+                            )
+                        )
+                    ),
+                )
+                .count()
+            )
 
             subjects = session.query(ValuesInst).filter_by(type='subject').count()
             samples = session.query(ValuesInst).filter_by(type='sample').count()
@@ -288,29 +281,22 @@ def run_f006_csv_with_export(test=True, csv_limit=1):
 
             f.write(f'\n=== Database Contents ===\n')
             f.write(f'Total Package Objects: {total_files}\n')
-            f.write(f"  - JPX files: {len(package_objects.get('jpx', []))}\n")
-            f.write(f"  - CSV files: {len(package_objects.get('csv', []))}\n")
+            f.write(f'  - JPX/MicroCT files: {jpx_files}\n')
+            f.write(f'  - CSV files: {total_files - jpx_files}\n')
 
             f.write(f'\n=== Biological Entities ===\n')
             f.write(f'Subjects: {subjects}\n')
             f.write(f'Samples: {samples}\n')
 
-            # Get value counts
-            cat_values = session.query(ValuesCat).count()
-            quant_values = session.query(ValuesQuant).count()
-
-            f.write(f'\n=== Values ===\n')
-            f.write(f'Categorical values: {cat_values}\n')
-            f.write(f'Quantitative values: {quant_values}\n')
-
             # List sample IDs
             sample_records = session.query(ValuesInst).filter_by(type='sample').order_by(ValuesInst.id_sam).all()
+            number_of_samples_to_run = 1
             if sample_records:
                 f.write(f'\nSample IDs:\n')
-                for sample in sample_records[:10]:  # Show first 10
+                for sample in sample_records[:number_of_samples_to_run]:  # Show first 10
                     f.write(f'  - {sample.id_sam}\n')
-                if len(sample_records) > 10:
-                    f.write(f'  ... and {len(sample_records) - 10} more\n')
+                if len(sample_records) > number_of_samples_to_run:
+                    f.write(f'  ... and {len(sample_records) - number_of_samples_to_run} more\n')
 
             f.write(f'\n=== Schema Components ===\n')
             f.write(f'Instance Descriptors: {unique_desc_inst}\n')
@@ -321,28 +307,41 @@ def run_f006_csv_with_export(test=True, csv_limit=1):
             f.write(f'Controlled Terms: {session.query(ControlledTerms).count()}\n')
             f.write(f'Address Types: {session.query(Addresses).count()}\n')
 
+            f.write(f'\n=== Ingestion Results ===\n')
+            f.write(f"Dataset object created: {'Yes' if result.get('dataset') else 'No'}\n")
+            f.write(f"Package objects: {len(result.get('objects', []))}\n")
+            f.write(f"Instances created: {len(result.get('instances', {}))}\n")
+            f.write(f"ObjDescInst mappings: {len(result.get('mappings', {}).get('obj_desc_inst', []))}\n")
+            f.write(f"ObjDescCat mappings: {len(result.get('mappings', {}).get('obj_desc_cat', []))}\n")
+            f.write(f"ObjDescQuant mappings: {len(result.get('mappings', {}).get('obj_desc_quant', []))}\n")
+            f.write(f"ValuesCat entries: {len(result.get('leaf_values', {}).get('values_cat', []))}\n")
+            f.write(f"ValuesQuant entries: {len(result.get('leaf_values', {}).get('values_quant', []))}\n")
+
             # Add measurement summary
-            f.write(f'\n=== Quantitative Measurements ===\n')
-            # Query for unique descriptors with their counts
-            from sqlalchemy import func
+            if result.get('leaf_values', {}).get('values_quant'):
+                f.write(f'\n=== Quantitative Measurements ===\n')
+                # Query for unique descriptors with their counts
+                from sqlalchemy import func
 
-            quant_summary = (
-                session.query(
-                    DescriptorsQuant.label.label('desc_label'),
-                    Aspects.label.label('aspect_label'),
-                    Units.label.label('unit_label'),
-                    func.count(ValuesQuant.id).label('count'),
+                quant_summary = (
+                    session.query(
+                        DescriptorsQuant.label.label('desc_label'),
+                        Aspects.label.label('aspect_label'),
+                        Units.label.label('unit_label'),
+                        func.count(ValuesQuant.id).label('count'),
+                    )
+                    .select_from(ValuesQuant)
+                    .join(DescriptorsQuant, ValuesQuant.desc_quant == DescriptorsQuant.id)
+                    .join(Aspects, DescriptorsQuant.aspect == Aspects.id)
+                    .join(Units, DescriptorsQuant.unit == Units.id)
+                    .group_by(DescriptorsQuant.label, Aspects.label, Units.label)
+                    .all()
                 )
-                .select_from(ValuesQuant)
-                .join(DescriptorsQuant, ValuesQuant.desc_quant == DescriptorsQuant.id)
-                .join(Aspects, DescriptorsQuant.aspect == Aspects.id)
-                .join(Units, DescriptorsQuant.unit == Units.id)
-                .group_by(DescriptorsQuant.label, Aspects.label, Units.label)
-                .all()
-            )
 
-            for row in quant_summary:
-                f.write(f'  - {row.desc_label}: {row.count} measurements ({row.aspect_label} in {row.unit_label})\n')
+                for row in quant_summary:
+                    f.write(
+                        f'  - {row.desc_label}: {row.count} measurements ({row.aspect_label} in {row.unit_label})\n'
+                    )
 
         print(f'\n✓ Summary written to {summary_file}')
 
@@ -361,7 +360,6 @@ def run_f006_csv_with_export(test=True, csv_limit=1):
             u.label as unit,
             di.label as domain,
             o.id_type as object_type,
-            o.id_file as file_id,
             vi.id_sam as sample_id
         FROM values_quant vq
         JOIN descriptors_quant dq ON vq.desc_quant = dq.id
@@ -382,14 +380,12 @@ def run_f006_csv_with_export(test=True, csv_limit=1):
         SELECT
             vc.id,
             ct.label as value,
-            vc.value_open,
             dc.label as descriptor_label,
             di.label as domain,
             o.id_type as object_type,
-            o.id_file as file_id,
             vi.id_sam as sample_id
         FROM values_cat vc
-        LEFT JOIN controlled_terms ct ON vc.value_controlled = ct.id
+        JOIN controlled_terms ct ON vc.value_controlled = ct.id
         JOIN descriptors_cat dc ON vc.desc_cat = dc.id
         JOIN descriptors_inst di ON dc.domain = di.id
         JOIN objects o ON vc.object = o.id
@@ -413,5 +409,5 @@ def run_f006_csv_with_export(test=True, csv_limit=1):
 
 
 if __name__ == '__main__':
-    # Run with test database and process 10 CSV files
-    run_f006_csv_with_export(test=True, csv_limit=10)
+    # Run with test database
+    run_f006_with_export(test=True)

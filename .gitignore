@@ -184,3 +184,6 @@ production_*/
 README.pdf
 .DS_STORE
 .vscode/
+export*/
+ingestion/data
+my_export/

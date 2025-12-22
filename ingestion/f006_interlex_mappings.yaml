@@ -109,6 +109,11 @@ units:
 # F006-specific descriptors
 descriptors:
   instance_types:
+    # Subject/sample types
+    - iri: http://uri.interlex.org/ilx_0101431
+      label: human
+    - iri: http://uri.interlex.org/tgbugs/uris/readable/nervevolume
+      label: nerve-volume
     # Cross-section descriptors
     - iri: http://uri.interlex.org/ilx_0738300
       label: fiber-cross-section
